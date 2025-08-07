@@ -1,0 +1,401 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Differential Expressed Genes Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+# sourceFolder(here::here("Code", "R", "Functions", "AnalysisScripts"), T)
+
+# Source the calculate_dynamic_metrics.R script to load required functions
+source(here::here("Code", "R", "Functions", "AnalysisScripts", "calculate_dynamic_metrics.R"))
+
+```
+
+### Import Data
+
+#### Phyloseq
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+# ps.cleaned %>% microViz::samdat_tbl()
+
+```
+
+### Variables
+
+```{r}
+## Diversity Methods
+
+diversity.method <- list()
+diversity.method[["alpha"]] <- c("shannon", 
+                                 "inverse_simpson", 
+                                 "observed")
+diversity.method[["beta"]] <- c("bray", "canberra")
+
+## Stats/Plotting Variables
+
+alpha.stats <- list() # save all stat results here
+alpha.plots <- list() # save plots here
+
+beta.stats <- list() # save all stat results here
+beta.plots <- list() # save plots here
+
+diffAbnd.stats <- list() # save all stat results here
+diffAbnd.plots <- list() # save plots here
+```
+
+
+
+
+
+## 00) All {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+
+
+
+
+## 01) What is the host-microbiome response to parasite exposure?  {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+
+
+
+
+
+## 02) Is the host-microbiome response to parasite exposure historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+
+
+
+
+
+## 03) Is the host-microbiome recovery historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

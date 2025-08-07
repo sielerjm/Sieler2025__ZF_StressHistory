@@ -1,0 +1,5657 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Microbiome Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+# sourceFolder(here::here("Code", "R", "Functions", "AnalysisScripts"), T)
+
+# Source the calculate_dynamic_metrics.R script to load required functions
+source(here::here("Code", "R", "Functions", "AnalysisScripts", "calculate_dynamic_metrics.R"))
+
+```
+
+### Import Data
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+# ps.cleaned %>% microViz::samdat_tbl()
+
+```
+
+### Variables
+
+```{r}
+## Diversity Methods
+
+diversity.method <- list()
+diversity.method[["alpha"]] <- c("shannon", 
+                                 "inverse_simpson", 
+                                 "observed")
+diversity.method[["beta"]] <- c("bray", "canberra")
+
+## Stats/Plotting Variables
+
+alpha.stats <- list() # save all stat results here
+alpha.plots <- list() # save plots here
+
+beta.stats <- list() # save all stat results here
+beta.plots <- list() # save plots here
+
+diffAbnd.stats <- list() # save all stat results here
+diffAbnd.plots <- list() # save plots here
+```
+
+
+### Calculate Scores
+
+<!-- ```{r} -->
+<!-- ps.cleaned %>% # phyloseq object we'll be using -->
+<!--   microViz::ps_calc_diversity( # calculates various alpha diversity metrics -->
+<!--     rank = "Genus", # What taxonomic rank do you want to calculate diversity metrics at -->
+<!--     index = "gini_simpson", # What diversity metric to use -->
+<!--     varname = "Simpson__Genus", # Column name in sample data -->
+<!--     exp = F # exponentiate the result or not -->
+<!--   ) %>% -->
+<!--     samdat_tbl() %>% -->
+<!--     dplyr::relocate(Simpson__Genus, .after = 2) %>% arrange(desc(Simpson__Genus)) -->
+<!-- ``` -->
+
+
+#### Alpha
+
+SUMMARY: This code calculates alpha diversity metrics and applies normalization using the norm_scores() function
+
+STEP-BY-STEP PROCESS:
+1. ALPHA DIVERSITY CALCULATION: Calculates three key alpha diversity metrics at the Genus level:
+   - Shannon diversity (Shannon__Genus) - measures both richness and evenness
+   - Simpson diversity (Simpson__Genus) - measures dominance (weighted toward abundant taxa)
+   - Richness (Richness__Genus) - counts the number of unique taxa
+
+2. NORMALIZATION USING norm_scores() FUNCTION:
+   - Tests if data follows normal distribution using Anderson-Darling test (p ≤ 0.05 = not normal)
+   - If NOT normal: Applies Tukey's power ladder transformation to make data more normal
+   - If normal OR after transformation: Scales values to 0-1 range using min-max normalization
+   - Creates normalized versions with "_norm" suffix (e.g., Shannon__Genus_norm)
+
+3. DATA ORGANIZATION: Converts to tidy format for analysis with columns for:
+   - Alpha.Metric (which diversity measure)
+   - Alpha.Score (the actual value)
+   - Data.Type (Raw vs Normalized)
+
+CONCEPT: Alpha diversity measures the diversity within each sample, while normalization ensures
+         all metrics are on the same 0-1 scale for fair comparison across different diversity measures.
+
+```{r}
+
+## Alpha
+ps.cleaned_alpha <-
+    ps.cleaned %>% # phyloseq object we'll be using
+  microViz::ps_calc_diversity( # calculates various alpha diversity metrics
+    rank = "Genus", # What taxonomic rank do you want to calculate diversity metrics at
+    index = "shannon", # What diversity metric to use
+    varname = "Shannon__Genus", # Column name in sample data
+    exp = F # exponentiate the result or not
+  ) %>%
+  microViz::ps_calc_diversity(
+    rank = "Genus",
+    index = "gini_simpson",
+    varname = "Simpson__Genus" # Column name in sample data
+  ) %>%
+  microViz::ps_calc_richness( # related to ps_calc_diversity, this calculates richness or "observed" values
+    rank = "Genus",
+    varname = "Richness__Genus"
+  ) %>%
+  # ps_calc_diversity.phy(
+  #   varname = "Phylogenetic__Genus"
+  # ) %>% # Note: This is a helper function I made. You need to adjust function manually to change taxon rank (See: microViz_Helper.R)
+  # # ps_calc_diversity.phy() helper function does not properly name the column. Modify the following function as needed 
+  # ps_rename("Phylogenetic__Genus" = "phylogenetic_Genus") %>% # Helper function (See: microViz_Helper.R)
+  ps_mutate(across(contains("__Genus"), norm_scores, .names = "{.col}_norm")) 
+    
+ps.cleaned_alpha %>%
+    microViz::samdat_tbl()
+
+
+test.data.alpha <-
+    ps.cleaned_alpha %>% 
+    microViz::samdat_tbl() %>%
+    dplyr::relocate(c(".sample_name"), .before = "Antibiotics") %>%
+    tidyr::pivot_longer(cols = contains("__Genus"), names_to = "Alpha.Metric", values_to = "Alpha.Score") %>%
+    dplyr::mutate(Data.Type = case_when(
+        Alpha.Metric %in% c("Shannon__Genus_norm", "Simpson__Genus_norm", "Richness__Genus_norm") ~ "Normalized",
+        TRUE ~ "Raw"
+    )) %>%
+    dplyr::relocate(c("Alpha.Metric", "Alpha.Score", "Data.Type"), .after = "Tank.ID") %>%
+    dplyr::relocate(c("Sample", "Treatment", "Time", "Tank.ID"), .before = 1)
+    # tidyr::pivot_longer(cols = contains("_norm"), names_to = "Alpha.Metric", values_to = "Alpha.Score") %>%
+    # dplyr::filter(Alpha.Metric %in% c("Simpson__Genus_norm", "Simpson__Genus_norm")) %>%
+    # tidyr::pivot_longer(cols = contains("__Genus"), names_to = "Raw.Metric", values_to = "Raw.Score") 
+
+
+```
+
+#### Beta
+
+##### Dist Matrices
+
+```{r}
+
+#### Beta diversity matrices
+
+##### All
+
+beta.dist.mat <- list()
+
+beta.dist.mat[["All"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+beta.dist.mat[["All_60DPE"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Time == 60) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+##### Parasite exposure only
+
+beta.dist.mat[["ParasiteExp"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+beta.dist.mat[["ParasiteExp_60DPE"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+##### Prior stressors and parasite exposure
+
+beta.dist.mat[["PriorStressParaExp"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+beta.dist.mat[["PriorStressParaExp_60DPE"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+##### Prior stressors and NO parasite exposure
+
+beta.dist.mat[["PriorStressNoParaExp"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+beta.dist.mat[["PriorStressNoParaExp_60DPE"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60) %>%
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list
+
+```
+
+##### Personalization
+
+SUMMARY: This code calculates "personalization scores" for each sample based on beta diversity
+
+STEP-BY-STEP PROCESS:
+1. DISTANCE MATRIX CALCULATION: Creates Bray-Curtis and Canberra distance matrices between all sample pairs
+   - Each cell contains the dissimilarity between two samples (0 = identical, 1 = completely different)
+
+2. DATA RESTRUCTURING: Converts the distance matrix from wide to long format
+   - Each row represents one pairwise comparison between samples
+   - Removes self-comparisons (sample compared to itself)
+
+3. METADATA MERGING: Adds sample metadata (Time, Treatment, Tank.ID) to both samples in each comparison
+   - Uses suffixes (_a, _b) to distinguish between the two samples being compared
+
+4. PERSONALIZATION CALCULATION: For each sample, calculates:
+   - Median distance to all other samples (Beta.Score) - measures how "unique" each sample is
+   - Mean distance to all other samples (Beta.Score.Mean) - alternative measure
+   - Higher scores = more "personalized" (dissimilar from others)
+   - Lower scores = more "typical" (similar to others)
+
+5. NORMALIZATION: Creates normalized versions of scores using the norm_scores function
+
+6. DATA ORGANIZATION: Combines Bray-Curtis and Canberra metrics, creates tidy format for analysis
+
+CONCEPT: A "personalized" microbiome is one that is distinct from the average community, while a "typical" microbiome is similar to most other samples in the dataset.
+
+```{r}
+#### Beta Personalization Scores
+
+data.beta.list <- list()
+
+# Save dataframe
+data.beta.list[["All"]] <-
+  
+  ps.cleaned_alpha %>% 
+  
+  # Calculate Distance matrix
+  microViz::dist_calc("bray") %>% 
+  
+  # Get distance matric
+  microViz::dist_get() %>%
+  # Pat Schloss methods to view beta diversity matrix data
+  # Source: https://youtu.be/Gm-kg3TuML4?si=nYLLAxm7uv8aYG27&t=250
+  
+  # Convert into a matrix object
+  as.matrix() %>%
+  
+  # Convert matrix into a tibble
+  tibble::as_tibble(rownames = "Sample_a") %>%
+  
+  # Convert dataframe into "long" format
+  tidyr::pivot_longer(-Sample_a, names_to = "Sample_b", values_to = "Dist") %>%
+  
+  # Remove any rows where names equal eachother
+  dplyr::filter(Sample_a != Sample_b) %>%
+  
+  # Merge sample dataframe
+  dplyr::right_join((ps.cleaned_alpha %>% 
+                       microViz::samdat_tbl() %>% ungroup() %>%  arrange(Time, Treatment, Tank.ID) %>% 
+                       dplyr::select(!contains("_Genus")) %>%
+                       dplyr::select(fecal.sample.number, Time, Treatment, Tank.ID)
+  ), 
+  by = c("Sample_a" = "fecal.sample.number")) %>% 
+  dplyr::right_join((ps.cleaned_alpha %>% 
+                       microViz::samdat_tbl() %>% 
+                       dplyr::ungroup() %>% 
+                       dplyr::arrange(Time, Treatment, Tank.ID) %>% 
+                       dplyr::select(!contains("_Genus")) %>%
+                       dplyr::select(fecal.sample.number, Time, Treatment, Tank.ID)
+  ), 
+  by = c("Sample_b" = "fecal.sample.number"), suffix = c("_a", "_b")) %>% # add suffix to differentiate between sample metadata
+  # Move columns around
+  dplyr::select(order(colnames(.))) %>%
+  dplyr::relocate(dplyr::any_of(c("Sample_a", "Sample_b", "Dist")), .before = 1) %>%
+  dplyr::relocate(dplyr::contains(c("Tank")), .after = dplyr::last_col()) %>%
+  dplyr::ungroup() %>%
+  
+  # Calculate the median distance of samples to all other samples (Measure of "personalization")
+  dplyr::group_by(Sample_a, Treatment_a, Time_a, Tank.ID_a) %>%
+  dplyr::summarize(Beta.Score = median(Dist), #*100,  
+                   Beta.Score.Mean = mean(Dist), #*100, 
+                   count = dplyr::n()) %>% 
+  dplyr::ungroup() %>%
+  
+  # Rename Columns
+  dplyr::rename(fecal.sample.number = Sample_a,
+                Treatment = Treatment_a,
+                
+                Time = Time_a,
+                Tank.ID = Tank.ID_a) %>%
+  dplyr::right_join(ps.cleaned_alpha %>%
+                      microViz::samdat_tbl() %>% 
+                      dplyr::select(!contains("_Genus")),
+                    by = c("fecal.sample.number", "Time", "Treatment","Tank.ID")) %>%
+  dplyr::ungroup() %>%
+  
+  # Normalize diversity scores
+  dplyr::mutate(dplyr::across(dplyr::contains("Beta.Score"), norm_scores, .names = "{.col}_norm"), .after = "Beta.Score") %>%
+  
+  # Create a column to save what type of beta metric was calculated
+  dplyr::mutate(Beta.Metric = "Bray-Curtis", .before = "Beta.Score") %>%
+  dplyr::mutate(Sample = gsub("^f", "", fecal.sample.number)) %>%
+    dplyr::relocate(Sample, .before = 1) %>%
+    dplyr::relocate(fecal.sample.number, .after = 36)
+
+data.beta.list[["All"]] <- data.beta.list[["All"]] %>%
+dplyr::full_join(., 
+                   ps.cleaned_alpha %>% 
+                     # tax_agg("Genus") %>%
+                     microViz::dist_calc("canberra") %>% 
+                     
+                     # Get distance matric
+    microViz::dist_get() %>%
+    # Pat Schloss methods to view beta diversity matrix data
+    # Source: https://youtu.be/Gm-kg3TuML4?si=nYLLAxm7uv8aYG27&t=250
+    
+    # Convert into a matrix object
+    as.matrix() %>%
+    
+    # Convert matrix into a tibble
+    tibble::as_tibble(rownames = "Sample_a") %>%
+    
+    # Convert dataframe into "long" format
+    tidyr::pivot_longer(-Sample_a, names_to = "Sample_b", values_to = "Dist") %>%
+    
+    # Remove any rows where names equal eachother
+    dplyr::filter(Sample_a != Sample_b) %>%
+    
+    # Merge sample dataframe
+    dplyr::right_join((ps.cleaned_alpha %>% 
+                       microViz::samdat_tbl() %>% ungroup() %>%  arrange(Time, Treatment, Tank.ID) %>% 
+                       dplyr::select(!contains("_Genus")) %>%
+                       dplyr::select(fecal.sample.number, Time, Treatment, Tank.ID)
+    ), 
+    by = c("Sample_a" = "fecal.sample.number")) %>% 
+    dplyr::right_join((ps.cleaned_alpha %>% 
+                       microViz::samdat_tbl() %>% 
+                       dplyr::ungroup() %>% 
+                       dplyr::arrange(Time, Treatment, Tank.ID) %>% 
+                       dplyr::select(!contains("_Genus")) %>%
+                       dplyr::select(fecal.sample.number, Time, Treatment, Tank.ID)
+    ), 
+    by = c("Sample_b" = "fecal.sample.number"), suffix = c("_a", "_b")) %>% # add suffix to differentiate between sample metadata
+    # Move columns around
+    dplyr::select(order(colnames(.))) %>%
+    dplyr::relocate(dplyr::any_of(c("Sample_a", "Sample_b", "Dist")), .before = 1) %>%
+    dplyr::relocate(dplyr::contains(c("Tank")), .after = dplyr::last_col()) %>%
+    dplyr::ungroup() %>%
+    
+    # Calculate the median distance of samples to all other samples (Measure of "personalization")
+    dplyr::group_by(Sample_a, Treatment_a, Time_a, Tank.ID_a) %>%
+    dplyr::summarize(Beta.Score = median(Dist), #*100,  
+                   Beta.Score.Mean = mean(Dist), #*100, 
+                   count = dplyr::n()) %>% 
+    dplyr::ungroup() %>%
+    
+    # Rename Columns
+    dplyr::rename(fecal.sample.number = Sample_a,
+                Treatment = Treatment_a,
+                
+                Time = Time_a,
+                Tank.ID = Tank.ID_a) %>%
+    dplyr::right_join(ps.cleaned_alpha %>%
+                      microViz::samdat_tbl() %>% 
+                      dplyr::select(!contains("_Genus")),
+                    by = c("fecal.sample.number", "Time", "Treatment","Tank.ID")) %>%
+    dplyr::ungroup() %>%
+                     
+    # Normalize diversity scores
+    dplyr::mutate(dplyr::across(contains("Beta.Score"), norm_scores, .names = "{.col}_norm"), .after = "Beta.Score") %>%
+    
+    # Create a column to save what type of beta metric was calculated
+    dplyr::mutate(Beta.Metric = "Canberra", .before = "Beta.Score")
+  )
+
+
+# Prepare beta diversity data
+test.data.beta <-
+    data.beta.list[["All"]] %>%
+        tidyr::pivot_longer(cols = c("Beta.Score", "Beta.Score_norm"), names_to = "Beta.Metric.Type", values_to = "Beta.Score") %>%
+        dplyr::relocate(c("Beta.Metric.Type", "Beta.Score"), .after = "Beta.Metric") %>%
+        dplyr::mutate(Data.Type = case_when(
+            Beta.Metric.Type %in% c("	Beta.Score", "Beta.Score_norm") ~ "Normalized",
+            TRUE ~ "Raw"
+        ), .after = "Beta.Score") %>%
+        # Remove the temporary Beta.Metric.Type column
+        dplyr::select(-c(Beta.Metric.Type, count)) %>%
+        dplyr::mutate(Beta.Metric = ifelse(Data.Type == "Normalized", paste0(Beta.Metric, "_norm"), Beta.Metric)) %>%
+        dplyr::arrange(Sample, Time, Tank.ID, Data.Type)
+```
+
+
+
+
+### Calculate SADMMs
+
+SUMMARY: This code calculates State-Aware Dynamic Microbiome Metrics (SADMMs) including displacement, velocity, acceleration, and volatility
+
+STEP-BY-STEP PROCESS:
+1. DISPLACEMENT CALCULATION: Measures how far each sample's diversity score deviates from a reference point
+   - Reference scores = mean diversity across all samples at each time point (baseline)
+   - Formula: Displacement = Current Score - Reference Score
+   - Positive displacement = higher diversity than baseline
+   - Negative displacement = lower diversity than baseline
+   - Zero displacement = sample matches baseline diversity
+
+2. VELOCITY CALCULATION: Measures the rate of change in diversity over time
+   - Formula: Velocity = (Score_t2 - Score_t1) / (Time_t2 - Time_t1)
+   - Calculates slope between consecutive time points
+   - Positive velocity = increasing diversity over time
+   - Negative velocity = decreasing diversity over time
+   - Zero velocity = no change in diversity
+
+3. ACCELERATION CALCULATION: Measures the rate of change in velocity
+   - Formula: Acceleration = (Velocity_t2 - Velocity_t1) / (Time_t2 - Time_t1)
+   - Calculates change in velocity between consecutive time points
+   - Positive acceleration = diversity is changing faster (increasing velocity)
+   - Negative acceleration = diversity is changing slower (decreasing velocity)
+   - Zero acceleration = constant rate of change
+
+4. VOLATILITY CALCULATION: Measures the stability of diversity over time
+   - Formula: Volatility = Standard Deviation(diversity scores across all time points)
+   - Higher volatility = more variable/unstable microbiome composition
+   - Lower volatility = more stable/consistent microbiome composition
+   - Uses all available time points for each sample to calculate stability
+
+CALCULATION METHODS:
+- All metrics are calculated separately for each treatment group and time point
+- Reference scores are group-specific means at each time point
+- Missing time points are handled by interpolation or exclusion
+- Both raw and normalized diversity scores can be used as inputs
+
+CONCEPT: SADMMs capture different aspects of microbiome dynamics - displacement shows deviation from baseline,
+         velocity shows directional change, acceleration shows change in rate, and volatility shows stability.
+
+WHY SADMMs ENHANCE UNDERSTANDING OF MICROBIOME RESPONSES TO PERTURBATIONS:
+- Traditional static diversity metrics only capture "snapshots" at single time points
+- SADMMs reveal the temporal dynamics and trajectory of microbiome responses
+- Displacement identifies which samples deviate most from expected baseline states
+- Velocity shows whether communities are recovering, deteriorating, or maintaining stability
+- Acceleration reveals if responses are intensifying or stabilizing over time
+- Volatility indicates resilience - stable communities may be more resistant to future perturbations
+- Combined, these metrics provide a comprehensive view of how microbiomes adapt to and recover from stressors
+
+```{r}
+
+# Calculate all metrics at once using the combined function
+test.alpha.all_metrics <- calculate_all_dynamic_metrics(
+  data = test.data.alpha,
+  metric_col = "Alpha.Metric",
+  score_col = "Alpha.Score",
+  ref_group = NULL,  # Using all groups as reference
+  time_col = "Time",
+  group_col = "Treatment",
+  use_mean = TRUE
+)
+
+# Calculate all metrics at once using the combined function
+test.beta.all_metrics <- calculate_all_dynamic_metrics(
+  data = test.data.beta,
+  metric_col = "Beta.Metric",
+  score_col = "Beta.Score",
+  ref_group = NULL,
+  time_col = "Time",
+  group_col = "Treatment",
+  use_mean = TRUE
+)
+
+
+
+```
+
+```{r}
+
+
+# Merge Displacement data with Alpha.Metric and Alpha.Score
+data.alpha.merged <-
+    test.alpha.all_metrics$volatility %>%
+        # dplyr::filter()
+        # First pivot the SADMM metrics
+        # dplyr::group_by(Data.Type) %>%
+        tidyr::pivot_longer(
+            cols = c("Alpha.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility"),
+            names_to = "METRIC",
+            values_to = "SCORE"
+        ) %>%
+        dplyr::mutate(METRIC = factor(METRIC, levels = c("Alpha.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")),
+                      Data.Type = factor(Data.Type, levels = c("Raw", "Normalized")))
+
+
+
+# Merge Displacement data with Alpha.Metric and Alpha.Score
+data.beta.merged <-
+    test.beta.all_metrics$volatility %>%
+        # dplyr::filter()
+        # First pivot the SADMM metrics
+        # dplyr::group_by(Data.Type) %>%
+        tidyr::pivot_longer(
+            cols = c("Beta.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility"),
+            names_to = "METRIC",
+            values_to = "SCORE"
+        ) %>%
+        dplyr::mutate(METRIC = factor(METRIC, levels = c("Beta.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")),
+                      Data.Type = factor(Data.Type, levels = c("Raw", "Normalized")))
+
+```
+
+
+
+## 00) All {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### Alpha {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$displacement %>%
+          dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) + 
+    labs(
+        title = "Highlighting: All Treatments"
+    )
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All"
+
+# GLM Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.alpha.all_metrics$volatility %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.alpha.all_metrics$volatility %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results",
+    subtitle = "glm(Displacement ~ Treatment); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+# Significant Results only: Tukey Table for all treatment groups
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table__SigOnly"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table__SigOnly"]]
+
+
+
+```
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All_60DPE"
+
+# GLM Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Significant Results only: Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+### Beta {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$displacement %>%
+          dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) + 
+    labs(
+        title = "Highlighting: All Treatments"
+    )
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All"
+
+# GLM Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.beta.all_metrics$volatility %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.beta.all_metrics$volatility %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - Beta",
+    subtitle = "glm(Displacement ~ Treatment); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - Beta",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - Beta",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table__SigOnly"]]
+
+# Significant Results only: Tukey Table for all treatment groups
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All_60DPE"
+
+# GLM Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+# Significant Results only: Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+
+```
+
+
+
+
+
+##### PCoA {.tabset}
+
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    # microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+```{r fig.height=4, fig.width=4, echo=FALSE, message=FALSE, warning=FALSE}
+
+p + theme(legend.position = "none")
+
+```
+
+```{r eval=FALSE, include=FALSE}
+p$data %>%
+    dplyr::filter(MDS2 < -2) %>%
+    dplyr::group_by(Time) %>%
+    count()
+```
+
+
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "bottom") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+```{r fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "bottom") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+```{r fig.height=6, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All_60DPE"
+
+
+
+#### Dispersion --------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]] <-
+  run_BetaDispersion(dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                     var = c("treatment_group"))
+
+##### ANOVA ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] <-
+  get_HoD_anova(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group"))
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] %>%
+  
+    # Create the table
+    dplyr::group_by(Beta.Metric) %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric")  %>%
+  
+    # Title/caption
+    gt::tab_header(
+      title = "ANOVA: Homogeneity of Dispersion",
+      subtitle = "ANOVA(Beta Disperson ~ Treatment); All treatments at 60 DPE"
+    ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+##### Tukey ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] <-
+  get_HoD_tukey(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group")) 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] %>%
+    
+    dplyr::mutate(
+        group1 = case_when(
+        group1 == "Control" ~ "A- T- P-",
+        group1 == "Parasite" ~ "A- T- P+",
+        group1 == "Antibiotics" ~ "A+ T- P-",
+        group1 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group1 == "Temperature" ~ "A- T+ P-",
+        group1 == "Temperature_Parasite" ~ "A- T+ P+",
+        group1 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group1 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    ),
+        group2 = case_when(
+        group2 == "Control" ~ "A- T- P-",
+        group2 == "Parasite" ~ "A- T- P+",
+        group2 == "Antibiotics" ~ "A+ T- P-",
+        group2 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group2 == "Temperature" ~ "A- T+ P-",
+        group2 == "Temperature_Parasite" ~ "A- T+ P+",
+        group2 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group2 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    )) %>%
+  
+  # Create the table
+  dplyr::group_by(Beta.Metric) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric")  %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "Tukey: Homogeneity of Dispersion",
+    subtitle = "Tukey(Beta Disperson ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value", "sig"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] %>%
+    
+    dplyr::filter(adj.p.value < 0.05) %>%
+    
+    dplyr::mutate(
+        group1 = case_when(
+        group1 == "Control" ~ "A- T- P-",
+        group1 == "Parasite" ~ "A- T- P+",
+        group1 == "Antibiotics" ~ "A+ T- P-",
+        group1 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group1 == "Temperature" ~ "A- T+ P-",
+        group1 == "Temperature_Parasite" ~ "A- T+ P+",
+        group1 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group1 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    ),
+        group2 = case_when(
+        group2 == "Control" ~ "A- T- P-",
+        group2 == "Parasite" ~ "A- T- P+",
+        group2 == "Antibiotics" ~ "A+ T- P-",
+        group2 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group2 == "Temperature" ~ "A- T+ P-",
+        group2 == "Temperature_Parasite" ~ "A- T+ P+",
+        group2 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group2 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    )) %>%
+  
+  # Create the table
+  dplyr::group_by(Beta.Metric) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric")  %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "Tukey: Homogeneity of Dispersion",
+    subtitle = "Tukey(Beta Disperson ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value", "sig"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table__SigOnly"]]
+
+```
+
+
+
+##### CAP {.tabset}
+
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+```{r include=FALSE}
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "All_60DPE"
+
+
+#### Capscale ----------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.mod"]] <-
+  run_capscale(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          # microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          # "A- T- P+",
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          # )) %>%
+          microViz::ps_filter(Time == 60), 
+               dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+               formula_str = "dist ~ Treatment")
+
+##### ADONIS ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] <-
+  run_cap_adonis(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          # microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          # "A- T- P+",
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          # )) %>%
+          microViz::ps_filter(Time == 60),
+                 dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                 formula_str = "dist ~ Treatment",
+                 by.method = "terms") 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "ADONIS2",
+    subtitle = "adonis2(Beta Distance ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]]
+
+```
+
+
+
+## 01) What is the host-microbiome response to parasite exposure?  {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+
+### Alpha {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$displacement %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+"
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) 
+
+```
+
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp"
+
+# GLM Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results",
+    subtitle = "glm(Displacement ~ Treatment); Parasite exposure only"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Parasite exposure only"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett",
+    subtitle = "Tukey(Displacement ~ Treatment); Parasite exposure only"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Alpha Score Norm {.tabset}
+
+###### Plot
+
+```{r include=FALSE, fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+# p <-
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::filter(Data.Type == "Normalized") %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Alpha.Score",
+  time_point = c(60)
+) + facet_wrap(.~Exp_Type + Time, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp_60DPE"
+
+# GLM Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+# Significant Results only: Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+
+
+### Beta {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$displacement %>%
+          dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) + 
+    labs(
+        title = "Highlighting: Parasite exposure only"
+    )
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp"
+
+# GLM Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - Beta",
+    subtitle = "glm(Displacement ~ Treatment); Parasite exposure only"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - Beta",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Parasite exposure only"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - Beta",
+    subtitle = "Tukey(Displacement ~ Treatment); Parasite exposure only"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Beta.Metric == "Canberra_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp_60DPE"
+
+# GLM Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+# Significant Results only: Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+
+##### PCoA {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp_60DPE"
+
+
+
+#### Dispersion --------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]] <-
+  run_BetaDispersion(dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                     var = c("treatment_group"))
+
+##### ANOVA ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] <-
+  get_HoD_anova(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group"))
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] %>%
+  
+    # Create the table
+    dplyr::group_by(Beta.Metric) %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric")  %>%
+  
+    # Title/caption
+    gt::tab_header(
+      title = "ANOVA: Homogeneity of Dispersion",
+      subtitle = "ANOVA(Beta Disperson ~ Treatment); Parasite exposure only at 60 DPE"
+    ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+##### Tukey ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] <-
+  get_HoD_tukey(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group")) 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] %>%
+    
+    dplyr::mutate(
+        group1 = case_when(
+        group1 == "Control" ~ "A- T- P-",
+        group1 == "Parasite" ~ "A- T- P+",
+        group1 == "Antibiotics" ~ "A+ T- P-",
+        group1 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group1 == "Temperature" ~ "A- T+ P-",
+        group1 == "Temperature_Parasite" ~ "A- T+ P+",
+        group1 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group1 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    ),
+        group2 = case_when(
+        group2 == "Control" ~ "A- T- P-",
+        group2 == "Parasite" ~ "A- T- P+",
+        group2 == "Antibiotics" ~ "A+ T- P-",
+        group2 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group2 == "Temperature" ~ "A- T+ P-",
+        group2 == "Temperature_Parasite" ~ "A- T+ P+",
+        group2 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group2 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    )) %>%
+  
+  # Create the table
+  dplyr::group_by(Beta.Metric) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric")  %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "Tukey: Homogeneity of Dispersion",
+    subtitle = "Tukey(Beta Disperson ~ Treatment); Parasite exposure only 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value", "sig"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]]
+
+```
+
+
+
+
+##### CAP {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+    microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "ParasiteExp_60DPE"
+
+
+#### Capscale ----------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.mod"]] <-
+  run_capscale(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60), 
+               dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+               formula_str = "dist ~ Treatment")
+
+##### ADONIS ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] <-
+  run_cap_adonis(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+"#,
+          # "A+ T- P-",
+          # "A+ T- P+",
+          # "A- T+ P-",
+          # "A- T+ P+",
+          # "A+ T+ P-",
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60),
+                 dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                 formula_str = "dist ~ Treatment",
+                 by.method = "terms") 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "ADONIS2",
+    subtitle = "adonis2(Beta Distance ~ Treatment); Parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]]
+
+```
+
+
+
+## 02) Is the host-microbiome response to parasite exposure historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+
+### Alpha {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$displacement %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) 
+
+```
+
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp"
+
+# GLM Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp_60DPE"
+
+# GLM Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+# Significant Results only: Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+
+
+### Beta {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$displacement %>%
+          dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) + 
+    labs(
+        title = "Highlighting: Prior stressors and parasite exposure"
+    )
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp"
+
+# GLM Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - Beta",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - Beta",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - Beta",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp_60DPE"
+
+# GLM Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and parasite exposure only at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Significant Results only: Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+
+##### PCoA {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp_60DPE"
+
+
+
+#### Dispersion --------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]] <-
+  run_BetaDispersion(dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                     var = c("treatment_group"))
+
+##### ANOVA ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] <-
+  get_HoD_anova(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group"))
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] %>%
+  
+    # Create the table
+    dplyr::group_by(Beta.Metric) %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric")  %>%
+  
+    # Title/caption
+    gt::tab_header(
+      title = "ANOVA: Homogeneity of Dispersion",
+      subtitle = "ANOVA(Beta Disperson ~ Treatment); Prior stressors and parasite exposure at 60 DPE"
+    ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+##### Tukey ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] <-
+  get_HoD_tukey(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group")) 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] %>%
+    
+    dplyr::mutate(
+        group1 = case_when(
+        group1 == "Control" ~ "A- T- P-",
+        group1 == "Parasite" ~ "A- T- P+",
+        group1 == "Antibiotics" ~ "A+ T- P-",
+        group1 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group1 == "Temperature" ~ "A- T+ P-",
+        group1 == "Temperature_Parasite" ~ "A- T+ P+",
+        group1 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group1 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    ),
+        group2 = case_when(
+        group2 == "Control" ~ "A- T- P-",
+        group2 == "Parasite" ~ "A- T- P+",
+        group2 == "Antibiotics" ~ "A+ T- P-",
+        group2 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group2 == "Temperature" ~ "A- T+ P-",
+        group2 == "Temperature_Parasite" ~ "A- T+ P+",
+        group2 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group2 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    )) %>%
+  
+  # Create the table
+  dplyr::group_by(Beta.Metric) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric")  %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "Tukey: Homogeneity of Dispersion",
+    subtitle = "Tukey(Beta Disperson ~ Treatment); Prior stressors and parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value", "sig"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]]
+
+```
+
+
+
+##### CAP {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+      # microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressParaExp_60DPE"
+
+
+#### Capscale ----------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.mod"]] <-
+  run_capscale(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60), 
+               dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+               formula_str = "dist ~ Treatment")
+
+##### ADONIS ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] <-
+  run_cap_adonis(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          # "A- T- P-",
+          "A- T- P+",
+          # "A+ T- P-",
+          "A+ T- P+",
+          # "A- T+ P-",
+          "A- T+ P+",
+          # "A+ T+ P-",
+          "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60),
+                 dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                 formula_str = "dist ~ Treatment",
+                 by.method = "terms") 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "ADONIS2",
+    subtitle = "adonis2(Beta Distance ~ Treatment); Prior stressors and parasite exposure at 60 DPE"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]]
+
+```
+
+
+
+## 03) Is the host-microbiome recovery historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+
+### Alpha {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$displacement %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          # "A- T- P+"
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) 
+
+```
+
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp"
+
+# GLM Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.alpha.all_metrics$volatility %>%
+    # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and no parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and no parasite exposure"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and no parasite exposure"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp_60DPE"
+
+# GLM Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models(formula_str = "Displacement ~ Treatment", 
+                   alpha_metric_col = "Alpha.Metric", 
+                   alpha_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova(alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.alpha.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Alpha.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm(., "Displacement", "Alpha.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Alpha.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Alpha.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+# Significant Results only: Tukey Table for 60 DPE
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different alpha diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Alpha.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Alpha.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+alpha.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+
+```
+
+
+### Beta {.tabset}
+
+#### All {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$displacement %>%
+          dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      fade_alpha = 0.1,
+      dodge_width = 6
+    ) + 
+    labs(
+        title = "Highlighting: Prior stressors and no parasite exposure"
+    )
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp"
+
+# GLM Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] <- 
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]])
+
+# Tukey Analysis for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] <-
+  test.beta.all_metrics$volatility %>%
+        # Filter 
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - Beta",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and no parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - Beta",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and no parasite exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for Beta
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - Beta",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and no parasite exposure"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["ALL"]][["Tukey.Table"]]
+
+```
+
+#### 60 DPE {.tabset}
+
+##### Displacement {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+p <-
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4)
+
+```
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp_60DPE"
+
+# GLM Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] <- 
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run GLM models
+  run_glm_models_beta(formula_str = "Displacement ~ Treatment", 
+                   beta_metric_col = "Beta.Metric", 
+                   beta_score_col = "Displacement",
+                   family_str = "gaussian")
+
+# ANOVA Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] <-
+  run_glm_anova_beta(beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]])
+
+# Tukey Analysis for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] <-
+  test.beta.all_metrics$displacement %>%
+    dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+    dplyr::filter(Time == 60) %>%
+    # Clean up cell value names by removing any strings including and after "__"
+    cutCellNames(col = "Beta.Metric", sep = "__") %>%
+    # Filter out raw data, leave only normalized data
+    dplyr::filter(Data.Type != "Raw") %>%
+  # Run Tukey test on GLM models
+  run_tukey_glm_beta(., "Displacement", "Beta.Metric", c("Treatment"), 
+                family_str = "gaussian",
+                group_by_var = NULL) 
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# GLM Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM"]] %>%
+  # Create a column called "Beta.Metric" for each metric's GLM model
+  purrr::imap(., ~tidy(.x) %>% mutate(Beta.Metric = .y)) %>%
+  # Combine the metric dataframes
+  dplyr::bind_rows() %>%
+  # Remove "Treatment" from term labels
+  dplyr::mutate(term = gsub("Treatment", "", term)) %>%
+  # Add significance indicators in a new column
+  SigStars() %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "GLM Results - 60 DPE",
+    subtitle = "glm(Displacement ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "p.adj.sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# ANOVA Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA"]] %>%
+  # Create GT Table
+  set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "ANOVA of GLM - 60 DPE",
+    subtitle = "ANOVA(GLM(Displacement ~ Treatment), type = 2); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+# Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Significant Results only: Tukey Table for 60 DPE
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey"]] %>%
+  dplyr::filter(adj.p.value < 0.05) %>%
+  # Combine the different beta diversity metrics into one dataframe
+  dplyr::bind_rows() %>%
+  # Create the table
+  dplyr::group_by(Beta.Metric, term) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric") %>%
+  # Title/caption
+  gt::tab_header(
+    title = "Significant Results:Pairwise Tukey's HSD, p.adj: Dunnett - 60 DPE",
+    subtitle = "Tukey(Displacement ~ Treatment); All treatments at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+# Display all tables
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["GLM.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["60DPE"]][["Tukey.Table__SigOnly"]]
+```
+
+
+##### PCoA {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha%>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(method = "PCoA") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp_60DPE"
+
+
+
+#### Dispersion --------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]] <-
+  run_BetaDispersion(dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                     var = c("treatment_group"))
+
+##### ANOVA ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] <-
+  get_HoD_anova(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group"))
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA"]] %>%
+  
+    # Create the table
+    dplyr::group_by(Beta.Metric) %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric")  %>%
+  
+    # Title/caption
+    gt::tab_header(
+      title = "ANOVA: Homogeneity of Dispersion",
+      subtitle = "ANOVA(Beta Disperson ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+    ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+##### Tukey ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] <-
+  get_HoD_tukey(betaDisper = beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.model"]],
+                var = c("treatment_group")) 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey"]] %>%
+    
+    dplyr::mutate(
+        group1 = case_when(
+        group1 == "Control" ~ "A- T- P-",
+        group1 == "Parasite" ~ "A- T- P+",
+        group1 == "Antibiotics" ~ "A+ T- P-",
+        group1 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group1 == "Temperature" ~ "A- T+ P-",
+        group1 == "Temperature_Parasite" ~ "A- T+ P+",
+        group1 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group1 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    ),
+        group2 = case_when(
+        group2 == "Control" ~ "A- T- P-",
+        group2 == "Parasite" ~ "A- T- P+",
+        group2 == "Antibiotics" ~ "A+ T- P-",
+        group2 == "Antibiotics_Parasite" ~ "A+ T- P+",
+        group2 == "Temperature" ~ "A- T+ P-",
+        group2 == "Temperature_Parasite" ~ "A- T+ P+",
+        group2 == "Antibiotics_Temperature" ~ "A+ T+ P-",
+        group2 == "Antibiotics_Temperature_Parasite" ~ "A+ T+ P+",
+    )) %>%
+  
+  # Create the table
+  dplyr::group_by(Beta.Metric) %>%
+  set_GT(var = "adj.p.value", group.by = "Beta.Metric")  %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "Tukey: Homogeneity of Dispersion",
+    subtitle = "Tukey(Beta Disperson ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("adj.p.value", "sig"),
+      rows = adj.p.value < 0.05
+    )
+  )
+
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.ANOVA.Table"]]
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["HoD.Tukey.Table"]]
+
+```
+
+
+##### CAP {.tabset}
+
+###### Plot
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "bray") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+```{r include=FALSE}
+
+
+p <-
+    ps.cleaned_alpha %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    microViz::ps_mutate(Treatment. = as.numeric(factor(Treatment)), .after = "Treatment") %>%
+    # samdat_tbl()
+    microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  microViz::tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  microViz::tax_agg(rank = "Genus") %>%
+  microViz::dist_calc(dist = "canberra") %>%
+  microViz::ord_calc(constraints = c("Treatment."),
+                     method = "CAP") %>%
+  microViz::ord_plot(alpha = 1, size = 2, color = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = treatment_color_scale) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Canberra at Time = 60") 
+
+```
+
+
+```{r fig.height=6, fig.width=6, echo=FALSE, message=FALSE, warning=FALSE}
+
+p
+
+```
+
+
+
+###### Code
+
+```{r}
+# Set the subsection for this analysis
+tmp.resSubSection <- "PriorStressNoParaExp_60DPE"
+
+
+#### Capscale ----------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.mod"]] <-
+  run_capscale(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60), 
+               dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+               formula_str = "dist ~ Treatment")
+
+##### ADONIS ------------------------------------------------------------------
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] <-
+  run_cap_adonis(ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+          microViz::ps_filter(Treatment  %in% c(
+          "A- T- P-",
+          # "A- T- P+",
+          "A+ T- P-",
+          # "A+ T- P+",
+          "A- T+ P-",
+          # "A- T+ P+",
+          "A+ T+ P-"#,
+          # "A+ T+ P+"
+          )) %>%
+          microViz::ps_filter(Time == 60),
+                 dist.matrix = beta.dist.mat[[tmp.resSubSection]], 
+                 formula_str = "dist ~ Treatment",
+                 by.method = "terms") 
+
+### Table
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]] <-
+  beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS"]] %>%
+    set_GT(var = "p.value", group.by = "Beta.Metric") %>%
+  
+  # Title/caption
+  gt::tab_header(
+    title = "ADONIS2",
+    subtitle = "adonis2(Beta Distance ~ Treatment); Prior stressors and no parasite exposure at 60 DPE"
+  )  %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = c("p.value", "sig"),
+      rows = p.value < 0.05
+    )
+  )
+
+
+```
+
+###### Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+beta.stats[[tmp.resSubSection]][["TREATMENT"]][["CAP.ADONIS.Table"]]
+
+```
+
+
+### Compare Raw, Norm, Disp
+
+#### Alpha 
+
+```{r}
+test.alpha.all_metrics$displacement
+```
+
+
+```{r fig.height=4, fig.width=4, echo=FALSE, message=FALSE, warning=FALSE}
+plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$displacement %>%
+      dplyr::filter(Alpha.Metric == "Shannon__Genus_norm",
+                    Data.Type == "Normalized"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      add_points = T,
+      fade_alpha = 0,
+      dodge_width = 6
+    ) + theme(legend.position = "none") + scale_y_continuous(limits = c(-.4,.6)) #+ facet_wrap(.~Tank.ID)
+```
+   
+   
+```{r fig.height=5, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Alpha.Metric == "Shannon__Genus_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4) + theme(legend.position = "none") + scale_y_continuous(limits = c(-.4,.6))
+```
+
+
+#### Beta 
+
+```{r}
+test.beta.all_metrics$displacement
+```
+
+
+```{r fig.height=4, fig.width=4, echo=FALSE, message=FALSE, warning=FALSE}
+plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$displacement %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm",
+                    Data.Type == "Normalized"),
+      value_col = "Displacement",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      add_points = F,
+      fade_alpha = 0,
+      dodge_width = 6
+    ) + theme(legend.position = "none") + scale_y_continuous(limits = c(-.4,.25))
+```
+   
+   
+```{r fig.height=5, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$displacement %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Displacement",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4) + theme(legend.position = "none") + scale_y_continuous(limits = c(-.6,.55))
+```
+
+#### Volatility
+
+```{r}
+test.beta.all_metrics$volatility
+```
+
+
+```{r fig.height=4, fig.width=4, echo=FALSE, message=FALSE, warning=FALSE}
+plot_dynamic_metrics_highlight(
+      data = test.beta.all_metrics$volatility %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm",
+                    Data.Type == "Normalized"),
+      value_col = "Acceleration",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      add_points = F,
+      fade_alpha = 0,
+      dodge_width = 6
+    ) + theme(legend.position = "none") #+ scale_y_continuous(limits = c(-.4,.25))
+```
+
+```{r fig.height=5, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+    plot_timepoint_violin_flexible(
+  data = test.beta.all_metrics$volatility %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Beta.Metric == "Bray-Curtis_norm"),
+  value_col = "Volatility",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4) + theme(legend.position = "none") #+ scale_y_continuous(limits = c(-.6,.55))
+```
+
+
+
+```{r fig.height=4, fig.width=4, echo=FALSE, message=FALSE, warning=FALSE}
+plot_dynamic_metrics_highlight(
+      data = test.alpha.all_metrics$volatility %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm",
+                    Data.Type == "Normalized"),
+      value_col = "Acceleration",
+      highlight_groups = c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+"
+        ),
+      # highlight_groups = c("A+ T- P-", "A+ T- P+"),
+      # highlight_groups = c("A- T+ P-", "A- T+ P+"),
+      # highlight_groups = c("A+ T+ P-", "A+ T+ P+"),
+      add_points = F,
+      fade_alpha = 0,
+      dodge_width = 6
+    ) + theme(legend.position = "none")# + scale_y_continuous(limits = c(-.4,.6))
+```
+
+```{r fig.height=5, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+    plot_timepoint_violin_flexible(
+  data = test.alpha.all_metrics$volatility %>%
+      dplyr::mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+      dplyr::filter(Treatment  %in% c(
+          "A- T- P-",
+          "A- T- P+",
+          "A+ T- P-",
+          "A+ T- P+",
+          "A- T+ P-",
+          "A- T+ P+",
+          "A+ T+ P-",
+          "A+ T+ P+")
+          ) %>%
+      dplyr::filter(Alpha.Metric == "Simpson__Genus_norm"),
+  value_col = "Volatility",
+  time_point = 60
+) + facet_wrap(.~Exp_Type, scales = "free_x", ncol = 4) + theme(legend.position = "none") #+ scale_y_continuous(limits = c(-.4,.6))
+```
+
+
+

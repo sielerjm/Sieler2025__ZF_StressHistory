@@ -1,0 +1,1030 @@
+---
+title: "Sanity Check"
+author: "Michael Sieler"
+date: "2025-06-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)  # Sets default knit settings for document
+```
+
+# Input
+
+## Plots
+
+```{r}
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#66A61E",  # A+ T- P- (Antibiotics)
+  "#E6AB02",  # A+ T- P+ (Antibiotics_Parasite)
+  "#7570B3",  # A- T+ P- (Temperature)
+  "#E7298A",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+```
+
+
+## Data
+
+### Microbiome
+
+#### Phyloseq
+
+```{r}
+
+diversity.method <- list()
+diversity.method[["alpha"]] <- c("shannon", 
+                                 "inverse_simpson", 
+                                 "observed")
+diversity.method[["beta"]] <- c("bray", "canberra")
+
+# Load phyloseq
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+# ps.cleaned_FilteredTaxa <-
+ps.tmp %>%
+    
+    ## Fix Phyloseq Object for MicroViz use
+    microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+    # Filter for any samples that contain more than 5000 reads
+    microViz::ps_filter(sample_sums(.) > 5000) %>%
+    # Any taxa not found in at least 3 samples are removed
+    microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+    # microViz::tax_filter(min_prevalence = 0.3, undetected = 0) %>%
+    # Remove any unwanted reads
+    microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+    microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) %>%
+    # microViz::samdat_tbl()
+    
+    ## Update Metadata
+    ps_rename(Time = Timepoint) %>%
+    microViz::ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+    microViz::ps_filter(Treatment != "Unknown") %>%
+    microViz::ps_mutate(
+        History = case_when(
+            Antibiotics + Temperature == 0 ~ 0,
+            Antibiotics + Temperature == 1 ~ 1,
+            Antibiotics + Temperature == 2 ~ 2,
+        ), .after = "Treatment"
+    ) %>%
+    
+    ## Additional metadata updates, factorizing metadata
+    microViz::ps_mutate(
+    # Create treatment code
+        treatment_code = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+        ),
+        # Create treatment group factor
+        treatment_group = case_when(
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+          TRUE ~ "Control"
+        ),
+        # Convert to factor with appropriate levels
+        treatment_group = factor(treatment_group, 
+                               levels = c("Control", "Antibiotics", "Temperature", 
+                                        "Antibiotics_Temperature", "Parasite", 
+                                        "Antibiotics_Parasite", "Temperature_Parasite",
+                                        "Antibiotics_Temperature_Parasite")),
+        treatment_code = factor(treatment_code, levels = treatment_order),
+        # Create time point factor
+        time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+        # Create pathogen status factor
+        pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                               levels = c("Unexposed", "Exposed")),
+        # Create sex factor
+        sex = factor(Sex, levels = c("M", "F"))
+        ) 
+
+ps.cleaned %>% microViz::samdat_tbl()
+
+```
+
+#### Calculate Scores
+
+```{r}
+
+## Alpha
+ps.cleaned_alpha <-
+    ps.cleaned %>% # phyloseq object we'll be using
+  microViz::ps_calc_diversity( # calculates various alpha diversity metrics
+    rank = "Genus", # What taxonomic rank do you want to calculate diversity metrics at
+    index = "shannon", # What diversity metric to use
+    varname = "Shannon__Genus", # Column name in sample data
+    exp = F # exponentiate the result or not
+  ) %>%
+  microViz::ps_calc_diversity(
+    rank = "Genus",
+    index = "inverse_simpson",
+    varname = "Simpson__Genus" # Column name in sample data
+  ) %>%
+  microViz::ps_calc_richness( # related to ps_calc_diversity, this calculates richness or "observed" values
+    rank = "Genus",
+    varname = "Richness__Genus"
+  ) %>%
+  # ps_calc_diversity.phy(
+  #   varname = "Phylogenetic__Genus"
+  # ) %>% # Note: This is a helper function I made. You need to adjust function manually to change taxon rank (See: microViz_Helper.R)
+  # # ps_calc_diversity.phy() helper function does not properly name the column. Modify the following function as needed 
+  # ps_rename("Phylogenetic__Genus" = "phylogenetic_Genus") %>% # Helper function (See: microViz_Helper.R)
+  ps_mutate(across(contains("__Genus"), norm_scores, .names = "{.col}_norm")) 
+    
+
+## Beta
+
+beta.dist.mat[["All"]] <- # saves the results of this loop to a list
+  furrr::future_map(diversity.method[["beta"]], function(x){ # Future_map runs the function in parallel
+    ps.cleaned_alpha %>% # is the phyloseq object we are looping over
+      microViz::tax_transform(trans = "identity", # tax transform transforms taxa counts
+                    rank = ifelse(x == "gunifrac" || x == "wunifrac" || x == "unifrac", "unique", "Genus")) %>% # phylogenetic methods need "unique" ASV counts
+      microViz::dist_calc(x, gunifrac_alpha = 0.5) # calculates the distance between samples. gunifrac_alpha = 0.5 weights abundance into its calculation
+  }) %>%
+  setNames(diversity.method[["beta"]]) # assigns names of the beta methods to the list 
+
+```
+
+```{r}
+test.data.alpha %>% glimpse()
+```
+
+
+```{r}
+test.data.alpha <-
+    ps.cleaned_alpha %>% 
+    microViz::samdat_tbl() %>%
+    dplyr::relocate(c(".sample_name"), .before = "Antibiotics") %>%
+    tidyr::pivot_longer(cols = contains("__Genus"), names_to = "Alpha.Metric", values_to = "Alpha.Score") %>%
+    dplyr::mutate(Data.Type = case_when(
+        Alpha.Metric %in% c("Shannon__Genus_norm", "Simpson__Genus_norm", "Richness__Genus_norm") ~ "Normalized",
+        TRUE ~ "Raw"
+    )) %>%
+    dplyr::relocate(c("Alpha.Metric", "Alpha.Score", "Data.Type"), .after = "Tank.ID") %>%
+    dplyr::relocate(c("Sample", "Treatment", "Time", "Tank.ID"), .before = 1)
+    # tidyr::pivot_longer(cols = contains("_norm"), names_to = "Alpha.Metric", values_to = "Alpha.Score") %>%
+    # dplyr::filter(Alpha.Metric %in% c("Simpson__Genus_norm", "Shannon__Genus_norm")) %>%
+    # tidyr::pivot_longer(cols = contains("__Genus"), names_to = "Raw.Metric", values_to = "Raw.Score") 
+
+# Prepare beta diversity data
+test.data.beta <-
+    data.beta.list[["All"]] %>%
+        tidyr::pivot_longer(cols = c("Beta.Score", "Beta.Score_norm"), names_to = "Beta.Metric.Type", values_to = "Beta.Score") %>%
+        dplyr::relocate(c("Beta.Metric.Type", "Beta.Score"), .after = "Beta.Metric") %>%
+        dplyr::mutate(Data.Type = case_when(
+            Beta.Metric.Type %in% c("	Beta.Score", "Beta.Score_norm") ~ "Normalized",
+            TRUE ~ "Raw"
+        ), .after = "Beta.Score") %>%
+        # Remove the temporary Beta.Metric.Type column
+        dplyr::select(-c(Beta.Metric.Type, count)) %>%
+        dplyr::mutate(Beta.Metric = ifelse(Data.Type == "Normalized", paste0(Beta.Metric, "_norm"), Beta.Metric)) %>%
+        dplyr::mutate(Sample = as.numeric(gsub("f","",Sample))) %>%
+        dplyr::arrange(Sample, Time, Tank.ID, Data.Type)
+        
+
+    
+
+```
+
+#### Calculate SADMMs
+
+```{r}
+
+# Calculate all metrics at once using the combined function
+test.alpha.all_metrics <- calculate_all_dynamic_metrics(
+  data = test.data.alpha,
+  metric_col = "Alpha.Metric",
+  score_col = "Alpha.Score",
+  ref_group = NULL,  # Using all groups as reference
+  time_col = "Time",
+  group_col = "Treatment",
+  use_mean = TRUE
+)
+
+# Calculate all metrics at once using the combined function
+test.beta.all_metrics <- calculate_all_dynamic_metrics(
+  data = test.data.beta,
+  metric_col = "Beta.Metric",
+  score_col = "Beta.Score",
+  ref_group = NULL,
+  time_col = "Time",
+  group_col = "Treatment",
+  use_mean = TRUE
+)
+
+test.alpha.all_metrics$volatility
+test.beta.all_metrics$volatility
+
+```
+
+
+### Mortality
+
+```{r}
+data.mortality <- 
+    # ps.cleaned %>%
+    readRDS('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds') %>%
+    
+    ## Update Metadata
+    ps_rename(Time = Timepoint) %>%
+    microViz::ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+    microViz::ps_filter(Treatment != "Unknown") %>%
+    microViz::ps_mutate(
+        History = case_when(
+            Antibiotics + Temperature == 0 ~ 0,
+            Antibiotics + Temperature == 1 ~ 1,
+            Antibiotics + Temperature == 2 ~ 2,
+        ), .after = "Treatment"
+    ) %>%
+    
+    ## Additional metadata updates, factorizing metadata
+    microViz::ps_mutate(
+    # Create treatment code
+        treatment_code = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+        ),
+        # Create treatment group factor
+        treatment_group = case_when(
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+          TRUE ~ "Control"
+        ),
+        # Convert to factor with appropriate levels
+        treatment_group = factor(treatment_group, 
+                               levels = c("Control", "Antibiotics", "Temperature", 
+                                        "Antibiotics_Temperature", "Parasite", 
+                                        "Antibiotics_Parasite", "Temperature_Parasite",
+                                        "Antibiotics_Temperature_Parasite")),
+        treatment_code = factor(treatment_code, levels = treatment_order),
+        # Create time point factor
+        time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+        # Create pathogen status factor
+        pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                               levels = c("Unexposed", "Exposed")),
+        # Create sex factor
+        sex = factor(Sex, levels = c("M", "F"))
+        ) %>%
+    microViz::samdat_tbl() 
+
+data.mortality
+```
+
+
+# Alpha 
+
+
+
+```{r message=FALSE, warning=FALSE}
+
+data.alpha <- test.alpha.all_metrics$volatility
+
+data.alpha
+
+# Merge Displacement data with Alpha.Metric and Alpha.Score
+data.alpha.merged <-
+    data.alpha %>%
+        # dplyr::filter()
+        # First pivot the SADMM metrics
+        # dplyr::group_by(Data.Type) %>%
+        tidyr::pivot_longer(
+            cols = c("Alpha.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility"),
+            names_to = "METRIC",
+            values_to = "SCORE"
+        ) %>%
+        dplyr::mutate(METRIC = factor(METRIC, levels = c("Alpha.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")),
+                      Data.Type = factor(Data.Type, levels = c("Raw", "Normalized")))
+    
+
+# data.alpha.merged
+
+
+```
+
+## Raw vs Norm
+
+### All
+
+```{r}
+
+p.violin <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Simpson__Genus", "Simpson__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    ggplot(aes(x = Treatment, y = SCORE, fill = Treatment)) +
+    geom_violin(draw_quantiles = c(0.5), alpha = 0.7) +
+    facet_grid(Data.Type ~ METRIC + Tank.ID, scales = "free") +
+    scale_fill_manual(values = treatment_color_scale) +
+    labs(title = "Alpha Diversity - Violin Plots") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p.violin
+
+```
+
+### By Treatment
+
+```{r  fig.width=6, fig.height=7}
+
+# Create separate plots for Raw and Normalized data with different y-axis scales
+p <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Simpson__Genus", "Simpson__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Create separate plots for each Data.Type
+        raw_plot <- ggplot(.x %>% dplyr::filter(Data.Type == "Raw"), 
+                          aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 1.5, color = treatment_color, alpha = 0.5) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~METRIC + Tank.ID) +
+            scale_y_continuous(limits = c(0, 41)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Data)"))
+        
+        norm_plot <- ggplot(.x %>% dplyr::filter(Data.Type == "Normalized"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 1.5, color = treatment_color, alpha = 0.5) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~METRIC + Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Data)"))
+        
+        # Return both plots as a list
+        list(raw_plot, norm_plot)
+    })
+
+p
+```
+
+## Raw vs Norm vs Disp
+
+### All
+
+```{r}
+
+p.violin <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Simpson__Genus", "Simpson__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Velocity", "Acceleration", "Volatility")) %>%
+    # Filter out specific combination: Simpson__Genus + Raw + Alpha.Score
+    dplyr::filter(!(Alpha.Metric == "Simpson__Genus" & Data.Type == "Raw" & METRIC == "Displacement")) %>%
+    ggplot(aes(x = Treatment, y = SCORE, fill = Treatment)) +
+    geom_violin(draw_quantiles = c(0.5), alpha = 0.7) +
+    facet_grid(METRIC+Data.Type ~ + Tank.ID, scales = "free") +
+    scale_fill_manual(values = treatment_color_scale) +
+    labs(title = "Alpha Diversity - Violin Plots") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p.violin
+
+```
+
+### By Treatment
+
+```{r  fig.width=4, fig.height=6}
+
+# Create separate plots for Raw and Normalized data with different y-axis scales
+p <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Simpson__Genus", "Simpson__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Velocity", "Acceleration", "Volatility")) %>%
+    # Filter out specific combination: Simpson__Genus + Raw + Alpha.Score
+    dplyr::filter(!(Alpha.Metric == "Simpson__Genus" & Data.Type == "Raw" & METRIC == "Displacement")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Create separate plots for each Data.Type
+        raw_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus" & Data.Type == "Raw" & METRIC == "Alpha.Score"), 
+                          aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 41)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Alpha Score)"))
+        
+        norm_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus_norm" & Data.Type == "Normalized" & METRIC == "Alpha.Score"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Alpha Score)"))
+        
+        # Create plot for Normalized Displacement
+        norm_disp_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus_norm" & Data.Type == "Normalized" & METRIC == "Displacement"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(-.667, .667)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Displacement)"))
+        
+        # Return all three plots as a list
+        list(raw_alpha_plot, norm_alpha_plot, norm_disp_plot)
+    })
+
+p
+```
+
+```{r  fig.width=4, fig.height=6}
+
+# Create separate plots for Raw and Normalized data with different y-axis scales
+p <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Shannon__Genus", "Shannon__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Velocity", "Acceleration", "Volatility")) %>%
+    # Filter out specific combination: Shannon__Genus + Raw + Alpha.Score
+    dplyr::filter(!(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Displacement")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Create separate plots for each Data.Type
+        raw_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Alpha.Score"), 
+                          aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 6)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Alpha Score)"))
+        
+        norm_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Alpha.Score"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Alpha Score)"))
+        
+        # Create plot for Normalized Displacement
+        norm_disp_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Displacement"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(-.667, .667)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Displacement)"))
+        
+        # Return all three plots as a list
+        list(raw_alpha_plot, norm_alpha_plot, norm_disp_plot)
+    })
+
+p
+```
+
+
+```{r  fig.width=4, fig.height=6}
+
+# Not by tank
+
+
+# Create separate plots for Raw and Normalized data with different y-axis scales
+p <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Shannon__Genus", "Shannon__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Velocity", "Acceleration", "Volatility")) %>%
+    # Filter out specific combination: Shannon__Genus + Raw + Alpha.Score
+    dplyr::filter(!(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Displacement")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Create separate plots for each Data.Type
+        raw_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Alpha.Score"), 
+                          aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 6)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Alpha Score)"))
+        
+        norm_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Alpha.Score"), 
+                           aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Alpha Score)"))
+        
+        # Create plot for Normalized Displacement
+        norm_disp_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Displacement"), 
+                           aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(-.667, .667)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Displacement)"))
+        
+        # Return all three plots as a list
+        list(raw_alpha_plot, norm_alpha_plot, norm_disp_plot)
+    })
+
+p
+```
+
+```{r  fig.width=4, fig.height=6}
+
+# Set seed for reproducible random sampling
+set.seed(42)
+
+# Create balanced plots with same number of points at each time point
+p <-
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Shannon__Genus", "Shannon__Genus_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Velocity", "Acceleration", "Volatility")) %>%
+    # Filter out specific combination: Shannon__Genus + Raw + Alpha.Score
+    dplyr::filter(!(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Displacement")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Function to balance data by randomly sampling same number of points per time point
+        balance_data <- function(data, time_col = "Time", n_samples = NULL) {
+            if (is.null(n_samples)) {
+                # Find the minimum number of samples across all time points
+                n_samples <- data %>%
+                    dplyr::group_by(!!sym(time_col)) %>%
+                    dplyr::summarise(n = n()) %>%
+                    dplyr::pull(n) %>%
+                    min()
+            }
+            
+            # Randomly sample n_samples from each time point
+            data %>%
+                dplyr::group_by(!!sym(time_col)) %>%
+                dplyr::slice_sample(n = n_samples, replace = FALSE) %>%
+                dplyr::ungroup()
+        }
+        
+        # Create separate plots for each Data.Type with balanced data
+        raw_alpha_data <- .x %>% 
+            dplyr::filter(Alpha.Metric == "Shannon__Genus" & Data.Type == "Raw" & METRIC == "Alpha.Score")
+        raw_alpha_balanced <- balance_data(raw_alpha_data)
+        
+        raw_alpha_plot <- ggplot(raw_alpha_balanced, 
+                          aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 6)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Alpha Score - Balanced)"))
+        
+        norm_alpha_data <- .x %>% 
+            dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Alpha.Score")
+        norm_alpha_balanced <- balance_data(norm_alpha_data)
+        
+        norm_alpha_plot <- ggplot(norm_alpha_balanced, 
+                           aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Alpha Score - Balanced)"))
+        
+        # Create plot for Normalized Displacement with balanced data
+        norm_disp_data <- .x %>% 
+            dplyr::filter(Alpha.Metric == "Shannon__Genus_norm" & Data.Type == "Normalized" & METRIC == "Displacement")
+        norm_disp_balanced <- balance_data(norm_disp_data)
+        
+        norm_disp_plot <- ggplot(norm_disp_balanced, 
+                           aes(x = Time, y = SCORE)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            # facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(-.667, .667)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Displacement - Balanced)"))
+        
+        # Return all three plots as a list
+        list(raw_alpha_plot, norm_alpha_plot, norm_disp_plot)
+    })
+
+p
+
+```
+
+
+## vs Gaulke
+
+### Alpha
+
+```{r}
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Shannon__Genus")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    dplyr::filter(Time %in% c(60)) %>%
+    dplyr::group_by(Treatment) %>%
+    dplyr::count() %>%
+    dplyr::arrange(Treatment)
+```
+
+
+```{r fig.width=6, fig.height=7}
+
+
+data.alpha.merged %>%
+    dplyr::filter(Alpha.Metric %in% c("Shannon__Genus")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    dplyr::filter(Treatment %in% c("A+ T- P+")) %>%
+    dplyr::filter(Time %in% c(29, 60)) %>%
+    ggplot(aes(x = as.factor(Time), y = SCORE, fill = Treatment)) +
+    geom_boxplot(position = position_dodge(width = 0.8)) +
+    # ggbeeswarm::geom_quasirandom(aes(color = Treatment), varwidth = T, width = .2, position = position_dodge(width = 0.8)) +
+    scale_fill_manual(values = treatment_color_scale) +
+        scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(
+      title = "Alpha Diversity (Shannon) by Treatment Across Time",
+      x = "Days PE",
+      y = "Shannon"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+
+
+```
+
+
+
+
+# Beta
+
+
+```{r message=FALSE, warning=FALSE}
+
+data.beta <- test.beta.all_metrics$volatility
+
+data.beta
+
+# Merge Displacement data with Alpha.Metric and Alpha.Score
+data.beta.merged <-
+    data.beta %>%
+        # dplyr::filter()
+        # First pivot the SADMM metrics
+        # dplyr::group_by(Data.Type) %>%
+        tidyr::pivot_longer(
+            cols = c("Beta.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility"),
+            names_to = "METRIC",
+            values_to = "SCORE"
+        ) %>%
+        dplyr::mutate(METRIC = factor(METRIC, levels = c("Beta.Score", "Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")),
+                      Data.Type = factor(Data.Type, levels = c("Raw", "Normalized")))
+    
+
+data.beta.merged
+
+
+```
+
+## Raw vs Norm vs Disp
+
+### All
+
+```{r}
+
+p.violin <-
+data.beta.merged %>%
+    dplyr::filter(Beta.Metric %in% c("Bray-Curtis", "Bray-Curtis_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    ggplot(aes(x = Treatment, y = SCORE, fill = Treatment)) +
+    geom_violin(draw_quantiles = c(0.5), alpha = 0.7) +
+    facet_grid(Data.Type ~ METRIC + Tank.ID, scales = "free") +
+    scale_fill_manual(values = treatment_color_scale) +
+    labs(title = "Beta Diversity - Violin Plots") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p.violin
+
+```
+
+### By Treatment
+
+```{r  fig.width=6, fig.height=7}
+
+# Create separate plots for Raw and Normalized data with different y-axis scales
+p <-
+data.beta.merged %>%
+    dplyr::filter(Beta.Metric %in% c("Bray-Curtis", "Bray-Curtis_norm")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    # Group by Treatment to create separate plots
+    dplyr::group_by(Treatment) %>%
+    dplyr::group_map(~ {
+        # Get the treatment color for this group
+        treatment_color <- treatment_color_scale[.y$Treatment]
+        
+        # Create separate plots for each Data.Type
+        raw_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus" & Data.Type == "Raw" & METRIC == "Alpha.Score"), 
+                          aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 41)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Raw Alpha Score)"))
+        
+        norm_alpha_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus_norm" & Data.Type == "Normalized" & METRIC == "Alpha.Score"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Alpha Score)"))
+        
+        # Create plot for Normalized Displacement
+        norm_disp_plot <- ggplot(.x %>% dplyr::filter(Alpha.Metric == "Simpson__Genus_norm" & Data.Type == "Normalized" & METRIC == "Displacement"), 
+                           aes(x = Time, y = SCORE, group = Tank.ID)) +
+            geom_point(alpha = 0.5, color = treatment_color) +
+            geom_smooth(method = "loess", se = F, size = 1, color = treatment_color) +
+            facet_wrap(.~Tank.ID) +
+            scale_y_continuous(limits = c(0, 1)) +
+            labs(title = paste("Treatment:", .y$Treatment, " (Normalized Displacement)"))
+        
+        # Return all three plots as a list
+        list(raw_alpha_plot, norm_alpha_plot, norm_disp_plot)
+    })
+
+p
+```
+
+## vs Gaulke
+
+### Treatment
+
+```{r fig.width=5, fig.height=5}
+
+ps.cleaned %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    # microViz::ps_filter(Time == 60) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "bray") %>%
+  ord_calc(method = "NMDS") %>%
+  ord_plot(alpha = 1, size = 2, color = "Time", shape = "Treatment") +
+  # coord_fixed(0.7) +
+    scale_color_manual(values = pal.Dark2[c(1:5,7)]) +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis") 
+
+
+```
+
+### Worm Burden
+
+```{r fig.width=5, fig.height=5}
+
+ps.cleaned %>%
+    microViz::ps_mutate(Time = factor(Time)) %>%
+    # microViz::ps_filter(Total.Worm.Count > 0) %>%
+      microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "bray") %>%
+  ord_calc(method = "NMDS") %>%
+  ord_plot(alpha = 1, size = 2, color = "Total.Worm.Count", shape = "Treatment") +
+  # coord_fixed(0.7) +
+    # scale_color_manual(values = pal.Dark2[c(1:5,7)]) +
+    scale_color_continuous(type = "viridis") +
+    ggnewscale::new_scale_color() +
+      stat_ellipse(aes(color = Treatment)) +
+    scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  # facet_grid(.~Exp_Type, scales = "free") +
+    theme_minimal() +
+  theme(legend.position = "top") +
+    labs(title = "Bray-Curtis") 
+
+
+```
+
+
+### Burden by NMDS1
+
+```{r fig.width=5, fig.height=5}
+
+tmp.p.data <-
+    ps.cleaned %>%
+        microViz::ps_mutate(Time = factor(Time)) %>%
+        # microViz::ps_filter(Total.Worm.Count > 0) %>%
+          microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+      tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+      tax_agg(rank = "Genus") %>%
+      dist_calc(dist = "bray") %>%
+      ord_calc(method = "NMDS") %>%
+      ord_plot(alpha = 1, size = 2, color = "Total.Worm.Count", shape = "Treatment") 
+
+tmp.p.data$data %>%
+    ggplot(aes(x = NMDS1, y = Total.Worm.Count)) +
+    geom_point() +
+    geom_smooth()
+
+```
+
+
+## Beta Dispersion
+
+```{r fig.width=5, fig.height=5}
+
+tmp.p.data <-
+ps.cleaned %>%
+        microViz::ps_mutate(Time = factor(Time)) %>%
+        # microViz::ps_filter(Total.Worm.Count > 0) %>%
+          microViz::ps_filter(Treatment  %in% c("A- T- P-", "A- T- P+")) %>%
+            microViz::ps_mutate(Time.Treat = paste0(Treatment, "_", Time)) %>%
+      tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+      tax_agg(rank = "Genus") %>%
+    dist_calc("bray") %>%
+  dist_bdisp(variables = c("Time.Treat")) %>%
+  bdisp_get() 
+
+# tmp.p.data$Time.Treat$model %>% glimpse()
+
+```
+
+```{r fig.width=6, fig.height=7}
+
+# First, let's check the structure of tmp.p.data to understand the column names
+str(tmp.p.data)
+
+# Extract dispersion data and create a data frame for plotting
+# The data is nested under tmp.p.data$Time.Treat$model
+dispersion_data <- data.frame(
+  Sample = names(tmp.p.data$Time.Treat$model$distances),
+  Distance = tmp.p.data$Time.Treat$model$distances,
+  Group = tmp.p.data$Time.Treat$model$group
+)
+
+# Check the structure of our data frame
+head(dispersion_data)
+names(dispersion_data)
+
+# Now parse the group information to extract Treatment and Time
+dispersion_data <- dispersion_data %>%
+  # Parse the group information to extract Treatment and Time
+  tidyr::separate(Group, into = c("Treatment", "Time"), sep = "_", remove = FALSE) %>%
+  dplyr::mutate(
+    Time = as.numeric(Time),
+    Treatment = factor(Treatment, levels = treatment_order),
+    Time = factor(Time, levels = c(0, 14, 18, 25, 29, 60))
+  )
+
+# Create box plot of dispersion scores across time
+dispersion_plot <- ggplot(dispersion_data, aes(x = Time, y = Distance, fill = Treatment)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+  scale_fill_manual(values = treatment_color_scale) +
+  labs(
+    title = "Beta Dispersion Scores Across Time",
+    x = "Days Post-Exposure",
+    y = "Distance to Centroid",
+    fill = "Treatment"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5)
+  )
+
+dispersion_plot
+
+# Also create a summary table
+dispersion_summary <- dispersion_data %>%
+  dplyr::group_by(Treatment, Time) %>%
+  dplyr::summarise(
+    Mean_Distance = mean(Distance, na.rm = TRUE),
+    SD_Distance = sd(Distance, na.rm = TRUE),
+    Median_Distance = median(Distance, na.rm = TRUE),
+    n_samples = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::arrange(Treatment, Time)
+
+dispersion_summary
+```
+
+
+```{r fig.width=6, fig.height=7}
+data.beta.merged %>%
+    dplyr::filter(Beta.Metric %in% c("Bray-Curtis", "Bray-Curtis_norm")) %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    dplyr::filter(!METRIC %in% c("Ref.Score", "Displacement", "Velocity", "Acceleration", "Volatility")) %>%
+    dplyr::mutate(Time = factor(Time)) %>%
+    ggplot(aes(x = Time, y = SCORE, fill = Treatment)) +
+    geom_boxplot(alpha = 0.7, outlier.alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+  scale_fill_manual(values = treatment_color_scale) +
+  labs(
+    title = "Beta *Personalization* Scores Across Time",
+    x = "Days Post-Exposure",
+    y = "Personalization Score",
+    fill = "Treatment"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+
+
+

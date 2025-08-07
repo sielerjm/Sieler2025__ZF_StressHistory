@@ -1,0 +1,159 @@
+
+SUMMARISING RUN PARAMETERS
+==========================
+Input filename: TS047_RoL_RNA_616_trimmed_1.fastq.gz
+Trimming mode: paired-end
+Trim Galore version: 0.6.10
+Cutadapt version: 4.9
+Python version: could not detect
+Number of cores used for trimming: 8
+Quality Phred score cutoff: 20
+Quality encoding type selected: ASCII+33
+Using Illumina adapter for trimming (count: 6093). Second best hit was Nextera (count: 2)
+Adapter sequence: 'AGATCGGAAGAGC' (Illumina TruSeq, Sanger iPCR; auto-detected)
+Maximum trimming error rate: 0.1 (default)
+Minimum required adapter overlap (stringency): 1 bp
+Minimum required sequence length for both reads before a sequence pair gets removed: 20 bp
+Running FastQC on the data once trimming has completed
+Running FastQC with the following extra arguments: -t 12
+Output file will be GZIP compressed
+
+
+This is cutadapt 4.9 with Python 3.12.7
+Command line parameters: -j 8 -e 0.1 -q 20 -O 1 -a AGATCGGAAGAGC TS047_RoL_RNA_616_trimmed_1.fastq.gz
+Processing single-end reads on 8 cores ...
+Finished in 71.022 s (3.312 µs/read; 18.11 M reads/minute).
+
+=== Summary ===
+
+Total reads processed:              21,442,189
+Reads with adapters:                 7,644,052 (35.6%)
+Reads written (passing filters):    21,442,189 (100.0%)
+
+Total basepairs processed: 2,165,661,089 bp
+Quality-trimmed:               1,055,310 bp (0.0%)
+Total written (filtered):  2,149,683,448 bp (99.3%)
+
+=== Adapter 1 ===
+
+Sequence: AGATCGGAAGAGC; Type: regular 3'; Length: 13; Trimmed: 7644052 times
+
+Minimum overlap: 1
+No. of allowed errors:
+1-9 bp: 0; 10-13 bp: 1
+
+Bases preceding removed adapters:
+  A: 27.7%
+  C: 35.9%
+  G: 20.1%
+  T: 16.0%
+  none/other: 0.4%
+
+Overview of removed sequences
+length	count	expect	max.err	error counts
+1	5102823	5360547.2	0	5102823
+2	1607492	1340136.8	0	1607492
+3	434485	335034.2	0	434485
+4	122558	83758.6	0	122558
+5	59080	20939.6	0	59080
+6	34319	5234.9	0	34319
+7	30679	1308.7	0	30679
+8	27089	327.2	0	27089
+9	25096	81.8	0	24652 444
+10	22298	20.4	1	21660 638
+11	20102	5.1	1	19480 622
+12	17785	1.3	1	17404 381
+13	16212	0.3	1	15831 381
+14	14632	0.3	1	14301 331
+15	13297	0.3	1	13064 233
+16	11645	0.3	1	11443 202
+17	10583	0.3	1	10396 187
+18	8885	0.3	1	8763 122
+19	7753	0.3	1	7621 132
+20	6989	0.3	1	6862 127
+21	5900	0.3	1	5798 102
+22	5146	0.3	1	5088 58
+23	4511	0.3	1	4398 113
+24	4109	0.3	1	4006 103
+25	3708	0.3	1	3610 98
+26	3361	0.3	1	3284 77
+27	2750	0.3	1	2693 57
+28	2424	0.3	1	2370 54
+29	2063	0.3	1	2006 57
+30	1808	0.3	1	1779 29
+31	1615	0.3	1	1568 47
+32	1344	0.3	1	1300 44
+33	1242	0.3	1	1201 41
+34	1011	0.3	1	975 36
+35	936	0.3	1	917 19
+36	724	0.3	1	709 15
+37	687	0.3	1	666 21
+38	602	0.3	1	580 22
+39	516	0.3	1	493 23
+40	399	0.3	1	382 17
+41	344	0.3	1	337 7
+42	321	0.3	1	302 19
+43	308	0.3	1	296 12
+44	276	0.3	1	266 10
+45	134	0.3	1	127 7
+46	137	0.3	1	132 5
+47	165	0.3	1	160 5
+48	204	0.3	1	191 13
+49	231	0.3	1	223 8
+50	269	0.3	1	260 9
+51	76	0.3	1	62 14
+52	180	0.3	1	174 6
+53	54	0.3	1	45 9
+54	8	0.3	1	2 6
+55	22	0.3	1	21 1
+56	12	0.3	1	10 2
+57	5	0.3	1	2 3
+58	5	0.3	1	2 3
+59	15	0.3	1	6 9
+60	9	0.3	1	4 5
+61	11	0.3	1	4 7
+62	16	0.3	1	4 12
+63	7	0.3	1	4 3
+64	7	0.3	1	4 3
+65	11	0.3	1	9 2
+66	12	0.3	1	4 8
+67	12	0.3	1	5 7
+68	12	0.3	1	7 5
+69	13	0.3	1	4 9
+70	4	0.3	1	0 4
+71	12	0.3	1	1 11
+72	10	0.3	1	4 6
+73	12	0.3	1	8 4
+74	18	0.3	1	10 8
+75	18	0.3	1	8 10
+76	16	0.3	1	14 2
+77	8	0.3	1	5 3
+78	11	0.3	1	11
+79	13	0.3	1	11 2
+80	16	0.3	1	11 5
+81	14	0.3	1	10 4
+82	22	0.3	1	16 6
+83	35	0.3	1	15 20
+84	26	0.3	1	20 6
+85	24	0.3	1	18 6
+86	26	0.3	1	18 8
+87	30	0.3	1	22 8
+88	25	0.3	1	18 7
+89	25	0.3	1	25
+90	29	0.3	1	27 2
+91	38	0.3	1	35 3
+92	58	0.3	1	49 9
+93	22	0.3	1	17 5
+94	30	0.3	1	29 1
+95	43	0.3	1	43
+96	42	0.3	1	41 1
+97	72	0.3	1	65 7
+98	113	0.3	1	95 18
+99	43	0.3	1	34 9
+100	47	0.3	1	4 43
+101	1616	0.3	1	16 1600
+
+RUN STATISTICS FOR INPUT FILE: TS047_RoL_RNA_616_trimmed_1.fastq.gz
+=============================================
+21442189 sequences processed in total
+

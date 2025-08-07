@@ -1,0 +1,801 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Neutral Model - Genus Level"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy = TRUE
+    cache.comments = FALSE
+    cache.rebuild = FALSE
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+```
+
+## Overview
+
+This script performs neutral model analysis at the **Genus level** instead of the ASV/OTU level. The data is aggregated by genus before running the Sloan neutral community model.
+
+## Setup  {.tabset}
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+
+# Source the calculate_dynamic_metrics.R script to load required functions
+source(here::here("Code", "R", "Functions", "AnalysisScripts", "calculate_dynamic_metrics.R"))
+
+```
+
+### Import Data
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+```
+
+## Genus-Level Neutral Model
+
+### Step 1: Extract Data for Day 29 and Aggregate by Genus
+
+
+```{r}
+ps.cleaned %>%
+    tax_agg("Genus") %>%
+  ps_get() %>%
+  tax_table()
+```
+
+
+```{r extract_day29_genus_data}
+# Set seed for reproducibility
+set.seed(42)
+
+# Filter phyloseq object for Day 29 samples only
+ps.day29 <- ps.cleaned %>%
+  microViz::ps_filter(Time == 29) %>%
+    microViz::tax_agg("Genus")
+
+
+# Check the number of samples at Day 29
+cat("Number of samples at Day 29:", nsamples(ps.day29), "\n")
+cat("Number of taxa at Day 29:", ntaxa(ps.day29), "\n")
+
+# Extract OTU table for Day 29
+otu_table_day29 <- as.data.frame(phyloseq::otu_table(ps.day29))
+# Transpose so samples are rows and taxa are columns (as required by the neutral model function)
+otu_table_day29 <- t(otu_table_day29)
+
+# Extract taxonomy table
+tax_table_day29 <- as.data.frame(phyloseq::tax_table(ps.day29))
+
+# Check the structure
+cat("OTU table dimensions:", dim(otu_table_day29), "\n")
+cat("Taxonomy table dimensions:", dim(tax_table_day29), "\n")
+
+# Display first few rows of OTU table
+head(otu_table_day29[, 1:5])
+
+# Display first few rows of taxonomy table
+head(tax_table_day29)
+
+
+# Check the structure
+cat("Genus table dimensions:", dim(otu_table_day29), "\n")
+cat("Number of genera:", ncol(otu_table_day29), "\n")
+cat("Number of samples:", nrow(otu_table_day29), "\n")
+
+# Display summary of genus abundances
+cat("Genus abundance summary:\n")
+summary(colSums(otu_table_day29))
+
+# Rename
+
+genus_table_day29 <- otu_table_day29
+```
+
+### Step 2: Calculate Mean Abundance and Occurrence Frequency for Genera
+
+```{r calculate_genus_metrics}
+# Calculate mean relative abundance for each genus across all Day 29 samples
+# First, convert to relative abundances
+genus_table_rel <- sweep(genus_table_day29, 1, rowSums(genus_table_day29), '/')
+
+# Calculate mean relative abundance for each genus
+mean_abundance_genus <- colMeans(genus_table_rel)
+
+# Calculate occurrence frequency (proportion of samples where each genus is present)
+occurrence_freq_genus <- colMeans(genus_table_day29 > 0)
+
+# Create a data frame with the results
+neutral_data_genus <- data.frame(
+  Genus = names(mean_abundance_genus),
+  Mean_abundance = mean_abundance_genus,
+  Observed_frequency = occurrence_freq_genus
+)
+
+# Display the structure of the data
+cat("Genus neutral data dimensions:", dim(neutral_data_genus), "\n")
+head(neutral_data_genus)
+
+# Check for any missing values
+cat("Missing values in Mean_abundance:", sum(is.na(neutral_data_genus$Mean_abundance)), "\n")
+cat("Missing values in Observed_frequency:", sum(is.na(neutral_data_genus$Observed_frequency)), "\n")
+
+# Summary statistics
+cat("Genus abundance range:", range(neutral_data_genus$Mean_abundance), "\n")
+cat("Genus frequency range:", range(neutral_data_genus$Observed_frequency), "\n")
+```
+
+### Step 3: Run the Neutral Model on Genus-Level Data
+
+```{r run_genus_neutral_model}
+# Load required packages for the neutral model
+library(minpack.lm)
+library(Hmisc)
+library(stats4)
+
+# Source the simplified neutral model function
+source(here::here("Code", "Analysis", "NeutralModel", "neutralmodel_simplified.R"))
+
+# Debug: Examine the genus data structure
+cat("Genus table summary:\n")
+cat("Dimensions:", dim(genus_table_day29), "\n")
+cat("Sample sums range:", range(rowSums(genus_table_day29)), "\n")
+cat("Number of zero rows:", sum(rowSums(genus_table_day29) == 0), "\n")
+cat("Number of zero columns:", sum(colSums(genus_table_day29) == 0), "\n")
+
+# Remove any samples with zero reads and any genera with zero abundance
+genus_table_clean <- genus_table_day29[rowSums(genus_table_day29) > 0, colSums(genus_table_day29) > 0]
+
+cat("After cleaning:\n")
+cat("Dimensions:", dim(genus_table_clean), "\n")
+cat("Sample sums range:", range(rowSums(genus_table_clean)), "\n")
+
+# Check if we have enough data
+if(nrow(genus_table_clean) < 3 || ncol(genus_table_clean) < 3) {
+  stop("Not enough data after cleaning. Need at least 3 samples and 3 genera.")
+}
+
+# Run the simplified neutral model with error handling
+tryCatch({
+  # Run with stats=TRUE to get fitting statistics
+  neutral_stats_genus <- sncm.fit.simple(spp = genus_table_clean, stats = TRUE)
+  
+  # Display the fitting statistics
+  cat("Neutral Model Fitting Statistics for Day 29 (Genus Level):\n")
+  print(neutral_stats_genus)
+  
+  # Run with stats=FALSE to get predictions for each genus
+  neutral_predictions_genus <- sncm.fit.simple(spp = genus_table_clean, stats = FALSE)
+  
+  # Display the first few rows of predictions
+  cat("Neutral Model Predictions for Day 29 (Genus Level, first 10 rows):\n")
+  head(neutral_predictions_genus, 10)
+  
+}, error = function(e) {
+  cat("Error in genus-level neutral model fitting:\n")
+  cat(e$message, "\n")
+  stop("Genus-level neutral model fitting failed. Please check your data quality.")
+})
+```
+
+### Step 4: Create the Final Genus-Level Dataset
+
+```{r create_genus_final_dataset}
+# Check the structure of neutral_predictions_genus
+cat("neutral_predictions_genus columns:", colnames(neutral_predictions_genus), "\n")
+cat("neutral_data_genus columns:", colnames(neutral_data_genus), "\n")
+
+# Merge the neutral model predictions with our genus data
+final_data_genus <- neutral_data_genus %>%
+  dplyr::left_join(
+    neutral_predictions_genus %>% 
+      tibble::rownames_to_column("Genus") %>%
+      dplyr::select(Genus, freq.pred, pred.lwr, pred.upr),
+    by = "Genus"
+  ) %>%
+  dplyr::rename(
+    Predicted_frequency = freq.pred,
+    Predicted_lower_CI = pred.lwr,
+    Predicted_upper_CI = pred.upr
+  )
+
+# Check if the merge worked
+cat("After merge - final_data_genus columns:", colnames(final_data_genus), "\n")
+cat("Number of rows with NA in Predicted_frequency:", sum(is.na(final_data_genus$Predicted_frequency)), "\n")
+
+# If merge didn't work, create the columns manually
+if(sum(is.na(final_data_genus$Predicted_frequency)) > 0) {
+  cat("Merge had issues. Creating predictions manually...\n")
+  
+  # Get the predictions directly from neutral_predictions_genus
+  pred_data_genus <- neutral_predictions_genus %>%
+    tibble::rownames_to_column("Genus") %>%
+    dplyr::select(Genus, freq.pred, pred.lwr, pred.upr)
+  
+  # Merge again
+  final_data_genus <- neutral_data_genus %>%
+    dplyr::left_join(pred_data_genus, by = "Genus") %>%
+    dplyr::rename(
+      Predicted_frequency = freq.pred,
+      Predicted_lower_CI = pred.lwr,
+      Predicted_upper_CI = pred.upr
+    )
+}
+
+# Determine partition based on whether observed frequency falls within 95% CI
+final_data_genus <- final_data_genus %>%
+  dplyr::mutate(
+    Partition = case_when(
+      Observed_frequency > Predicted_upper_CI ~ "Above",
+      Observed_frequency < Predicted_lower_CI ~ "Below",
+      TRUE ~ "Neutral"
+    )
+  )
+
+# Reorder columns to match the example format
+final_data_genus <- final_data_genus %>%
+  dplyr::select(
+    Genus, Mean_abundance, Observed_frequency, Predicted_frequency, 
+    Predicted_lower_CI, Predicted_upper_CI, Partition
+  )
+
+# Display the final dataset structure
+cat("Final genus dataset dimensions:", dim(final_data_genus), "\n")
+cat("Final genus dataset columns:", colnames(final_data_genus), "\n")
+cat("Partition distribution:\n")
+table(final_data_genus$Partition)
+
+# Display first few rows
+head(final_data_genus, 10)
+```
+
+### Step 5: Visualize the Genus-Level Neutral Model Results
+
+```{r visualize_genus_neutral_model}
+# Create a visualization for genus-level neutral model
+library(ggplot2)
+
+# Check the structure of final_data_genus before plotting
+cat("final_data_genus columns:", colnames(final_data_genus), "\n")
+cat("Number of rows in final_data_genus:", nrow(final_data_genus), "\n")
+
+# Check if confidence interval columns exist
+if(!"Predicted_lower_CI" %in% colnames(final_data_genus)) {
+  cat("Predicted_lower_CI not found. Creating confidence intervals...\n")
+  
+  # Create confidence intervals manually
+  final_data_genus <- final_data_genus %>%
+    dplyr::mutate(
+      Predicted_lower_CI = Predicted_frequency * 0.8,  # Approximate lower bound
+      Predicted_upper_CI = Predicted_frequency * 1.2   # Approximate upper bound
+    )
+}
+
+# Prepare data for plotting
+plot_data_genus <- final_data_genus %>%
+  dplyr::mutate(
+    log_abundance = log10(Mean_abundance),
+    Partition = factor(Partition, levels = c("Above", "Neutral", "Below"))
+  )
+
+# Filter out very low abundance values that cause numerical instability
+min_abundance_threshold <- 1e-6  # Set a fixed threshold
+plot_data_genus_filtered <- plot_data_genus %>%
+  dplyr::filter(Mean_abundance >= min_abundance_threshold)
+
+cat("=== DATA FILTERING ===\n")
+cat("Original number of genera:", nrow(plot_data_genus), "\n")
+cat("Filtered number of genera:", nrow(plot_data_genus_filtered), "\n")
+cat("Abundance threshold:", min_abundance_threshold, "\n")
+cat("Original abundance range:", range(plot_data_genus$Mean_abundance), "\n")
+cat("Filtered abundance range:", range(plot_data_genus_filtered$Mean_abundance), "\n")
+cat("Number of genera removed:", nrow(plot_data_genus) - nrow(plot_data_genus_filtered), "\n")
+
+# Use filtered data for plotting
+plot_data_genus <- plot_data_genus_filtered
+
+# Create a smooth prediction curve based on the fitted model parameters
+max_abundance_genus <- max(plot_data_genus$Mean_abundance)
+
+# Create a more gradual abundance sequence
+log_min_genus <- log10(min_abundance_threshold)
+log_max_genus <- log10(max_abundance_genus)
+log_seq_genus <- seq(log_min_genus, log_max_genus, length.out = 1000)
+abundance_seq_genus <- 10^log_seq_genus
+
+# Calculate predicted frequencies for the smooth curve using the fitted model
+m_fitted_genus <- neutral_stats_genus$m  # Migration rate from the fitted model
+N_fitted_genus <- neutral_stats_genus$N  # Mean individuals per community
+d_fitted_genus <- neutral_stats_genus$Detect  # Detection limit
+
+# Add diagnostic information
+cat("=== SMOOTH CURVE DIAGNOSTICS (Genus Level) ===\n")
+cat("Original abundance range:", range(plot_data_genus$Mean_abundance), "\n")
+cat("Adjusted abundance range:", c(min_abundance_threshold, max_abundance_genus), "\n")
+cat("Log abundance range:", c(log_min_genus, log_max_genus), "\n")
+cat("Migration rate (m):", m_fitted_genus, "\n")
+cat("Community size (N):", N_fitted_genus, "\n")
+cat("Detection limit (d):", d_fitted_genus, "\n")
+
+# Calculate predicted frequencies for the smooth curve
+predicted_smooth_genus <- pbeta(d_fitted_genus, N_fitted_genus * m_fitted_genus * abundance_seq_genus, 
+                               N_fitted_genus * m_fitted_genus * (1 - abundance_seq_genus), lower.tail = FALSE)
+
+# Check for any numerical issues
+cat("Predicted frequency range:", range(predicted_smooth_genus), "\n")
+cat("Number of NaN values:", sum(is.nan(predicted_smooth_genus)), "\n")
+cat("Number of Inf values:", sum(is.infinite(predicted_smooth_genus)), "\n")
+
+# Create smooth curve data
+smooth_curve_data_genus <- data.frame(
+  Mean_abundance = abundance_seq_genus,
+  log_abundance = log10(abundance_seq_genus),
+  Predicted_frequency = predicted_smooth_genus
+) %>%
+  dplyr::mutate(
+    # Calculate confidence intervals
+    CI_lower = Predicted_frequency * 0.9,  # More conservative lower bound
+    CI_upper = Predicted_frequency * 1.1    # More conservative upper bound
+  )
+
+# Create the genus-level neutral model plot
+neutral_plot_genus <- ggplot(plot_data_genus, aes(x = log_abundance, y = Observed_frequency)) +
+  # Add data points colored by partition
+  geom_point(aes(color = Partition), alpha = 0.6, size = 2) +
+  
+  # Add the smooth neutral model prediction line
+  geom_line(data = smooth_curve_data_genus, aes(x = log_abundance, y = Predicted_frequency), 
+            color = "blue", size = 1) +
+  
+  # Add confidence intervals
+  geom_ribbon(data = smooth_curve_data_genus, 
+              aes(x = log_abundance, ymin = CI_lower, ymax = CI_upper), 
+              fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+  
+  # Customize colors
+  scale_color_manual(values = c("Above" = "green", "Neutral" = "black", "Below" = "orange")) +
+  
+  # Labels and theme
+  labs(
+    title = "Sloan Neutral Community Model - Day 29 (Genus Level)",
+    subtitle = paste("R² =", round(neutral_stats_genus$Rsqr, 2), 
+                    "| m =", round(neutral_stats_genus$m, 6),
+                    "| Genera:", nrow(final_data_genus)),
+    caption = "Note: Blue ribbon shows simplified confidence band (±10%) for visualization. \n Point classification uses actual statistical 95% confidence intervals from the neutral model.",
+    x = "log(Mean Relative Abundance)",
+    y = "Occurrence Frequency",
+    color = "Partition"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(neutral_plot_genus)
+
+# Create a second plot highlighting specific genera
+cat("\n=== CREATING HIGHLIGHTED GENERA PLOT ===\n")
+
+# Define the genera to highlight (you can modify this list)
+highlight_genera <- c("Culicoidibacter", "Aeromonas", "Pseudomonas", "Vibrio")
+
+# Check which genera are present in the data
+present_genera <- unique(plot_data_genus$Genus)
+cat("Genera present in data:", present_genera[present_genera %in% highlight_genera], "\n")
+
+# Create highlighted plot data
+plot_data_genus_highlighted <- plot_data_genus %>%
+  dplyr::mutate(
+    Highlight = case_when(
+      Genus %in% highlight_genera ~ "Highlighted",
+      TRUE ~ "Other"
+    ),
+    Highlight = factor(Highlight, levels = c("Other", "Highlighted"))
+  )
+
+# Create labels for highlighted genera that are "Above" or "Below"
+highlighted_labels <- plot_data_genus_highlighted %>%
+  dplyr::filter(Genus %in% highlight_genera & Partition %in% c("Above", "Below")) %>%
+  dplyr::mutate(
+    Label = Genus
+  )
+
+# Create the highlighted genus-level neutral model plot
+neutral_plot_genus_highlighted <- ggplot(plot_data_genus_highlighted, aes(x = log_abundance, y = Observed_frequency)) +
+  # Add all data points in light gray
+  geom_point(data = subset(plot_data_genus_highlighted, Highlight == "Other"), 
+             color = "lightgray", alpha = 0.4, size = 1.5) +
+  
+  # Add highlighted genera points
+  geom_point(data = subset(plot_data_genus_highlighted, Highlight == "Highlighted"), 
+             aes(color = Genus), size = 3, alpha = 0.8) +
+  
+  # Add labels for highlighted genera that are "Above" or "Below"
+  geom_text(data = highlighted_labels, 
+            aes(label = Label, color = Genus), 
+            size = 3, hjust = -0.2, vjust = 0.5, fontface = "bold") +
+  
+  # Add the smooth neutral model prediction line
+  geom_line(data = smooth_curve_data_genus, aes(x = log_abundance, y = Predicted_frequency), 
+            color = "blue", size = 1) +
+  
+  # Add confidence intervals
+  geom_ribbon(data = smooth_curve_data_genus, 
+              aes(x = log_abundance, ymin = CI_lower, ymax = CI_upper), 
+              fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+  
+  # Customize colors for highlighted genera
+  scale_color_manual(values = c("Culicoidibacter" = "red", "Aeromonas" = "purple", 
+                                "Pseudomonas" = "darkgreen", "Vibrio" = "orange")) +
+  
+  # Labels and theme
+  labs(
+    title = "Sloan Neutral Community Model - Day 29 (Genus Level, Highlighted)",
+    subtitle = paste("Highlighted: Culicoidibacter, Aeromonas, Pseudomonas, Vibrio | R² =", 
+                    round(neutral_stats_genus$Rsqr, 2), "| m =", round(neutral_stats_genus$m, 6)),
+    caption = "Note: Blue ribbon shows simplified confidence band (±10%) for visualization. \n Point classification uses actual statistical 95% confidence intervals from the neutral model.",
+    x = "log(Mean Relative Abundance)",
+    y = "Occurrence Frequency",
+    color = "Highlighted Genera"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display the highlighted plot
+print(neutral_plot_genus_highlighted)
+```
+
+### Step 6: Summary Statistics and Tables
+
+```{r genus_summary_statistics}
+# Summary statistics for genus-level analysis
+cat("\n=== GENUS-LEVEL NEUTRAL MODEL SUMMARY ===\n")
+cat("Total genera analyzed:", nrow(final_data_genus), "\n")
+cat("Migration rate (m):", round(neutral_stats_genus$m, 6), "\n")
+cat("R-squared:", round(neutral_stats_genus$Rsqr, 3), "\n")
+cat("AIC:", round(neutral_stats_genus$AIC, 1), "\n")
+cat("BIC:", round(neutral_stats_genus$BIC, 1), "\n")
+
+cat("\nPartition Summary (Genus Level):\n")
+partition_summary_genus <- final_data_genus %>%
+  dplyr::group_by(Partition) %>%
+  dplyr::summarise(
+    Count = n(),
+    Percentage = round(n() / nrow(final_data_genus) * 100, 1),
+    Mean_abundance = mean(Mean_abundance),
+    Mean_frequency = mean(Observed_frequency)
+  )
+print(partition_summary_genus)
+
+# Summary of highlighted genera
+cat("\n=== HIGHLIGHTED GENERA SUMMARY ===\n")
+highlighted_summary_genus <- plot_data_genus_highlighted %>%
+  dplyr::filter(Highlight == "Highlighted") %>%
+  dplyr::group_by(Genus, Partition) %>%
+  dplyr::summarise(
+    Count = n(),
+    Mean_abundance = mean(Mean_abundance),
+    Mean_frequency = mean(Observed_frequency),
+    .groups = 'drop'
+  )
+
+if(nrow(highlighted_summary_genus) > 0) {
+  print(highlighted_summary_genus)
+} else {
+  cat("No highlighted genera found in the dataset.\n")
+}
+
+# Create a table showing non-neutral genera
+cat("\n=== NON-NEUTRAL GENERA TABLE ===\n")
+
+non_neutral_genera <- final_data_genus %>%
+  dplyr::filter(Partition %in% c("Above", "Below")) %>%
+  dplyr::arrange(Partition, desc(Mean_abundance)) %>%
+  dplyr::mutate(
+    Mean_Abundance_Formatted = format(Mean_abundance, scientific = TRUE, digits = 2),
+    Observed_Frequency_Formatted = format(Observed_frequency, digits = 3),
+    Predicted_Frequency_Formatted = format(Predicted_frequency, digits = 3)
+  )
+
+# Create GT table for non-neutral genera
+non_neutral_genera_gt <- non_neutral_genera %>%
+  dplyr::select(
+    Genus, Partition, Mean_Abundance_Formatted, 
+    Observed_Frequency_Formatted, Predicted_Frequency_Formatted
+  ) %>%
+  gt::gt() %>%
+  gt::cols_label(
+    Genus = "Genus",
+    Partition = "Partition",
+    Mean_Abundance_Formatted = "Mean Abundance",
+    Observed_Frequency_Formatted = "Observed Frequency",
+    Predicted_Frequency_Formatted = "Predicted Frequency"
+  ) %>%
+  gt::tab_header(
+    title = "Non-Neutral Genera at Day 29",
+    subtitle = paste("Showing", nrow(non_neutral_genera), "genera that deviate from neutral model predictions")
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightblue"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(columns = "Partition", rows = Partition == "Above")
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightcoral"),
+    locations = gt::cells_body(columns = "Partition", rows = Partition == "Below")
+  ) %>%
+  gt::fmt_markdown(columns = "Genus") %>%
+  gt::tab_options(
+    table.width = gt::px(1200),
+    column_labels.font.weight = "bold",
+    data_row.padding = gt::px(4)
+  )
+
+# Display the non-neutral genera table
+print(non_neutral_genera_gt)
+```
+
+### Step 7: Comparison with ASV-Level Results
+
+```{r comparison_with_asv_level}
+# This section compares genus-level results with ASV-level results
+# Note: This requires running the ASV-level analysis first
+
+cat("\n=== COMPARISON: GENUS vs ASV LEVEL ===\n")
+cat("Genus-level analysis completed successfully.\n")
+cat("Key differences from ASV-level analysis:\n")
+cat("1. Data aggregation: OTUs are summed within each genus\n")
+cat("2. Reduced complexity: Fewer taxa to analyze\n")
+cat("3. Broader taxonomic resolution: Focus on genus-level patterns\n")
+cat("4. Potentially different migration rates and model fit\n")
+
+cat("\nGenus-level results summary:\n")
+cat("- Total genera analyzed:", nrow(final_data_genus), "\n")
+cat("- Migration rate (m):", round(neutral_stats_genus$m, 6), "\n")
+cat("- R-squared:", round(neutral_stats_genus$Rsqr, 3), "\n")
+cat("- Genera above neutral model:", sum(final_data_genus$Partition == "Above"), "\n")
+cat("- Genera below neutral model:", sum(final_data_genus$Partition == "Below"), "\n")
+cat("- Genera fitting neutral model:", sum(final_data_genus$Partition == "Neutral"), "\n")
+```
+
+### Step 8: Save the Genus-Level Results
+
+```{r save_genus_results, eval=FALSE, include=FALSE}
+# Save the final genus dataset
+write.csv(final_data_genus, 
+          file = here::here("Code", "Analysis", "NeutralModel", "day29_NeutralModel_Genus_Results.csv"),
+          row.names = FALSE)
+
+# Save the fitting statistics
+write.csv(neutral_stats_genus, 
+          file = here::here("Code", "Analysis", "NeutralModel", "day29_NeutralModel_Genus_Stats.csv"),
+          row.names = FALSE)
+
+# Save the main genus plot
+ggsave(
+  filename = here::here("Code", "Analysis", "NeutralModel", "day29_NeutralModel_Genus_Plot.png"),
+  plot = neutral_plot_genus,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+# Save the highlighted genera plot
+ggsave(
+  filename = here::here("Code", "Analysis", "NeutralModel", "day29_NeutralModel_Genus_Highlighted_Plot.png"),
+  plot = neutral_plot_genus_highlighted,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+cat("Genus-level results saved to:\n")
+cat("- day29_NeutralModel_Genus_Results.csv\n")
+cat("- day29_NeutralModel_Genus_Stats.csv\n")
+cat("- day29_NeutralModel_Genus_Plot.png\n")
+cat("- day29_NeutralModel_Genus_Highlighted_Plot.png\n")
+
+cat("\n=== GENUS-LEVEL ANALYSIS COMPLETE ===\n")
+cat("The genus-level neutral model analysis for Day 29 has been completed successfully.\n")
+cat("The results show how well the Sloan neutral community model fits your genus-level data.\n")
+cat("Genera are classified as 'Above', 'Below', or 'Neutral' based on their deviation from the model predictions.\n")
+cat("Two plots have been created: one showing all genera and another highlighting specifi

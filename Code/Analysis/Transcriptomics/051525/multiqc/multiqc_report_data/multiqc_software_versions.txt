@@ -1,0 +1,18 @@
+Sample	getchromsizes	python	r-base	bioconductor-deseq2	fastqc	fq	perl	gunzip	rsem	star	salmon	bioconductor-summarizedexperiment	trimgalore	cutadapt	bioconductor-tximeta	nf-core/rnaseq	Nextflow
+CUSTOM_GETCHROMSIZES	1.21																
+CUSTOM_TX2GENE		3.10.4															
+DESEQ2_QC_PSEUDO			4.0.3	1.28.0													
+FASTQC					0.12.1												
+FQ_LINT						0.12.0 (2024-07-08)											
+FQ_SUBSAMPLE						0.12.0 (2024-07-08)											
+GTF2BED							5.26.2										
+GTF_FILTER		3.9.5															
+GUNZIP_FASTA								1.1									
+GUNZIP_GTF								1.1									
+MAKE_TRANSCRIPTS_FASTA									1.3.1	2.7.10a							
+SALMON_INDEX											1.10.3						
+SALMON_QUANT											1.10.3						
+SE_GENE												1.32.0					
+TRIMGALORE													0.6.10	4.9			
+TXIMETA_TXIMPORT															1.20.1		
+Workflow																v3.18.0	24.10.4

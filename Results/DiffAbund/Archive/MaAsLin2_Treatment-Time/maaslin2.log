@@ -1,0 +1,43 @@
+2025-04-30 20:43:06.688426 INFO::Writing function arguments to log file
+2025-04-30 20:43:06.689674 DEBUG::Function arguments
+2025-04-30 20:43:06.69008 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time
+2025-04-30 20:43:06.690379 DEBUG::Min Abundance: 0.000000
+2025-04-30 20:43:06.690662 DEBUG::Min Prevalence: 0.000000
+2025-04-30 20:43:06.690937 DEBUG::Normalization: TSS
+2025-04-30 20:43:06.691238 DEBUG::Transform: LOG
+2025-04-30 20:43:06.691506 DEBUG::Analysis method: LM
+2025-04-30 20:43:06.691781 DEBUG::Max significance: 0.250000
+2025-04-30 20:43:06.692057 DEBUG::Random effects:
+2025-04-30 20:43:06.692332 DEBUG::Fixed effects: Treatment,Timepoint
+2025-04-30 20:43:06.692714 DEBUG::Correction method: BH
+2025-04-30 20:43:06.693241 DEBUG::Standardize: FALSE
+2025-04-30 20:43:06.69357 DEBUG::Cores: 8
+2025-04-30 20:43:06.693853 INFO::Verifying options selected are valid
+2025-04-30 20:43:06.694682 INFO::Determining format of input files
+2025-04-30 20:43:06.695442 INFO::Input format is data samples as rows and metadata samples as rows
+2025-04-30 20:43:06.697527 DEBUG::A total of 594 samples were found in both the data and metadata
+2025-04-30 20:43:06.697792 DEBUG::Reordering data/metadata to use same sample ordering
+2025-04-30 20:43:06.702173 INFO::Formula for fixed effects: expr ~  Treatment + Timepoint
+2025-04-30 20:43:06.703967 INFO::Filter data based on min abundance and min prevalence
+2025-04-30 20:43:06.705037 INFO::Total samples in data: 594
+2025-04-30 20:43:06.705927 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-04-30 20:43:06.717518 INFO::Total filtered features: 0
+2025-04-30 20:43:06.71867 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-04-30 20:43:06.807881 INFO::Total filtered features with variance filtering: 0
+2025-04-30 20:43:06.809071 INFO::Filtered feature names from variance filtering:
+2025-04-30 20:43:06.809855 INFO::Running selected normalization method: TSS
+2025-04-30 20:43:06.82876 INFO::Bypass z-score application to metadata
+2025-04-30 20:43:06.829939 INFO::Running selected transform method: LOG
+2025-04-30 20:43:06.85735 INFO::Running selected analysis method: LM
+2025-04-30 20:43:06.858851 INFO::Creating cluster of 8 R processes
+2025-04-30 20:43:32.942583 INFO::Counting total values for each feature
+2025-04-30 20:43:33.118719 INFO::Writing filtered data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/features/filtered_data.tsv
+2025-04-30 20:43:33.257982 INFO::Writing filtered, normalized data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/features/filtered_data_norm.tsv
+2025-04-30 20:43:33.520397 INFO::Writing filtered, normalized, transformed data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/features/filtered_data_norm_transformed.tsv
+2025-04-30 20:43:34.141947 WARNING::Deleting existing residuals file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/fits/residuals.rds
+2025-04-30 20:43:34.1437 INFO::Writing residuals to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/fits/residuals.rds
+2025-04-30 20:43:34.173989 WARNING::Deleting existing fitted file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/fits/fitted.rds
+2025-04-30 20:43:34.180531 INFO::Writing fitted values to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/fits/fitted.rds
+2025-04-30 20:43:34.19744 INFO::Writing all results to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/all_results.tsv
+2025-04-30 20:43:37.37045 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/significant_results.tsv
+2025-04-30 20:43:37.383124 INFO::Writing heatmap of significant results to file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time/heatmap.pdf

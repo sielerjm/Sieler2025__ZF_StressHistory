@@ -1,0 +1,1008 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Differential Expressed Genes Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+# Script Overview
+
+This script performs an integrated analysis of host gene expression and microbial abundance data to identify potential interactions between the host transcriptome and microbiome. The analysis focuses on:
+
+1. Identifying differentially expressed genes (DEGs) in the host
+2. Identifying differentially abundant taxa (DATs) in the microbiome
+3. Analyzing correlations between DEGs and DATs
+4. Creating a bipartite network visualization of host-microbiome interactions
+5. Performing functional enrichment analysis of correlated genes
+
+The rationale behind this analysis is to understand how host gene expression patterns may be influenced by or influence the composition of the microbiome, potentially revealing important host-microbiome interactions that could be relevant to the experimental conditions being studied.
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Set seed for reproducibility
+set.seed(42)
+
+# Load required libraries
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(DESeq2)
+library(phyloseq)
+library(vegan)
+library(pheatmap)
+library(RColorBrewer)
+library(ggpubr)
+library(ggrepel)
+library(org.Dr.eg.db)
+library(GO.db)
+library(AnnotationDbi)
+library(KEGGREST)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)
+library(rstatix)
+library(coin)
+library(microViz)
+library(parallel)
+library(nptest)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#66A61E",  # A+ T- P- (Antibiotics)
+  "#E6AB02",  # A+ T- P+ (Antibiotics_Parasite)
+  "#7570B3",  # A- T+ P- (Temperature)
+  "#E7298A",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+# Create treatment name mapping for plotting (original descriptive names)
+treatment_name_mapping <- c(
+  "A- T- P-" = "Control",
+  "A- T- P+" = "Parasite", 
+  "A+ T- P-" = "Antibiotics",
+  "A+ T- P+" = "Antibiotics_Parasite",
+  "A- T+ P-" = "Temperature",
+  "A- T+ P+" = "Temperature_Parasite",
+  "A+ T+ P-" = "Antibiotics_Temperature",
+  "A+ T+ P+" = "Antibiotics_Temperature_Parasite"
+)
+
+# Function to convert treatment codes to descriptive names for plotting
+convert_treatment_names <- function(treatment_codes) {
+  treatment_name_mapping[treatment_codes]
+}
+```
+
+### Functions
+
+```{r}
+
+# Dynamic function to format p-values and q-values with custom threshold
+fmt_pvalues <- function(gt_tbl, columns, threshold = 0.001, decimals = 3) {
+  gt_tbl |>
+    # First: numeric formatting to specified decimals
+    gt::fmt_number(columns = all_of(columns), decimals = decimals) |>
+    # Second: override rows where values < threshold with "<threshold"
+    gt::fmt(
+      columns = all_of(columns),
+      rows = Reduce(`|`, lapply(columns, function(col) gt_tbl$`_data`[[col]] < threshold)),
+      fns = function(x) rep(paste0("<", threshold), length(x))
+    )
+}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# Function to get Entrez IDs for gene correlation analysis
+get_entrez <- function(sig_partial_cor) {
+  # Get unique gene symbols from significant correlations
+  sig_genes <- unique(sig_partial_cor$gene_id)
+  
+  # Convert gene symbols to Entrez IDs
+  entrez_ids <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = sig_genes,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "SYMBOL", value = "ENTREZID") %>%
+    dplyr::filter(!is.na(ENTREZID))
+  
+  # Join with correlation data
+  entrez_df <- sig_partial_cor %>%
+    dplyr::left_join(entrez_ids, by = c("gene_id" = "SYMBOL")) %>%
+    dplyr::filter(!is.na(ENTREZID)) %>%
+    dplyr::rename(entrezgene_id = ENTREZID)
+  
+  return(entrez_df)
+}
+
+# Function to perform correlation analysis
+perform_correlation_analysis <- function(deg_results, dat_results, metadata, expr_counts, taxa_counts, treatment_filter) {
+  
+  # Get samples with transcriptomics data and filter for specific treatments
+  rna_samples <- metadata %>%
+    dplyr::filter(Treatment %in% treatment_filter) %>%
+    dplyr::filter(Sample %in% expr_samples) %>%
+    dplyr::pull(Sample)
+  
+  # Filter for significant features
+  deg_sig <- deg_results %>%
+    filter(padj < 0.05)
+  
+  dat_sig <- dat_results %>%
+    filter(qval < 0.05)
+  
+  # Filter expression data for significant genes and relevant samples
+  filtered_expr <- expr_counts %>%
+    dplyr::filter(gene_id %in% deg_sig$gene_id) %>%
+    dplyr::select(gene_id, gene_name, any_of(rna_samples))
+  
+  # Filter taxa data for significant taxa and relevant samples
+  filtered_taxa <- taxa_counts %>%
+    dplyr::select(Sample, any_of(dat_sig$feature)) %>%
+    dplyr::filter(Sample %in% rna_samples)
+  
+  # Normalize gene expression data using z-score
+  normalized_expr <- filtered_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "count"
+    ) %>%
+    dplyr::group_by(gene_id) %>%
+    dplyr::mutate(
+      z_score = (count - mean(count)) / sd(count)
+    ) %>%
+    dplyr::select(-count) %>%
+    tidyr::pivot_wider(
+      names_from = Sample,
+      values_from = z_score
+    )
+  
+  # Prepare taxa data (z-score normalized)
+  prepared_taxa <- filtered_taxa %>%
+    tidyr::pivot_longer(
+      cols = -Sample,
+      names_to = "TaxaID",
+      values_to = "abundance"
+    ) %>%
+    dplyr::group_by(TaxaID) %>%
+    dplyr::mutate(
+      z_score = (abundance - mean(abundance)) / sd(abundance)
+    ) %>%
+    dplyr::select(Sample, TaxaID, z_score) %>%
+    dplyr::rename(abundance = z_score) %>%
+    dplyr::mutate(Sample = as.character(Sample))
+  
+  # Prepare expression data for correlation
+  prepared_expr <- normalized_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "z_score"
+    )
+  
+  # Calculate correlations between genes and taxa
+  correlation_results <- prepared_expr %>%
+    dplyr::left_join(
+      prepared_taxa,
+      by = "Sample"
+    ) %>%
+    dplyr::group_by(gene_id, gene_name, TaxaID) %>%
+    dplyr::summarise(
+      correlation = cor(z_score, abundance, method = "spearman"),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      abs_correlation = abs(correlation)
+    ) %>%
+    dplyr::arrange(desc(abs_correlation))
+  
+  return(list(
+    correlation_results = correlation_results,
+    filtered_expr = filtered_expr,
+    filtered_taxa = filtered_taxa,
+    rna_samples = rna_samples
+  ))
+}
+
+# Function to perform partial correlation analysis
+perform_partial_correlation_analysis <- function(correlation_results, metadata, expr_counts, taxa_counts, treatment_filter) {
+  
+  # Get samples with transcriptomics data and filter for specific treatments
+  rna_samples <- metadata %>%
+    dplyr::filter(Treatment %in% treatment_filter) %>%
+    dplyr::filter(Sample %in% expr_samples) %>%
+    dplyr::pull(Sample)
+  
+  # Filter for significant features
+  deg_sig <- correlation_results$correlation_results %>%
+    dplyr::filter(fdr < 0.05) %>%
+    dplyr::pull(gene_id) %>%
+    unique()
+  
+  dat_sig <- correlation_results$correlation_results %>%
+    dplyr::filter(fdr < 0.05) %>%
+    dplyr::pull(TaxaID) %>%
+    unique()
+  
+  # Filter expression data for significant genes and relevant samples
+  filtered_expr <- expr_counts %>%
+    dplyr::filter(gene_id %in% deg_sig) %>%
+    dplyr::select(gene_id, gene_name, any_of(rna_samples))
+  
+  # Filter taxa data for significant taxa and relevant samples
+  filtered_taxa <- taxa_counts %>%
+    dplyr::select(Sample, any_of(dat_sig)) %>%
+    dplyr::filter(Sample %in% rna_samples)
+  
+  # Convert filtered expression data to wide format with samples as rows
+  expr_wide <- filtered_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "count"
+    ) %>%
+    dplyr::group_by(gene_id) %>%
+    dplyr::mutate(
+      z_score = (count - mean(count)) / sd(count)
+    ) %>%
+    dplyr::select(-count, -gene_name) %>%
+    tidyr::pivot_wider(
+      names_from = gene_id,
+      values_from = z_score
+    ) %>%
+    dplyr::arrange(Sample)
+  
+  # Convert filtered taxa data to wide format with samples as rows
+  taxa_wide <- filtered_taxa %>%
+    tidyr::pivot_longer(
+      cols = -Sample,
+      names_to = "TaxaID",
+      values_to = "abundance"
+    ) %>%
+    tidyr::pivot_wider(
+      names_from = TaxaID,
+      values_from = abundance
+    ) %>%
+    dplyr::mutate(Sample = as.character(Sample)) %>%
+    dplyr::arrange(Sample)
+  
+  # Create control variable matrix (worm counts)
+  control_matrix <- metadata %>%
+    dplyr::filter(Sample %in% rna_samples) %>%
+    dplyr::arrange(Sample) %>%
+    dplyr::select(Total.Worm.Count) %>%
+    as.matrix()
+  
+  # Get the top correlations from simple correlation analysis
+  top_pairs <- correlation_results$correlation_results %>%
+    dplyr::filter(fdr < 0.05) %>%
+    dplyr::select(gene_id, TaxaID) %>%
+    dplyr::distinct()
+  
+  # Initialize results storage
+  partial_cor_results <- list()
+  failed_pairs <- list()
+  
+  # Set up parallel processing
+  cl <- makeCluster(6)
+  on.exit(stopCluster(cl))
+  
+  # Calculate partial correlations only for the top pairs
+  for(i in 1:nrow(top_pairs)) {
+    gene <- top_pairs$gene_id[i]
+    taxa <- top_pairs$TaxaID[i]
+    
+    # Get data for this gene-taxa pair
+    x <- expr_wide[[gene]]
+    y <- taxa_wide[[taxa]]
+    
+    # Skip if any data is missing
+    if(any(is.na(c(x, y)))) {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- "Missing data"
+      next
+    }
+    
+    set.seed(42)
+    
+    # Calculate partial correlation
+    res_pcor <- try(nptest::np.cor.test(
+      x = x,
+      y = y,
+      z = control_matrix,
+      partial = TRUE,
+      parallel = TRUE,
+      cl = cl,
+      R = 1000,
+      na.rm = TRUE
+    ), silent = TRUE)
+    
+    # Only store results if calculation was successful
+    if(!inherits(res_pcor, "try-error")) {
+      partial_cor_results[[paste(gene, taxa, sep = "_")]] <- list(
+        gene_id = gene,
+        taxa_id = taxa,
+        correlation = res_pcor$estimate,
+        p_value = res_pcor$p.value
+      )
+    } else {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- as.character(res_pcor)
+    }
+  }
+  
+  # Convert results to data frame
+  partial_cor_df <- do.call(rbind, lapply(partial_cor_results, function(x) {
+    data.frame(
+      gene_id = x$gene_id,
+      taxa_id = x$taxa_id,
+      correlation = x$correlation,
+      p_value = x$p_value
+    )
+  })) %>%
+    dplyr::mutate(
+      fdr = p.adjust(p_value, method = "BH"),
+      abs_correlation = abs(correlation)
+    ) %>%
+    dplyr::arrange(desc(abs_correlation))
+  
+  return(partial_cor_df)
+}
+```
+
+### Import Data
+
+```{r}
+
+# Import metadata to get treatment info
+metadata <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Output/sample_metadata__2025-05-19.tsv') %>%
+  dplyr::select(Sample, Treatment, Pathogen, Total.Worm.Count) %>%
+  dplyr::mutate(Sample = as.character(Sample))
+
+# Read and process OTU table
+taxa_counts <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Output/otu_table__2025-05-19.tsv') 
+
+# Import raw data
+expr_counts <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Results/rnaseq/051525/salmon/salmon.merged.gene_counts_length_scale__Corrected_f136-f138.tsv') %>%
+  # Clean up column names
+  rename_with(~gsub("TS047_RoL_RNA_", "", .), -c(gene_id, gene_name))
+
+# Get samples from raw expression data
+expr_samples <- colnames(expr_counts)[-c(1,2)] # Exclude gene_id and gene_name columns
+
+# Print data dimensions
+cat("\nData dimensions:\n")
+cat("Expression data:", nrow(expr_counts), "genes x", ncol(expr_counts)-2, "samples\n")
+cat("Taxa data:", nrow(taxa_counts), "samples x", ncol(taxa_counts)-1, "taxa\n")
+cat("Total samples in expression data:", length(expr_samples), "\n")
+```
+
+## 00) All Treatment Groups {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Simple Correlation Analysis
+
+```{r}
+
+# Load DEG and DAT results for all treatments
+deg_results <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Analysis/DESeq2_results/DESeq2_all_treatments_20250519__filteredGenes.tsv') %>%
+    dplyr::rename(gene_id = gene)
+
+dat_results <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__All_treatments/significant_results.tsv')
+
+# Perform correlation analysis for all treatments
+all_treatments_analysis <- perform_correlation_analysis(
+  deg_results = deg_results,
+  dat_results = dat_results,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = treatment_order
+)
+
+# Print summary of correlations
+cat("\nCorrelation Summary for All Treatments:\n")
+summary(all_treatments_analysis$correlation_results$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+all_treatments_analysis$correlation_results %>%
+  head(10) %>%
+  print()
+```
+
+### Partial Correlation Analysis
+
+```{r}
+
+# Calculate correlation significance
+all_treatments_analysis$correlation_results <- all_treatments_analysis$correlation_results %>%
+  dplyr::mutate(
+    p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(all_treatments_analysis$filtered_taxa) - 2) / (1 - correlation^2)))),
+    fdr = p.adjust(p_value, method = "BH")
+  )
+
+# Perform partial correlation analysis
+all_treatments_partial <- perform_partial_correlation_analysis(
+  correlation_results = all_treatments_analysis,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = treatment_order
+)
+
+# Print summary of partial correlations
+cat("\nPartial Correlation Summary for All Treatments:\n")
+summary(all_treatments_partial$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest partial correlations:\n")
+all_treatments_partial %>%
+  head(10) %>%
+  print()
+```
+
+### Functional Enrichment Analysis
+
+```{r}
+
+# Get significant partial correlations
+sig_partial_cor <- all_treatments_partial %>%
+  dplyr::filter(fdr < 0.1)
+
+# Get Entrez IDs for functional analysis
+entrez_all_treatments <- get_entrez(sig_partial_cor)
+
+# Perform GO enrichment analysis
+go_results_all <- enrichGO(
+  gene = entrez_all_treatments$entrezgene_id,
+  OrgDb = org.Dr.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.1,
+  qvalueCutoff = 0.2,
+  readable = TRUE
+) %>%
+  as.data.frame()
+
+# Display top GO terms
+cat("\nTop 10 GO terms for All Treatments:\n")
+go_results_all %>%
+  head(10) %>%
+  gt::gt() %>%
+  fmt_pvalues(columns = c("pvalue", "p.adjust", "qvalue"), threshold = 0.001, decimals = 3)
+```
+
+## 01) What is the host-microbiome response to parasite exposure? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Simple Correlation Analysis
+
+```{r}
+
+# Load DEG and DAT results for parasite effect (A- T- P- vs A- T- P+)
+deg_results_parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Analysis/DESeq2_results/DESeq2_parasite_effect_20250519__filteredGenes.tsv') %>%
+    dplyr::rename(gene_id = gene)
+
+dat_results_parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasite_effect/significant_results.tsv')
+
+# Perform correlation analysis for parasite effect
+parasite_analysis <- perform_correlation_analysis(
+  deg_results = deg_results_parasite,
+  dat_results = dat_results_parasite,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P-", "A- T- P+")
+)
+
+# Print summary of correlations
+cat("\nCorrelation Summary for Parasite Effect:\n")
+summary(parasite_analysis$correlation_results$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+parasite_analysis$correlation_results %>%
+  head(10) %>%
+  print()
+```
+
+### Partial Correlation Analysis
+
+```{r}
+
+# Calculate correlation significance
+parasite_analysis$correlation_results <- parasite_analysis$correlation_results %>%
+  dplyr::mutate(
+    p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(parasite_analysis$filtered_taxa) - 2) / (1 - correlation^2)))),
+    fdr = p.adjust(p_value, method = "BH")
+  )
+
+# Perform partial correlation analysis
+parasite_partial <- perform_partial_correlation_analysis(
+  correlation_results = parasite_analysis,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P-", "A- T- P+")
+)
+
+# Print summary of partial correlations
+cat("\nPartial Correlation Summary for Parasite Effect:\n")
+summary(parasite_partial$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest partial correlations:\n")
+parasite_partial %>%
+  head(10) %>%
+  print()
+```
+
+### Functional Enrichment Analysis
+
+```{r}
+
+# Get significant partial correlations
+sig_partial_cor_parasite <- parasite_partial %>%
+  dplyr::filter(fdr < 0.1)
+
+# Get Entrez IDs for functional analysis
+entrez_parasite <- get_entrez(sig_partial_cor_parasite)
+
+# Perform GO enrichment analysis
+go_results_parasite <- clusterProfiler::enrichGO(
+  gene = entrez_parasite$entrezgene_id,
+  OrgDb = org.Dr.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.1,
+  qvalueCutoff = 0.2,
+  readable = TRUE
+) %>%
+  as.data.frame()
+
+# Display top GO terms
+cat("\nTop 10 GO terms for Parasite Effect:\n")
+go_results_parasite %>%
+  head(10) %>%
+  gt::gt()  %>%
+  fmt_pvalues(columns = c("pvalue", "p.adjust", "qvalue"), threshold = 0.001, decimals = 3)
+```
+
+## 02) Is the host-microbiome response to parasite exposure historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Simple Correlation Analysis
+
+```{r}
+
+# Load DEG and DAT results for historical contingency (A- T- P+ vs A+ T- P+, A- T+ P+, A+ T+ P+)
+deg_results_hist_cont <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Analysis/DESeq2_results/DESeq2_historical_contingency_20250519__filteredGenes.tsv') %>%
+    dplyr::rename(gene_id = gene)
+
+dat_results_hist_cont <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Historical_contingency/significant_results.tsv')
+
+# Perform correlation analysis for historical contingency
+hist_cont_analysis <- perform_correlation_analysis(
+  deg_results = deg_results_hist_cont,
+  dat_results = dat_results_hist_cont,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")
+)
+
+# Print summary of correlations
+cat("\nCorrelation Summary for Historical Contingency:\n")
+summary(hist_cont_analysis$correlation_results$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+hist_cont_analysis$correlation_results %>%
+  head(10) %>%
+  print()
+```
+
+### Partial Correlation Analysis
+
+```{r}
+
+# Calculate correlation significance
+hist_cont_analysis$correlation_results <- hist_cont_analysis$correlation_results %>%
+  dplyr::mutate(
+    p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(hist_cont_analysis$filtered_taxa) - 2) / (1 - correlation^2)))),
+    fdr = p.adjust(p_value, method = "BH")
+  )
+
+# Perform partial correlation analysis
+hist_cont_partial <- perform_partial_correlation_analysis(
+  correlation_results = hist_cont_analysis,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")
+)
+
+# Print summary of partial correlations
+cat("\nPartial Correlation Summary for Historical Contingency:\n")
+summary(hist_cont_partial$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest partial correlations:\n")
+hist_cont_partial %>%
+  head(10) %>%
+  print()
+```
+
+### Functional Enrichment Analysis
+
+```{r}
+
+# Get significant partial correlations
+sig_partial_cor_hist_cont <- hist_cont_partial %>%
+  dplyr::filter(fdr < 0.1)
+
+# Get Entrez IDs for functional analysis
+entrez_hist_cont <- get_entrez(sig_partial_cor_hist_cont)
+
+# Perform GO enrichment analysis
+go_results_hist_cont <- enrichGO(
+  gene = entrez_hist_cont$entrezgene_id,
+  OrgDb = org.Dr.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.1,
+  qvalueCutoff = 0.2,
+  readable = TRUE
+) %>%
+  as.data.frame()
+
+# Display top GO terms
+cat("\nTop 10 GO terms for Historical Contingency:\n")
+go_results_hist_cont %>%
+  head(10) %>%
+  gt::gt() %>%
+  fmt_pvalues(columns = c("pvalue", "p.adjust", "qvalue"), threshold = 0.001, decimals = 3)
+```
+
+## 03) Is the host-microbiome recovery historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Simple Correlation Analysis
+
+```{r}
+
+# Load DEG and DAT results for recovery analysis (A- T- P- vs A+ T- P-, A- T+ P-, A+ T+ P-)
+deg_results_recovery <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Analysis/DESeq2_results/DESeq2_recovery_analysis_20250519__filteredGenes.tsv') %>%
+    dplyr::rename(gene_id = gene)
+
+dat_results_recovery <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Recovery_analysis/significant_results.tsv')
+
+# Perform correlation analysis for recovery
+recovery_analysis <- perform_correlation_analysis(
+  deg_results = deg_results_recovery,
+  dat_results = dat_results_recovery,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")
+)
+
+# Print summary of correlations
+cat("\nCorrelation Summary for Recovery Analysis:\n")
+summary(recovery_analysis$correlation_results$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+recovery_analysis$correlation_results %>%
+  head(10) %>%
+  print()
+```
+
+### Partial Correlation Analysis
+
+```{r}
+
+# Calculate correlation significance
+recovery_analysis$correlation_results <- recovery_analysis$correlation_results %>%
+  dplyr::mutate(
+    p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(recovery_analysis$filtered_taxa) - 2) / (1 - correlation^2)))),
+    fdr = p.adjust(p_value, method = "BH")
+  )
+
+# Perform partial correlation analysis
+recovery_partial <- perform_partial_correlation_analysis(
+  correlation_results = recovery_analysis,
+  metadata = metadata,
+  expr_counts = expr_counts,
+  taxa_counts = taxa_counts,
+  treatment_filter = c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")
+)
+
+# Print summary of partial correlations
+cat("\nPartial Correlation Summary for Recovery Analysis:\n")
+summary(recovery_partial$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest partial correlations:\n")
+recovery_partial %>%
+  head(10) %>%
+  print()
+```
+
+### Functional Enrichment Analysis
+
+```{r}
+
+# Get significant partial correlations
+sig_partial_cor_recovery <- recovery_partial %>%
+  dplyr::filter(fdr < 0.1)
+
+# Get Entrez IDs for functional analysis
+entrez_recovery <- get_entrez(sig_partial_cor_recovery)
+
+# Perform GO enrichment analysis
+go_results_recovery <- enrichGO(
+  gene = entrez_recovery$entrezgene_id,
+  OrgDb = org.Dr.eg.db,
+  keyType = "ENTREZID",
+  ont = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.1,
+  qvalueCutoff = 0.2,
+  readable = TRUE
+) %>%
+  as.data.frame()
+
+# Display top GO terms
+cat("\nTop 10 GO terms for Recovery Analysis:\n")
+go_results_recovery %>%
+  head(10) %>%
+  gt::gt() %>%
+  fmt_pvalues(columns = c("pvalue", "p.adjust", "qvalue"), threshold = 0.001, decimals = 3)
+```
+
+## Summary and Comparison
+
+```{r}
+
+# Create summary table comparing results across all three analyses
+summary_comparison <- data.frame(
+  Analysis = c("All Treatments", "Parasite Effect", "Historical Contingency", "Recovery"),
+  Total_Correlations = c(
+    nrow(all_treatments_analysis$correlation_results),
+    nrow(parasite_analysis$correlation_results),
+    nrow(hist_cont_analysis$correlation_results),
+    nrow(recovery_analysis$correlation_results)
+  ),
+  Significant_Correlations = c(
+    sum(all_treatments_analysis$correlation_results$fdr < 0.05, na.rm = TRUE),
+    sum(parasite_analysis$correlation_results$fdr < 0.05, na.rm = TRUE),
+    sum(hist_cont_analysis$correlation_results$fdr < 0.05, na.rm = TRUE),
+    sum(recovery_analysis$correlation_results$fdr < 0.05, na.rm = TRUE)
+  ),
+  Significant_Partial_Correlations = c(
+    sum(all_treatments_partial$fdr < 0.1, na.rm = TRUE),
+    sum(parasite_partial$fdr < 0.1, na.rm = TRUE),
+    sum(hist_cont_partial$fdr < 0.1, na.rm = TRUE),
+    sum(recovery_partial$fdr < 0.1, na.rm = TRUE)
+  ),
+  Unique_Genes = c(
+    length(unique(all_treatments_partial$gene_id)),
+    length(unique(parasite_partial$gene_id)),
+    length(unique(hist_cont_partial$gene_id)),
+    length(unique(recovery_partial$gene_id))
+  ),
+  Unique_Taxa = c(
+    length(unique(all_treatments_partial$taxa_id)),
+    length(unique(parasite_partial$taxa_id)),
+    length(unique(hist_cont_partial$taxa_id)),
+    length(unique(recovery_partial$taxa_id))
+  )
+)
+
+# Display summary table
+summary_comparison %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Summary of Gene-Taxa Correlation Analyses",
+    subtitle = "Comparison across different experimental conditions"
+  ) %>%
+  gt::fmt_number(
+    columns = c("Total_Correlations", "Significant_Correlations", "Significant_Partial_Correlations", "Unique_Genes", "Unique_Taxa"),
+    decimals = 0
+  )
+```
+
+## Network Visualization
+
+```{r fig.width=10, fig.height=8}
+
+# Create bipartite network for significant partial correlations from all analyses
+all_sig_correlations <- bind_rows(
+  all_treatments_partial %>% filter(fdr < 0.1) %>% mutate(Analysis = "All Treatments"),
+  parasite_partial %>% filter(fdr < 0.1) %>% mutate(Analysis = "Parasite Effect"),
+  hist_cont_partial %>% filter(fdr < 0.1) %>% mutate(Analysis = "Historical Contingency"),
+  recovery_partial %>% filter(fdr < 0.1) %>% mutate(Analysis = "Recovery")
+)
+
+# Create network data
+network_data <- all_sig_correlations %>%
+  select(gene_id, taxa_id, correlation, Analysis) %>%
+  mutate(
+    node_type = case_when(
+      str_detect(gene_id, "^ENS") ~ "Gene",
+      TRUE ~ "Taxa"
+    )
+  )
+
+# Create igraph object
+g <- graph_from_data_frame(network_data, directed = FALSE)
+
+# Set vertex attributes
+V(g)$type <- ifelse(V(g)$name %in% network_data$gene_id, "Gene", "Taxa")
+V(g)$size <- ifelse(V(g)$type == "Gene", 3, 2)
+
+# Set edge attributes
+E(g)$weight <- abs(network_data$correlation)
+E(g)$color <- ifelse(network_data$correlation > 0, "red", "blue")
+
+# Plot network
+plot(g,
+     vertex.color = ifelse(V(g)$type == "Gene", "lightblue", "lightgreen"),
+     vertex.size = V(g)$size,
+     edge.width = E(g)$weight * 2,
+     edge.color = E(g)$color,
+     layout = layout.bipartite,
+     main = "Gene-Taxa Correlation Network\n(All Significant Partial Correlations)")
+```
+
+## Session Info
+
+```{r}
+sessionInfo()
+``` 

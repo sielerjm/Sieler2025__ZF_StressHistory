@@ -1,0 +1,1018 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	2'-deoxyribonucleotide metabolic process	0.0052479646427504075	5	2.2800090996061235	1.0950110195223048	4	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA biosynthetic process	7.139654988712804e-4	11	3.146322774234814	1.7659332838218083	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA conformation change	1.1370003083139753e-5	12	4.944239417547059	1.5483213092453025	11	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage checkpoint signaling	1.757207269004901e-4	12	3.7551770088655223	1.913834035937253	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	3.275829930123286e-22	91	21.484678653409254	1.7253184942184208	88	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA duplex unwinding	2.2443351904080523e-5	10	4.648912280894684	1.7740405272860273	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA geometric change	2.2443351904080523e-5	10	4.648912280894684	1.7740405272860273	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA integrity checkpoint signaling	2.47960440523644e-6	15	5.605617600757237	1.899662807556693	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.4304268622136061e-16	47	15.844534342786412	1.7807004544865745	47	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.2539783481398332e-21	77	20.901709962201135	1.791123878067274	76	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	6.756168780259623e-37	65	36.17029950957175	1.702886412682309	64	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication checkpoint signaling	0.00789790960621397	5	2.102487841192932	1.644255176228279	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	1.217243073603607e-13	17	12.914622688011718	1.7792362497962775	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation	2.2718473665904812e-7	10	6.643620849930307	1.7737075596370024	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation involved in DNA replication	4.795374663037189e-8	10	7.31917745570228	1.7737075596370024	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA synthesis involved in DNA repair	0.040938704328815904	5	1.3878659064646715	2.133767341930547	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	2.59700577747537e-26	43	25.585527084208632	1.7770143423840783	43	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication maintenance of fidelity	2.2443351904080523e-5	10	4.648912280894684	1.8140712693199934	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	G2/M transition of mitotic cell cycle	1.2118466799743746e-6	14	5.9165523226227625	2.2155517220426404	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	attachment of spindle microtubules to kinetochore	0.0032943938425388656	6	2.4822244824531845	2.235817994670188	6	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	autophagy	0.046953473106760665	24	1.3283322778320739	-0.8390606841301661	4	20		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid transport	0.017069872115300765	23	1.7677697325365402	-1.2182430962175754	4	19		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell chemotaxis	2.6316180118908587e-4	23	3.5797771497721778	1.2146226896634766	18	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle DNA replication	1.3160738598886613e-11	14	10.880719736829995	1.8774427645254914	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle G2/M phase transition	4.730334953853603e-6	14	5.325108105888004	2.2155517220426404	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle checkpoint signaling	9.6915513935989e-12	26	11.013606696865692	2.049166679537735	26	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	4.557263218102454e-14	45	13.341295886741648	1.9239086049041438	44	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell division	4.496368463999835e-14	62	13.347138106841783	2.0374594264184815	62	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to biotic stimulus	0.04636106330554937	9	1.3338466119138557	0.38369924024537927	5	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to chemokine	8.610770404458743e-5	13	4.06495799053969	1.1986026484435761	10	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to cytokine stimulus	0.006954232320229092	23	2.1577508049227916	0.9026500015050007	17	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to estrogen stimulus	7.954953346276173e-8	14	7.099362363033645	-3.0585129049384294	0	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to hormone stimulus	0.004977451614060266	26	2.3029929530682605	-2.290210609899678	1	25		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to interleukin-1	0.003379972551734093	9	2.4710868265504	1.3378740797538429	7	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to tumor necrosis factor	0.005403053538980446	10	2.2673607290055804	1.3143366573509712	8	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to type II interferon	8.702367352810902e-4	10	3.0603625877944713	1.3410106280218168	8	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to xenobiotic stimulus	0.014380340195013995	13	1.8422308397480083	-1.5914560632995935	0	13		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centriole assembly	0.0014559654381595833	8	2.836848934222659	1.6858141781035072	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centriole replication	0.02532242080253597	6	1.5964947784758565	1.6293250042770897	6	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centromere complex assembly	3.6536285789242506e-9	12	8.437275604307626	1.834263528479258	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centrosome cycle	6.93099627226109e-5	15	4.159204334732025	1.817855906118008	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chemokine-mediated signaling pathway	2.8003975241513063e-4	12	3.5527803149823476	1.167946944118955	9	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromatin organization	0.022683262707124327	35	1.644294477389887	1.4253787754175185	33	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome condensation	2.8577380916307114e-4	10	3.543977576304916	2.0802623476198177	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome localization	0.0017148578504504756	9	2.765771874060616	2.236141363029183	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4758909246296544e-29	76	28.83094573775815	1.8369528798708468	75	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization involved in meiotic cell cycle	0.04719669570943507	6	1.3260884057174365	1.9956106695084823	6	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	1.405798739462108e-37	74	36.85207685043816	1.9827718498846347	73	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome separation	5.95920290054765e-7	12	6.224811827347816	2.1241886080852592	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cytokine-mediated signaling pathway	0.00820111546830466	22	2.086127073374518	0.8724763151943631	16	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cytokinetic process	0.0061780501117087855	7	2.209148573349178	1.649823732988487	7	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response	0.003195354671420281	52	2.495480929902468	1.3379550658444417	40	12		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response to other organism	2.2945690161096935e-4	45	3.6392988750515496	1.4387051706136542	35	10		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribonucleotide metabolic process	0.0032943938425388656	6	2.4822244824531845	1.1621238167611894	5	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribose phosphate metabolic process	0.00789790960621397	5	2.102487841192932	1.0950110195223048	4	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	7.092843137614359e-13	39	12.149179644722427	1.806335556861633	39	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via break-induced replication	3.4479725620978454e-10	11	9.462436198815107	1.9239553991578544	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.4583453956132987e-16	34	15.836139605205927	1.7725035297491403	34	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of chromosome localization	0.001348736093364655	9	2.8700730202375806	2.236141363029183	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of protein localization to mitochondrial membrane	0.016700425782097288	5	1.7772724562501354	1.0398285027370402	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of protein localization to mitochondrion	0.001992218129900616	11	2.700663111983704	1.1924441631337168	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	glucose metabolic process	0.012909353800852093	11	1.8890954965211861	-0.29940474228819464	4	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	granulocyte chemotaxis	6.198933966421238e-5	18	4.207682989906149	1.3302608479105493	14	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	granulocyte migration	0.0015500074904045615	18	2.8096662030984128	1.3302608479105493	14	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	hexose metabolic process	0.027176622930262132	13	1.5658045113222023	-0.430253499694886	4	9		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	homologous recombination	7.93152525185825e-6	12	5.100643288751743	1.8274864588885402	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	innate immune response	0.014738562418544245	26	1.8315448749668524	1.160226313549793	19	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	interstrand cross-link repair	7.436404198406153e-4	8	3.128637012610922	2.099416300874285	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore assembly	1.1229090911570278e-5	7	4.949655402070673	1.8018596255902128	7	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore organization	1.1642096844280343e-6	8	5.9339687923762	1.8331568148585091	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	leukocyte chemotaxis	2.502362424747364e-4	19	3.6016497898987767	1.3233545766015087	15	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	leukocyte migration	0.020755620005416947	20	1.682864288982181	1.3256488258931123	16	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lipid biosynthetic process	0.041573593243326046	40	1.3811824374060329	-0.617590118620444	11	29		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lipid localization	0.0168601727050201	30	1.7731379810485792	-1.7264163798693244	3	27		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lipid transport	0.012524209165425827	29	1.902249687890663	-1.741094978226945	3	26		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lymphocyte chemotaxis	0.0027604711377005172	9	2.5590167892965034	1.3378740797538429	7	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lymphocyte migration	0.002917481731693468	11	2.534991854682613	1.361507034596109	9	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I	2.47960440523644e-6	15	5.605617600757237	1.7787875862791067	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I cell cycle process	2.886653972511828e-7	17	6.539605272522242	1.7301769432753198	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	8.31625035202991e-11	29	10.08007244516205	1.7951142329953533	29	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle process	2.615007706340124e-12	27	11.582527026943529	1.814880588968529	27	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic chromosome segregation	0.00419830104695935	8	2.376926422746105	2.1569307522505454	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic nuclear division	7.535324318312897e-8	19	7.122898051030496	1.8720644013169983	19	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase chromosome alignment	2.0254156453056974e-4	9	3.693485839639678	2.236141363029183	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of cell cycle	6.708606007076612e-8	13	7.173367713263049	1.9217162547406708	13	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of mitotic cell cycle	3.977082100474781e-8	13	7.40043544360916	1.9217162547406708	13	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization	4.540384928787397e-7	54	6.3429073265786355	1.8440325680409289	52	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization involved in mitosis	3.463078444187617e-8	24	7.460537670884276	2.0476384368477323	24	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule organizing center organization	2.1735958094446313e-5	17	4.662821211881676	1.822258940643273	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mismatch repair	0.0022063218621194364	6	2.6563311316301808	1.7289584182740767	6	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitochondrial transport	0.004977451614060266	13	2.3029929530682605	0.8246236604480697	11	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitochondrion organization	0.0168601727050201	30	1.7731379810485792	0.38278718804568573	20	10		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA damage checkpoint signaling	5.878618005133479e-6	11	5.230724759517092	1.9262147623283408	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA integrity checkpoint signaling	2.617338021654874e-7	13	6.582140185858549	1.9718497617100237	13	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA replication	3.4015798281819463e-7	9	6.46831933257285	1.7878956968996924	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2 DNA damage checkpoint signaling	0.0052479646427504075	5	2.2800090996061235	2.2538914347000247	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2/M transition checkpoint	2.3069729414400918e-4	8	3.636957499302995	2.108561861284404	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle checkpoint signaling	2.615007706340124e-12	23	11.582527026943529	2.048161012298402	23	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle phase transition	9.15948145462139e-12	36	11.03812911233336	1.9261439740707562	35	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	6.756168780259623e-37	96	36.17029950957175	1.900499806631723	94	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cytokinesis	0.012524209165425827	9	1.902249687890663	1.857583483400094	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic intra-S DNA damage checkpoint signaling	0.0032943938425388656	5	2.4822244824531845	1.4417812493066762	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic metaphase chromosome alignment	0.00789790960621397	5	2.102487841192932	2.077580522210297	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.1447626334534245e-21	44	20.941284554955683	1.9683945132982226	43	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	2.6913836990701514e-24	38	23.570024382314337	2.047006685997649	38	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid separation	4.5050008954250737e-7	11	6.3463051183634684	2.08100838122059	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly	7.484270993307876e-4	9	3.125850495788874	1.8466647367867834	9	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly checkpoint signaling	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle checkpoint signaling	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle organization	8.818482133931843e-10	22	9.054606160626266	2.041492943564905	22	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid transport	0.03340905019304463	13	1.476135871018052	-1.8694737600449711	0	13		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	monocyte chemotaxis	0.0017148578504504756	9	2.765771874060616	1.3378740797538429	7	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mononuclear cell migration	0.006377204458184931	11	2.1953696589672593	1.361507034596109	9	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	myeloid leukocyte migration	0.0041890187627332065	19	2.3778876944171885	1.3233545766015087	15	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of DNA repair	0.044463152159806035	4	1.351999751779108	1.9586547940152323	4	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of G2/M transition of mitotic cell cycle	0.0019206645700942761	8	2.716548474845201	2.108561861284404	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle	5.8120666483197314e-09	31	8.235669414189651	1.8334746653853444	29	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle G2/M phase transition	0.002546977409022432	8	2.5939749070899416	2.108561861284404	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle phase transition	1.80583480079825e-10	27	9.743321981809492	2.056530204952324	27	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle process	2.4183927732140535e-10	29	9.61647316361305	2.096581243161037	29	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome organization	4.5050008954250737e-7	11	6.3463051183634684	2.0913184454251947	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome segregation	2.2718473665904812e-7	10	6.643620849930307	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome separation	2.2718473665904812e-7	10	6.643620849930307	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of double-strand break repair	0.044463152159806035	4	1.351999751779108	1.9586547940152323	4	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of metaphase/anaphase transition of cell cycle	2.2718473665904812e-7	10	6.643620849930307	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle	7.98844922948088e-9	25	8.097537520616696	1.9332105981670566	24	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle phase transition	1.314014403104059e-9	20	8.881399874384813	2.119779198872208	20	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic metaphase/anaphase transition	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic nuclear division	3.1386940667402145e-6	10	5.503251013577316	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid segregation	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid separation	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of nuclear division	1.3647420837577312e-6	11	5.864949416157598	2.2530355958755197	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of organelle organization	0.04827744224645469	15	1.3162557470186822	2.3411487945713283	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of sister chromatid segregation	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	neutrophil chemotaxis	1.6342223310378066e-5	18	4.786688859324764	1.3302608479105493	14	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	neutrophil migration	6.377958185933485e-4	18	3.195318332330106	1.3302608479105493	14	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	non-membrane-bounded organelle assembly	0.0013703001141056616	32	2.8631843061092037	1.7845574305007252	32	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear DNA replication	1.3282627412701916e-9	12	8.876716009457903	1.773190252954391	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	6.54164652403775e-30	52	29.184312926552725	2.031170990757428	52	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	3.163169189865037e-28	61	27.4998775781571	1.945769504543333	60	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nucleotide-excision repair	0.01207368140353652	8	1.918160288355959	1.5315302274977356	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	one-carbon metabolic process	0.04549528585721479	8	1.3420336018542076	-1.0178529147588162	1	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.590005426912705e-26	63	25.79860139336872	1.894670405778457	61	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organic acid transport	0.01965898598387098	23	1.7064388869599718	-1.2182430962175754	4	19		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle	0.0039061928648453565	10	2.4082463176097963	1.7281420225026227	9	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle process	0.0017574685630190818	10	2.7551124347459472	1.7281420225026227	9	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of endopeptidase activity	0.005134049122351159	9	2.289539980334621	1.0240679067942748	8	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of hydrolase activity	0.00734073759440854	26	2.134260300153753	1.0193014145071415	20	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of peptidase activity	0.021323908549679187	10	1.6711331886707494	1.0623638525222905	9	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of proteolysis	0.04690116725214846	14	1.3288163486525308	0.828975208899394	11	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	process utilizing autophagic mechanism	0.046953473106760665	24	1.3283322778320739	-0.8390606841301661	4	20		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to chromosome	0.0048675648196631945	7	2.312688256421263	1.911286730443943	7	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to microtubule cytoskeleton	0.030787239304157273	5	1.5116292525948314	1.3798851079646002	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to mitochondrion	0.001992218129900616	11	2.700663111983704	1.1924441631337168	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein targeting to mitochondrion	0.003261533727216049	10	2.4865781261195448	1.2113461601462658	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex assembly	1.225942836317049e-4	18	3.9115297797775193	1.7948866461098558	18	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex organization	6.475317221234876e-5	47	4.188738950944436	1.51227438238922	45	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal homologous recombination	5.37956624763478e-6	12	5.269252739919647	1.8274864588885402	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal meiotic recombination	5.37956624763478e-6	12	5.269252739919647	1.8274864588885402	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	2.1017043947550302e-16	34	15.67742836763918	1.7725035297491403	34	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA metabolic process	0.007563299877933115	17	2.1212886798829205	1.9068751067496281	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA replication	9.13204671510631e-6	10	5.039431875536927	1.9657238250046554	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of G2/M transition of mitotic cell cycle	1.6211529997300697e-5	12	4.79017599576045	2.070741013908168	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle	1.9199226740615665e-11	75	10.716716262392612	1.5887363651070627	67	8		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle G2/M phase transition	5.824197917404309e-5	12	4.234763875285662	2.070741013908168	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	3.097123659775209e-13	37	12.509041454092406	1.9510220599713999	37	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.5170086035831067e-17	56	16.81901195614269	1.9036728140108226	55	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome organization	2.378967029416791e-6	16	5.623611576895721	1.8612612747821877	16	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome segregation	1.491192909855232e-8	16	7.826466169916374	1.9152191896612771	16	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome separation	1.47550956850409e-5	10	4.831057969806819	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of hydrolase activity	0.013184019964246946	34	1.879952148004687	0.8860649144217387	25	9		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of metaphase/anaphase transition of cell cycle	1.3647420837577312e-6	11	5.864949416157598	2.054648964333727	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle	1.009690591844965e-6	43	5.99581169041638	1.5537009289183747	38	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle phase transition	3.775981983674427e-11	28	10.422970086516301	1.9626111451715196	28	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic metaphase/anaphase transition	8.153866514184367e-7	11	6.0886364026002795	2.054648964333727	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic nuclear division	7.954953346276173e-8	15	7.099362363033645	1.8590811133527474	14	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid segregation	9.453115074854011e-7	10	6.024425055311679	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid separation	3.1386940667402145e-6	10	5.503251013577316	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of nuclear division	5.2886956789693384e-8	16	7.276651422345125	1.9497469921430617	15	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of organelle organization	0.0018482390971243652	48	2.733241847052637	1.3557287526005273	40	8		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of sister chromatid segregation	5.2040463469676864e-8	14	7.283658844289028	1.9099314305588981	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of type I interferon production	0.0052479646427504075	5	2.2800090996061235	1.2223901815670226	4	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	replication fork processing	5.21782376163596e-4	8	3.2825105938141026	1.8229973889884057	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reproduction	6.678867862668396e-4	41	3.1752971487020036	1.4836318099740102	36	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reproductive process	5.484771683181266e-4	41	3.2608414462658044	1.4836318099740102	36	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	resolution of meiotic recombination intermediates	0.00789790960621397	5	2.102487841192932	1.611646291681419	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to bacterium	3.5818444806139696e-4	31	3.4458932746225095	1.3949885756584817	25	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	5.2040463469676864e-8	67	7.283658844289028	1.3415127300698566	52	15		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to chemokine	8.610770404458743e-5	13	4.06495799053969	1.1986026484435761	10	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to cytokine	0.02234372605128403	23	1.6508444020092095	0.9026500015050007	17	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to estradiol	0.012008040365530841	6	1.920527860863234	-4.0754201050028875	0	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to estrogen	1.7914315620554474e-7	14	6.746799778505073	-3.0585129049384294	0	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	7.954953346276173e-8	66	7.099362363033645	1.3771084327579046	52	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to hormone	0.007250922916774473	30	2.139606711752764	-2.080800216662704	2	28		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to interleukin-1	0.0073679603886897494	9	2.1326527176401577	1.3378740797538429	7	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to lipid	0.014061917775375774	23	1.851955445854866	-1.489741432810717	5	18		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to methylmercury	0.044463152159806035	4	1.351999751779108	-0.609785576270526	1	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to other organism	7.954953346276173e-8	66	7.099362363033645	1.3771084327579046	52	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to tumor necrosis factor	0.005403053538980446	10	2.2673607290055804	1.3143366573509712	8	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to type II interferon	0.0011276637441755852	10	2.9478203824623304	1.3410106280218168	8	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to virus	0.012909353800852093	15	1.8890954965211861	1.6234525016969423	13	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to xenobiotic stimulus	0.005072313374434446	15	2.2947939229923646	-1.7486870401983647	0	15		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sexual reproduction	2.598550640020998e-5	40	4.585268815317017	1.5552559189933302	36	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	signal transduction in response to DNA damage	5.701750490978867e-5	15	4.243991791369238	1.9135647009257433	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.259933620292949e-27	43	26.89965233512044	1.9776928055857448	43	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	small molecule biosynthetic process	0.04257979450571621	33	1.3707964388406007	-0.750765361078257	8	25		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly	2.886653972511828e-7	17	6.539605272522242	1.8381108924914051	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly checkpoint signaling	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle checkpoint signaling	9.780008385590488e-8	10	7.009660772838767	2.1473656380632944	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle elongation	3.743868361457117e-7	8	6.426679429938699	1.9974225245456083	8	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle midzone assembly	2.3764270913682414e-4	6	3.6240755052918705	1.9583990391650905	6	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle organization	4.773505812436471e-13	31	12.321162544282162	2.034800283509739	31	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	steroid metabolic process	0.026759818517236	16	1.572516836241667	-0.9360084283442432	3	13		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	translesion synthesis	0.012008040365530841	5	1.920527860863234	2.133767341930547	5	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	type I interferon production	0.0052479646427504075	5	2.2800090996061235	1.2223901815670226	4	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	xenobiotic metabolic process	0.0016911117766925682	11	2.7718276860767372	-1.6328787488304024	0	11		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	L-phenylalanine catabolic process	0.03561423195812067	1	1.448376417034608	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	L-phenylalanine metabolic process	0.03561423195812067	1	1.448376417034608	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	alpha-amino acid metabolic process	0.03561423195812067	2	1.448376417034608	-1.0703446870535984	1	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	amine biosynthetic process	0.03732155011407324	1	1.4280403265544857	2.7302732304770485	1	0		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	amino acid metabolic process	0.03561423195812067	2	1.448376417034608	-1.0703446870535984	1	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	antimicrobial humoral immune response mediated by antimicrobial peptide	0.03561423195812067	1	1.448376417034608	-2.340067418254223	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	antimicrobial humoral response	0.041968159125537	1	1.3770800800893193	-2.340067418254223	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	arachidonate transport	0.03561423195812067	1	1.448376417034608	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	arachidonic acid secretion	0.03561423195812067	1	1.448376417034608	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	aromatic amino acid family catabolic process	0.038629420305002604	1	1.4130818090756705	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	aromatic amino acid metabolic process	0.04819328646152857	1	1.3170134566944374	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	biogenic amine biosynthetic process	0.03732155011407324	1	1.4280403265544857	2.7302732304770485	1	0		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	carboxylic acid transport	0.03561423195812067	2	1.448376417034608	-3.378244421760761	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	cell chemotaxis	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	cellular response to chemokine	0.016018268991534412	2	1.7953844175927929	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	cellular response to cytokine stimulus	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	chemokine-mediated signaling pathway	0.016018268991534412	2	1.7953844175927929	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	chemotaxis	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	cytokine-mediated signaling pathway	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	delamination	0.03732155011407324	1	1.4280403265544857	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	endothelial to hematopoietic transition	0.03561423195812067	1	1.448376417034608	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	erythrose 4-phosphate/phosphoenolpyruvate family amino acid catabolic process	0.03561423195812067	1	1.448376417034608	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	erythrose 4-phosphate/phosphoenolpyruvate family amino acid metabolic process	0.03561423195812067	1	1.448376417034608	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	glomerular epithelial cell development	0.04819328646152857	1	1.3170134566944374	-1.9842802880533204	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	granulocyte chemotaxis	0.029785288714561063	2	1.5259981858443705	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	granulocyte migration	0.029991435186794407	2	1.5230027513531181	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	hormone biosynthetic process	0.04819328646152857	1	1.3170134566944374	-3.6206557393114958	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	icosanoid secretion	0.03561423195812067	1	1.448376417034608	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	icosanoid transport	0.03561423195812067	1	1.448376417034608	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	inflammatory response	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	leukocyte chemotaxis	0.029991435186794407	2	1.5230027513531181	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	leukocyte migration	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	long-chain fatty acid transport	0.04621880629997438	1	1.3351812753006296	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	myeloid leukocyte migration	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	neutrophil chemotaxis	0.029785288714561063	2	1.5259981858443705	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	neutrophil migration	0.029991435186794407	2	1.5230027513531181	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	organic acid transport	0.03561423195812067	2	1.448376417034608	-3.378244421760761	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	organic anion transport	0.03561423195812067	2	1.448376417034608	-3.378244421760761	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	podocyte development	0.04819328646152857	1	1.3170134566944374	-1.9842802880533204	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	polyamine metabolic process	0.03561423195812067	1	1.448376417034608	2.7302732304770485	1	0		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	positive regulation of intracellular signal transduction	0.03658097718762233	2	1.436744697396404	-3.1131430891302316	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	positive regulation of response to wounding	0.03732155011407324	1	1.4280403265544857	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	positive regulation of wound healing	0.03561423195812067	1	1.448376417034608	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	regulation of blood coagulation	0.03561423195812067	1	1.448376417034608	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	regulation of coagulation	0.03732155011407324	1	1.4280403265544857	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	regulation of hemostasis	0.03561423195812067	1	1.448376417034608	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	regulation of neural retina development	0.03561423195812067	1	1.448376417034608	-3.6206557393114958	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	regulation of wound healing	0.04516085485580938	1	1.3452378458514318	-2.7538444785248077	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	response to chemokine	0.016018268991534412	2	1.7953844175927929	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	response to cytokine	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	taxis	0.03561423195812067	2	1.448376417034608	-2.9062545589949393	0	2		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	tyrosine metabolic process	0.03561423195812067	1	1.448376417034608	-4.870962604584245	0	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	2'-deoxyribonucleotide metabolic process	0.002123126789906463	7	2.673024069652875	1.0428978514090135	5	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA biosynthetic process	0.005813699620603602	14	2.235547410901396	2.1686214079356696	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA conformation change	4.39807247806367e-4	14	3.3567376179575503	2.155057675441897	13	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage checkpoint signaling	1.278552902735818e-6	20	5.893281297445303	2.1688893183207503	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	4.066724367620552e-31	151	30.390755261988826	1.9298329496935458	144	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA duplex unwinding	2.3088384646223812e-4	12	3.636606450962077	2.4269439178405006	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA geometric change	2.3088384646223812e-4	12	3.636606450962077	2.4269439178405006	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA integrity checkpoint signaling	5.272747124473647e-8	23	7.2779630564855555	2.231053135842201	23	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.0087867765226596e-16	66	15.996200619259003	2.2473201401004808	66	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	7.666696378146896e-32	129	31.11539173563595	2.004514329560703	125	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	3.1826695963318822e-37	85	36.49720844461425	2.1476960315894695	84	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication checkpoint signaling	4.430395385823316e-4	8	3.353557513908115	2.081189926031924	8	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	7.65532928933143e-13	20	12.116036123651046	2.350856761533716	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation	8.107011648313528e-7	12	6.091139202979436	2.160097225622498	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation involved in DNA replication	1.3369834817218666e-06	11	5.873873958363565	2.2560638606617056	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	8.440101870412998e-32	60	31.073652311491497	2.1361818708324747	60	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication maintenance of fidelity	6.66737576184912e-8	16	7.17604506809344	2.123785755779905	16	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	G2/M transition of mitotic cell cycle	6.505693594894032e-6	18	5.1867063949706065	2.6050795924584365	18	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	RNA localization	0.04071231884253351	20	1.390274160901448	1.8602144102751674	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	RNA transport	0.012315121467262196	20	1.9095613002437537	1.8602144102751674	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	T cell activation	0.04883397673728452	29	1.3112779080170116	0.5084421550597836	20	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	alcohol catabolic process	0.030155841632707032	7	1.5206285461073137	-1.3466518352065222	1	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	attachment of spindle microtubules to kinetochore	0.0034986825608844894	8	2.456095459720638	2.076762434694985	7	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	carbohydrate derivative catabolic process	0.008771231674175674	27	2.056939417838097	-0.40028432353957727	7	20		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid biosynthetic process	0.022591782113406376	36	1.6460495091641263	-0.9107868696044195	10	26		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid transport	0.017071390502553158	38	1.7677311031974368	-1.0067535453092884	9	29		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle DNA replication	5.519131324801088e-9	15	8.258129272005057	2.314278564850497	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle G2/M phase transition	3.43517352726472e-5	18	4.4640513197310545	2.6050795924584365	18	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle checkpoint signaling	9.228294543947265e-12	35	11.034878552342368	2.4500210508777434	35	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	1.7507657241563976e-16	68	15.756771964432383	2.265555496009662	65	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell division	2.2109999472871902e-11	86	10.65541126777537	2.528725187610542	83	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular lipid catabolic process	0.011082130947694453	31	1.9553767224737935	-0.8128235149342757	4	27		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular process involved in reproduction in multicellular organism	0.033085727429807775	29	1.4803593124249939	3.201761057240722	24	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to chemokine	0.01801070729864476	14	1.7444692316631516	1.2578075780054812	10	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to estrogen stimulus	0.04883397673728452	10	1.3112779080170116	-1.6613472105298728	0	10		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to type II interferon	0.003742993801071497	13	2.426780892138229	1.1105379472880645	9	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to xenobiotic stimulus	8.82318334078185e-7	29	6.054374696284706	-1.9470435519952525	0	29		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centriole assembly	2.3088384646223812e-4	12	3.636606450962077	1.9150211653699418	11	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centriole replication	0.0030128491422466235	10	2.52102261354074	1.8402991621651883	9	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centromere complex assembly	1.4319069400635212e-9	15	8.844085206001749	2.385165976724762	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centrosome cycle	1.3114607250110707e-4	21	3.8822447109191267	2.2410688720491216	20	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centrosome duplication	0.04075885793018467	11	1.389777993497005	1.9580260371965246	10	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chemokine-mediated signaling pathway	0.03335374281570585	13	1.4768554243260845	1.2169355107504773	9	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol metabolic process	0.04883397673728452	16	1.3112779080170116	-0.8709246607533914	3	13		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromatin organization	0.0011546198553643659	66	2.9375609784491696	1.6777523820298808	61	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromatin remodeling	0.00847092905099925	43	2.072068955714677	1.7036663377039067	39	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome condensation	0.015105342711914042	11	1.8208694169511304	2.8061054438671804	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome localization	1.9456991446868677e-4	14	3.7109243120139737	2.7059039466656047	13	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	2.3661373847653e-28	103	27.625960042584985	2.3069513255748544	100	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	7.816889830450861e-33	92	32.10696600885194	2.423010516005017	88	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome separation	1.8533404384949446e-5	14	4.732044798177228	2.623443190570557	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response	0.007531752987260657	87	2.123103931622548	0.49821150478767734	51	36		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response to other organism	2.224125168840603e-5	78	4.652840775270233	0.580762402000231	48	30		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response to symbiont	1.2667514276683088e-4	26	3.8973085975736095	-0.016538992841470465	13	13		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	defense response to virus	1.2667514276683088e-4	26	3.8973085975736095	-0.016538992841470465	13	13		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribonucleotide metabolic process	0.0034986825608844894	8	2.456095459720638	1.2031677250548825	6	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribose phosphate metabolic process	0.004297408933546478	7	2.366793317683911	1.0428978514090135	5	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	9.728195528249773e-15	58	14.011967709043118	2.1620893366097644	58	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via break-induced replication	4.014272648391802e-7	11	6.396393133674445	2.4369747220603513	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.2881280031657817e-15	44	14.890040978353232	2.2798534945785716	44	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	epigenetic regulation of gene expression	0.04453647413040382	15	1.351284168225233	2.036772650421216	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of RNA localization	0.012315121467262196	20	1.9095613002437537	1.8602144102751674	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of chromosome localization	1.3077992556156744e-4	14	3.8834589141686187	2.7059039466656047	13	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	establishment of organelle localization	0.04043658638958688	39	1.393225514177476	1.5360292553800527	30	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid biosynthetic process	0.04995346932611084	19	1.3014343441374323	-0.4784004349981458	7	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid metabolic process	0.02173746143779823	39	1.6627911754258633	-0.9776485186702226	7	32		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	female gamete generation	0.007412496164172272	21	2.130035518366871	4.078979028121937	19	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	gamete generation	0.007085282292527843	38	2.1496428418675	2.9659763772479355	33	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	glycosyl compound catabolic process	0.009249351326947278	8	2.0338887240183414	-0.9311382501238916	1	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	glycosyl compound metabolic process	0.01801070729864476	14	1.7444692316631516	-0.10554768380658892	5	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	homologous recombination	2.93333570199639e-4	14	3.532638231877376	2.3270750262061055	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	innate immune response	7.754708668825807e-4	48	3.1104345132466324	0.6818282604360704	31	17		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	interstrand cross-link repair	1.2676869828233778e-6	14	5.896987969178667	2.0737090438907138	13	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore assembly	6.419896390274744e-5	8	4.192471980886761	2.263389139057836	8	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore organization	1.2402673908925104e-5	9	4.906484674619775	2.30180337209419	9	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lipid catabolic process	3.0982966420561566e-4	46	3.5088770036715293	-0.676328169335253	8	38		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	lipid homeostasis	0.00948180477536597	18	2.023108990786111	-1.5956185064224577	1	17		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	long-chain fatty acid biosynthetic process	0.0019274878639286804	8	2.715008347723386	0.10898630127394796	4	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mRNA transport	0.006769419718741305	18	2.1694485578657705	1.9267622428674998	18	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	male gamete generation	0.048046254030828406	21	1.318340466833282	2.4967614322524714	18	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I	3.43517352726472e-5	19	4.4640513197310545	2.43250805761341	19	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I cell cycle process	1.106017275379267e-5	21	4.956238089538287	2.369408220121739	21	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	9.66989073100412e-16	47	15.014578433382363	2.5993885908436916	47	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle process	4.269224053767993e-12	36	11.369651052326132	2.6220560943470144	36	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic chromosome segregation	0.0014008337032282289	12	2.8536134179312063	3.2172172832808577	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic nuclear division	2.666634262930813e-9	28	8.57403654504616	2.706944692238696	28	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase chromosome alignment	4.1153976259114325e-5	13	4.3855881972933854	2.598338350676562	12	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of cell cycle	3.2384262242235053e-7	16	6.489665992319394	2.196656179250911	15	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of mitotic cell cycle	1.2676869828233778e-6	15	5.896987969178667	2.0929302119671895	14	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization	1.472142628788092e-7	88	6.8320501112656	2.040799036762271	78	10		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization involved in mitosis	1.4729263358395754e-5	29	4.831818972599573	2.7401748108662907	29	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule organizing center organization	1.301397925020647e-4	23	3.8855898900509116	2.2452047250356073	22	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mismatch repair	0.0019274878639286804	8	2.715008347723386	2.0404554947944518	8	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA damage checkpoint signaling	1.8533404384949446e-5	14	4.732044798177228	2.4341136170428914	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA integrity checkpoint signaling	3.125459248639971e-7	17	6.505086159281149	2.466621816958261	17	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA replication	7.834640217552502e-6	10	5.105980942414187	2.238541012624201	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2 DNA damage checkpoint signaling	0.002123126789906463	7	2.673024069652875	2.62773504028776	7	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2/M transition checkpoint	9.946076293553381e-5	11	4.002348213740214	2.5585278607174127	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle checkpoint signaling	1.710492692030489e-10	28	9.766878776970069	2.586074021530563	28	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle phase transition	2.0368564401876764e-12	52	11.691039579459048	2.235213966638902	49	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	5.066988391153247e-31	124	30.295250090709104	2.3682441420507003	118	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic intra-S DNA damage checkpoint signaling	0.009249351326947278	6	2.0338887240183414	2.0398298335246774	6	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic metaphase chromosome alignment	4.430395385823316e-4	8	3.353557513908115	2.6521891175518073	7	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.2898330621469855e-19	56	18.889466495033997	2.495343396616935	54	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	8.086326314173471e-20	44	19.092248737206468	2.5406491393573223	43	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid separation	4.8001747981166307e-05	12	4.318742947525395	2.474704965875241	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly	0.0014008337032282289	12	2.8536134179312063	2.508624249719144	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly checkpoint signaling	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle checkpoint signaling	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle organization	3.9839808159548756e-7	26	6.3996827614995935	2.8028881749717796	26	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid biosynthetic process	0.00948180477536597	24	2.023108990786111	-0.7541308919575349	8	16		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid metabolic process	0.014446457391510532	57	1.840238638993626	-0.9460796679915898	12	45		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	monocyte chemotaxis	0.04883397673728452	10	1.3112779080170116	1.319491172715482	7	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	multicellular organism reproduction	0.018472177262685224	38	1.7334819124946987	2.9659763772479355	33	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	multicellular organismal reproductive process	0.009375532067293073	38	2.0280040764181138	2.9659763772479355	33	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ncRNA metabolic process	0.011067083880807642	72	1.9559667983905864	1.2133579003667292	65	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ncRNA processing	0.009239499586301289	60	2.034351549644953	1.3047062113723884	55	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of G2/M transition of mitotic cell cycle	3.836493702030167e-4	12	3.4160655103984214	2.4766738238166504	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle	4.321543615394939e-12	50	11.364361099503022	1.9704064463201143	43	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle G2/M phase transition	6.064481936159938e-4	12	3.2172062932107344	2.4766738238166504	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle phase transition	9.808384942497752e-12	39	11.00840249805384	2.3356658636845236	38	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle process	1.1726078109339378e-12	44	11.930847217234447	2.313401116679431	42	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome organization	4.8001747981166307e-05	12	4.318742947525395	2.5455717488842313	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome segregation	1.106017275379267e-5	11	4.956238089538287	2.767874377685862	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome separation	1.106017275379267e-5	11	4.956238089538287	2.767874377685862	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of metaphase/anaphase transition of cell cycle	1.106017275379267e-5	11	4.956238089538287	2.767874377685862	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle	8.55459010232336e-9	35	8.067800795072491	2.2617984165913114	32	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle phase transition	2.89564245885999e-8	25	7.538255063928722	2.330967117133279	24	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic metaphase/anaphase transition	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic nuclear division	1.7679406765847168e-4	11	3.752532311870544	2.7457843923594494	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid segregation	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid separation	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of nuclear division	1.409299887838359e-4	12	3.850996582635551	2.84688677147825	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of sister chromatid segregation	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	non-membrane-bounded organelle assembly	7.245290157635479e-4	53	3.1399442173237038	1.7601755162914523	47	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear DNA replication	1.679966594021953e-7	13	6.774699354093288	2.2182000392145342	13	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	3.7340601045897597e-25	62	24.427818695791977	2.531903859952559	60	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	7.801205056942002e-27	80	26.107838306391937	2.5349738561373307	78	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nucleic acid transport	0.012315121467262196	20	1.9095613002437537	1.8602144102751674	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nucleotide-excision repair	0.007748232066582926	12	2.1107973802442177	1.5950802968378228	11	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	oogenesis	0.022441337905583496	18	1.6489512549162535	4.159589490660057	16	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.8859498210996603e-24	83	23.724469866587786	2.4398024515301864	79	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organic acid biosynthetic process	0.008708131274687014	38	2.0600750326118282	-0.9544987516887182	10	28		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organic acid transport	0.011353545161691105	39	1.9448685081839188	-1.0127484151809654	9	30		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound catabolic process	0.03518342976992345	9	1.453661826687881	-1.060386110350705	2	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound metabolic process	0.038909839243648284	43	1.4099405634841193	-1.0478022830932026	7	36		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organophosphate catabolic process	0.018444588163565437	21	1.7341310373896182	0.0778264399168598	7	14		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle	0.02173746143779823	13	1.6627911754258633	1.8896654123078664	11	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle process	0.008771231674175674	13	2.056939417838097	1.8896654123078664	11	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of immune response	0.043147434699818736	32	1.365045019852164	0.21306526517876945	20	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to chromosome	0.013692088893577831	9	1.8635302899413322	2.1189399295827696	9	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein monoubiquitination	0.019937901958022673	7	1.7003205439176652	1.0804028642117507	5	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex assembly	2.3088384646223812e-4	26	3.636606450962077	2.245373449394689	26	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex organization	9.865593696235926e-6	80	5.0058767744522505	1.7678955776041536	75	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	rRNA processing	0.02130735452162583	34	1.6714704680699621	0.9931724176770368	31	3		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal homologous recombination	1.9456991446868677e-4	14	3.7109243120139737	2.3270750262061055	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal meiotic recombination	1.9456991446868677e-4	14	3.7109243120139737	2.3270750262061055	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	3.6919965484099875e-16	45	15.432738713661076	2.2934597536170203	45	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA metabolic process	0.006769419718741305	27	2.1694485578657705	2.0912958709778606	26	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA replication	5.190063563146199e-4	11	3.2848273232778227	2.4604250227083404	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of G2/M transition of mitotic cell cycle	3.0200869480215737e-5	16	4.51998055356523	2.4186305577234926	16	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle	2.091718833591222e-11	117	10.679496693239916	1.937517881721799	102	15		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle G2/M phase transition	1.409299887838359e-4	16	3.850996582635551	2.4186305577234926	16	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	1.7189542159581096e-13	52	12.76473569051571	2.1901738303683884	50	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	5.611086377674709e-16	77	15.250953045668536	2.2179373546300765	72	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome organization	7.588216961479046e-7	23	6.119860260304977	1.9577064283337198	21	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome segregation	1.0645411727615628e-7	20	6.97283753689606	2.060929963331179	18	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome separation	1.409299887838359e-4	12	3.850996582635551	2.636795595875814	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cyclin-dependent protein kinase activity	6.34867290700346e-4	13	3.1973170478418296	2.5529136719715826	12	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cyclin-dependent protein serine/threonine kinase activity	6.34867290700346e-4	13	3.1973170478418296	2.5529136719715826	12	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of metaphase/anaphase transition of cell cycle	2.6589572426710216e-6	14	5.575288646279316	2.2898404684787788	13	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle	1.0998983453821701e-4	61	3.958647451277813	1.9203901364569809	54	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle phase transition	1.91887154522509e-9	36	8.716954097211977	2.112844214325613	34	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic metaphase/anaphase transition	1.1688227263596665e-5	13	4.932251352655004	2.177324682322782	12	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic nuclear division	2.35684431697752e-6	18	5.627669104158166	2.4246170516965493	17	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid segregation	4.9193773055162054e-5	11	4.308089866723124	2.3259364023832285	10	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid separation	1.7679406765847168e-4	11	3.752532311870544	2.5353637692730024	11	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of nuclear division	5.197398156550364e-7	20	6.2842140119496515	2.542926080739511	19	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of organelle organization	0.005086540646736094	79	2.293577480688957	1.3617110792731835	58	21		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of sister chromatid segregation	7.190959548654989e-8	18	7.143213154278993	2.0166443542242005	16	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	replication fork processing	5.947763820906346e-7	14	6.225646285159092	2.0887103122719064	14	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reproduction	1.824989196889695e-8	83	7.738739702026728	2.562045643560795	76	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	reproductive process	1.180490316057551e-8	83	7.9279375712282185	2.562045643560795	76	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	resolution of meiotic recombination intermediates	0.02796345167046381	6	1.5534092224501461	2.17471347057942	6	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	5.106227476904793e-7	104	6.291899841751913	0.6909531286037982	65	39		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to chemokine	0.01801070729864476	14	1.7444692316631516	1.2578075780054812	10	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	6.008692921677011e-7	103	6.2212199903333945	0.7105379202733975	65	38		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to other organism	6.008692921677011e-7	103	6.2212199903333945	0.7105379202733975	65	38		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to type II interferon	0.005086540646736094	13	2.293577480688957	1.1105379472880645	9	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to virus	8.959510262389111e-5	29	4.047715728748013	0.1106770492701428	15	14		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to xenobiotic stimulus	9.521289183149372e-7	31	6.021304244134225	-1.9876881797925758	0	31		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ribonucleoprotein complex biogenesis	0.003742993801071497	64	2.426780892138229	1.101925264128068	59	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ribosome biogenesis	0.020158051222259995	46	1.695551455576101	1.0414188230803414	41	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	serine family amino acid metabolic process	0.04883397673728452	10	1.3112779080170116	-0.8866784833049566	2	8		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sexual reproduction	2.5257836551406273e-11	80	10.597603851485532	2.63610193254988	74	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	signal transduction in response to DNA damage	3.9839808159548756e-7	25	6.3996827614995935	2.108992710805918	25	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	5.531235644904389e-24	51	23.257177839071662	2.426541395583855	49	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	small molecule biosynthetic process	0.0013228639241648506	64	2.878484827032238	-0.7376201778424762	19	45		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly	1.7921602833078333e-8	25	7.746623151457811	2.2230664112194516	24	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly checkpoint signaling	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle checkpoint signaling	4.8001747981166307e-05	10	4.318742947525395	2.6694072466037744	10	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle elongation	6.419896390274744e-5	8	4.192471980886761	2.6304202276195165	8	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle midzone assembly	9.186131513328327e-4	7	3.03686734129302	2.0433001879789185	6	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle organization	3.399266036660099e-12	41	11.468614844910272	2.4960087517295557	40	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spliceosomal snRNP assembly	2.474672824202835e-6	15	5.606482210886287	1.2048755201707804	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	steroid catabolic process	0.009249351326947278	6	2.0338887240183414	-2.0078917550511495	0	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	steroid metabolic process	0.02255618888136596	26	1.6467342773665574	-1.366992311623771	3	23		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sterol metabolic process	0.031162540286103425	18	1.5063671470434497	-1.0407283224458668	3	15		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance	0.00213821236294886	15	2.6699491637311947	1.7324699687168563	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	telomere organization	0.0028848086219610282	15	2.539882992623718	1.7324699687168563	15	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	xenobiotic metabolic process	1.8670659742097204e-7	22	6.728840335650815	-2.0921873894883984	0	22		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	cellular response to estrogen stimulus	2.6700322208436724e-12	7	11.573483497717756	-9.231406222794744	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	cellular response to hormone stimulus	4.2059999678697464e-7	7	6.3761307349673375	-9.231406222794744	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	endoplasmic reticulum organization	0.04212745822619963	2	1.375434743380546	-3.0647065023130624	0	2		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	endoplasmic reticulum tubular network organization	0.0021260726647528622	2	2.67242189627467	-3.0647065023130624	0	2		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	lipid localization	1.6708555756601267e-6	7	5.777061087751476	-8.83749625457486	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	lipid transport	1.43378094119268e-6	7	5.843517196854058	-8.83749625457486	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to estradiol	9.655694185001134e-12	6	11.015216497661092	-9.26957581698077	0	6		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to estrogen	2.6700322208436724e-12	7	11.573483497717756	-9.231406222794744	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to hormone	1.43378094119268e-6	7	5.843517196854058	-9.231406222794744	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to lipid	2.804082883071041e-7	7	6.552209153641038	-8.304472359180746	0	7		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to organic cyclic compound	1.5414302307133726e-6	6	5.812076127831354	-9.26957581698077	0	6		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to oxygen-containing compound	3.2011144035942525e-5	7	4.494698804468224	-8.304472359180746	0	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	2'-deoxyribonucleotide metabolic process	0.010867861375779303	6	1.963855909830708	2.2032846809742836	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA biosynthetic process	2.1129771563368279e-4	16	3.6751051981348564	2.120159816702756	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA conformation change	2.3963357343799742e-4	14	3.620452335959657	1.8904013465689977	13	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage checkpoint signaling	1.374511150737624e-5	18	4.861851732587209	2.297309137843608	18	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	1.117377771198038e-38	160	37.9517999726233	1.8482792267407135	149	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA duplex unwinding	1.340463577992015e-4	12	3.872744981824318	2.10562553932121	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA geometric change	1.340463577992015e-4	12	3.872744981824318	2.10562553932121	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA integrity checkpoint signaling	5.870009854275676e-7	21	6.231361169680161	2.3052853846826946	21	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	4.897910329274438e-22	72	21.30998917018268	2.154290850306664	71	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.8160056306806576e-41	140	40.74088280924569	1.8984978055826096	133	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	7.958956612775235e-42	88	41.09914386279187	2.139930300852439	87	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication checkpoint signaling	2.869966609996824e-4	8	3.5421231559414377	1.9712113379755136	8	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	3.371013183409462e-13	20	12.472239549030263	2.253911113761223	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation	2.4466348166094526e-8	13	7.6114308483706745	2.1635671984095803	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation involved in DNA replication	3.5894047719650364e-8	12	7.444977564146931	2.2355629715329424	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA synthesis involved in DNA repair	0.02621951949627286	7	1.581375271533401	2.4735243102087465	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	1.2655026127883861e-36	63	35.89773695384954	2.153401082269738	63	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication maintenance of fidelity	2.6581827216681984e-9	17	8.575415169260571	2.170707542237895	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	G2/M transition of mitotic cell cycle	1.3706793501920123e-5	17	4.863064129987611	2.7357093847990224	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA export from nucleus	0.01470353822456837	14	1.832578145081397	1.2218543324141	14	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA localization	0.01972771562785676	20	1.7049232009948327	1.355815782601158	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA splicing, via transesterification reactions	0.019124063238250902	44	1.7184198288761643	1.31469570971798	44	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA splicing, via transesterification reactions with bulged adenosine as nucleophile	0.019124063238250902	44	1.7184198288761643	1.31469570971798	44	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA surveillance	0.0050199609309577965	7	2.2992996628421256	1.3200621009432074	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA transport	0.006348421311916226	20	2.1973342590802734	1.355815782601158	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA-templated DNA biosynthetic process	0.01242664778032428	7	1.9056460110892623	1.6450882012649557	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	acyl-CoA metabolic process	0.015650576916106735	16	1.8054696487332726	-0.9156231239696913	4	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	acylglycerol biosynthetic process	0.017237214372445873	8	1.7635329171901841	-1.5673562920955086	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alcohol biosynthetic process	3.694212766897612e-5	25	4.432478095136021	-1.4890381583540162	3	22		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alcohol metabolic process	1.8843790993695096e-8	50	7.724831721393488	-1.2474491182963463	6	44		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	anaphase-promoting complex-dependent catabolic process	0.01242664778032428	7	1.9056460110892623	1.6356621504946611	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	attachment of spindle microtubules to kinetochore	0.01242664778032428	7	1.9056460110892623	2.831732500864838	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	carbohydrate metabolic process	0.02281716631476662	59	1.6417382920069878	-1.0685578323395646	8	51		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid biosynthetic process	0.04984033103748467	33	1.3024190817727341	-1.2054521630061554	8	25		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid catabolic process	0.001690609132468493	38	2.7719567893471417	-1.296619218979501	3	35		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid transport	3.946195399469223e-5	45	4.403821414063495	-1.4671824702425302	6	39		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle DNA replication	2.8228745325471558e-9	15	8.549308424379952	2.5019316410087047	15	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle G2/M phase transition	1.374511150737624e-5	18	4.861851732587209	2.751267968301391	18	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle checkpoint signaling	1.691877628528007e-11	34	10.771631052158076	2.4661868182447697	33	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	1.4797790860302846e-15	65	14.8298031149288	2.3022252682385904	62	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell division	6.967191346994334e-12	85	11.156942261834798	2.5118681377873	83	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular aldehyde metabolic process	0.001166281571477576	15	2.9331965866470204	-1.4241200922263453	0	15		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular lipid catabolic process	7.659719611903021e-5	36	4.115787127656173	-1.1613333799938335	3	33		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular modified amino acid metabolic process	0.01015720023513714	18	1.9932259859493089	-0.90699126552908	2	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to estrogen stimulus	6.198500281185911e-8	18	7.207713374758514	-4.159586616601126	0	18		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to hormone stimulus	0.004453053707006202	41	2.3513420669357483	-2.6924305121724426	1	40		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to type II interferon	0.022675755547304235	11	1.6444382335045418	0.886604774081761	7	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to xenobiotic stimulus	4.243040431485455e-9	32	8.372322829867283	-1.6188012828568679	2	30		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centriole assembly	7.839655889433469e-4	11	3.105702999636991	2.1510005763897206	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centriole replication	0.008644573132318423	9	2.0632564472548025	2.0657987367039605	9	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centromere complex assembly	4.568698551606746e-13	17	12.340207496287197	2.6118131000031517	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centrosome cycle	2.1129771563368279e-4	20	3.6751051981348564	2.3634598536140894	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centrosome duplication	0.022675755547304235	11	1.6444382335045418	2.1105339696592127	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol biosynthetic process	1.0449472706356037e-5	13	4.98090562405031	-1.3075727495935137	2	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol efflux	0.049838588597401305	7	1.3024342651658951	-1.5779415522318414	0	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol metabolic process	1.1351010284506127e-9	29	8.944965482835629	-1.2184319440763072	4	25		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol transport	0.0017954564723148883	14	2.7458251191163527	-1.369177201641818	1	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromatin organization	0.0077363642486417295	60	2.1114630907023226	1.6575985509532292	55	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromatin remodeling	0.027679888877836758	39	1.5578356577065797	1.6075086538469683	35	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome condensation	0.00913289202384778	11	2.039391676888858	3.1219326871583073	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome localization	0.00236459303208493	12	2.626243594515417	2.9660518771953144	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4004987282521329e-33	108	32.85371728120909	2.3622033808233396	107	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	8.804854700301484e-34	91	33.05527780646308	2.6470723850317945	90	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome separation	1.164330847828814e-6	15	5.933923596172239	2.687379307828191	15	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	circadian regulation of gene expression	0.0037701665611962255	13	2.4236394627887625	-1.3251913845854797	1	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	circadian rhythm	0.013968372673150408	21	1.8548541866014425	-0.8736196033904856	5	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribonucleotide metabolic process	0.01242664778032428	7	1.9056460110892623	2.208696495354099	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribose phosphate metabolic process	0.017423039433936107	6	1.75887608042809	2.2032846809742836	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	diterpenoid metabolic process	0.012261741580066625	12	1.9114478410006386	-0.9483785821110972	2	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	1.8196221636044035e-21	66	20.740018781958334	2.0605033928134717	65	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via break-induced replication	1.9990129228558757e-7	11	6.699184398324676	2.475107142058057	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	7.936512831921981e-22	50	21.100370277235182	2.133353059953172	49	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	entrainment of circadian clock by photoperiod	0.04022597987570866	6	1.3954933680013362	-1.3484151682053667	0	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	establishment of RNA localization	0.006348421311916226	20	2.1973342590802734	1.355815782601158	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	establishment of chromosome localization	0.001690609132468493	12	2.7719567893471417	2.9660518771953144	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	establishment of protein localization to mitochondrial membrane	0.00840428882579184	7	2.075499030838644	1.2200231959994055	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	establishment of protein localization to mitochondrion	0.010150530879698774	14	1.9935112432587039	1.2006916520019588	13	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	fat-soluble vitamin metabolic process	0.006018100701362816	9	2.22054054945066	-1.7669131158729523	1	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid catabolic process	0.025229334154800213	16	1.5980942111039838	-1.1981961666916816	1	15		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid metabolic process	3.0931182845043493e-4	44	3.5096034717442213	-1.190661725788414	7	37		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid transport	5.218032807306204e-4	18	3.282493194690137	-1.5231603640641165	2	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	glucose metabolic process	0.00524288179552859	17	2.280429933651595	-0.9429283925725942	4	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	glycolytic process	0.040337088403801756	12	1.3942954530691583	-0.2774923253210829	5	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	glycosyl compound catabolic process	0.02621951949627286	7	1.581375271533401	-0.9125288100426752	1	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	glycosyl compound metabolic process	9.845263779990226e-4	16	3.0067726435015336	-0.6666478546770807	4	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	hexose metabolic process	0.009468820440634747	21	2.0237041189935554	-1.0415156922537914	4	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	homologous recombination	7.62049138250479e-7	17	6.118017023695854	2.298426669558725	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	interstrand cross-link repair	6.198500281185911e-8	15	7.207713374758514	2.0359006031919384	14	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	isoprenoid metabolic process	0.029080300215785396	16	1.5364011142715293	-0.9788579251725142	3	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore assembly	1.5787092829970825e-6	9	5.801697837321947	2.482801554837625	9	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore organization	2.526438257271607e-7	10	6.597491310864853	2.503430135992646	10	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid biosynthetic process	1.928484703039552e-6	86	5.714783801657602	-1.049478472212989	19	67		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid catabolic process	1.8750589087470507e-5	48	4.726985083487253	-1.1477622293336953	5	43		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid homeostasis	0.005088186161097399	18	2.2934370075683055	-1.6152686983252107	1	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid localization	9.156338983377576e-9	69	8.038278137373078	-1.7980339167240276	9	60		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid transport	2.0646086627211704e-8	65	7.685162254771213	-1.8687135953048843	8	57		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lymphocyte chemotaxis	0.043434548978136756	10	1.36216468381655	1.1543450792718126	7	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mRNA splicing, via spliceosome	0.019124063238250902	44	1.7184198288761643	1.31469570971798	44	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mRNA transport	0.009270971153099564	17	2.0328747702415866	1.3948173307265253	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	maturation of 5.8S rRNA	0.0068088699461898725	11	2.166924961047315	1.0407550921401019	10	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	maturation of 5.8S rRNA from tricistronic rRNA transcript (SSU-rRNA, 5.8S rRNA, LSU-rRNA)	0.006018100701362816	9	2.22054054945066	1.2955143515631073	9	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I	5.870009854275676e-7	21	6.231361169680161	2.3505176768472547	21	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I cell cycle process	1.9345577485056482e-7	23	6.713418301619651	2.3049328418925836	23	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	4.499481280559279e-14	44	13.346837550663702	2.298762855878414	44	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle process	1.278295183879672e-12	36	11.893368847329922	2.4331824789627743	36	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic chromosome segregation	0.0036861187048321986	11	2.4334306832180013	2.8797451368377405	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic nuclear division	5.252868058066822e-9	27	8.279603507701205	2.4739561127320484	27	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase chromosome alignment	7.839655889433469e-4	11	3.105702999636991	2.885702846603873	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of cell cycle	1.423313553348405e-7	16	6.846699415103068	2.468569305354723	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of mitotic cell cycle	6.708844941308718e-8	16	7.173352245672529	2.468569305354723	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization	1.6474479202013633e-7	85	6.783188305612051	2.0907014806684985	78	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization involved in mitosis	1.46322226647449e-6	30	5.8346896986378285	2.626857665012328	30	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule organizing center organization	5.435843982311277e-5	23	4.264733016728664	2.2300200739113527	22	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule polymerization or depolymerization	0.043298580556163285	15	1.3635263407535652	1.9621439841904742	14	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mismatch repair	0.0012085767476305257	8	2.9177257656004674	1.823576639126407	7	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitochondrial transport	0.011899073049858459	18	1.9244868692806918	0.5285801964442096	13	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA damage checkpoint signaling	8.632423360504078e-6	14	5.06386726867013	2.464785506642158	14	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA integrity checkpoint signaling	1.3286042074392654e-7	17	6.876604376563472	2.434554004117831	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA replication	3.738942977998025e-6	10	5.427251158148707	2.3298348272738854	10	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2 DNA damage checkpoint signaling	0.010867861375779303	6	1.963855909830708	2.9173486062990075	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2/M transition checkpoint	4.106628706334615e-4	10	3.386514561348789	2.6618110684822534	10	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle checkpoint signaling	8.040974524178564e-12	29	11.094691313835439	2.496548736819701	28	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle phase transition	6.928597821814768e-12	50	11.159354647042369	2.34586882116001	48	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	1.7402168669680873e-31	122	30.75939662628139	2.4019148976859928	117	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic intra-S DNA damage checkpoint signaling	6.029228443897172e-4	7	3.2197382606620315	2.0119237310453792	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic metaphase chromosome alignment	0.0027189805188870594	7	2.5655939040602234	2.627616417154744	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.3282917004993577e-20	56	19.876706540927366	2.6001864372876606	55	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	1.018932281074401e-21	45	20.991854678538214	2.7271048892403837	45	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid separation	2.6478639682666644e-7	14	6.5771043301646115	2.6254214897968486	14	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly	0.0036861187048321986	11	2.4334306832180013	2.5067872513097917	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly checkpoint signaling	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle checkpoint signaling	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle organization	2.976196141765888e-8	27	7.526338450653177	2.628913776159249	27	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid biosynthetic process	0.01015720023513714	23	1.9932259859493089	-1.244743513960214	6	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid catabolic process	0.030672237843467075	17	1.5132545367787142	-1.2152614613203607	1	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid metabolic process	2.17529820890898e-6	69	5.662481197741067	-1.1187909494967907	13	56		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid transport	1.008814866333204e-4	26	3.9961885264360606	-1.7096073621562025	2	24		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monosaccharide metabolic process	0.0016265825093247437	25	2.78872390198828	-1.098239406247787	4	21		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ncRNA processing	0.028062487228230022	55	1.5518738393082092	1.1260278862935664	52	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of G2/M transition of mitotic cell cycle	0.0012085767476305257	11	2.9177257656004674	2.593095184217472	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle	1.0451556195949758e-9	45	8.980819039983958	2.094268716299775	39	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle G2/M phase transition	0.0017888262567819452	11	2.7474318390777595	2.593095184217472	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle phase transition	7.974820373795455e-11	37	10.09827909028307	2.355106174203914	35	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle process	1.4613754506496387e-10	40	9.835238192554609	2.438646469639262	38	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome organization	2.5934906879031917e-6	13	5.586115307030149	2.7437701292346897	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome segregation	5.2635228590881165e-6	11	5.278723486616198	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome separation	5.2635228590881165e-6	11	5.278723486616198	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of metaphase/anaphase transition of cell cycle	5.2635228590881165e-6	11	5.278723486616198	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle	2.670796662096829e-9	35	8.573359175209948	2.291866645470687	32	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle phase transition	1.0524116142109705e-8	25	7.977814367770007	2.5483784225432813	24	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic metaphase/anaphase transition	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic nuclear division	1.1856991953250732e-5	12	4.926025474867253	2.900258599636626	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid segregation	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid separation	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of nuclear division	1.0449472706356037e-5	13	4.98090562405031	3.0176897415274544	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of sister chromatid segregation	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	neutral lipid biosynthetic process	0.017237214372445873	8	1.7635329171901841	-1.5673562920955086	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	neutrophil chemotaxis	0.027679888877836758	18	1.5578356577065797	1.6173634070893215	14	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	non-membrane-bounded organelle assembly	4.2605240999420705e-4	52	3.3705369737347204	1.9301137778150927	49	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear DNA replication	7.988031415495928e-8	13	7.097560235795614	2.357324023402407	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear RNA surveillance	0.010867861375779303	6	1.963855909830708	1.3142329548614018	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	3.400484570267471e-26	62	25.46845919142886	2.738743640660332	62	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	4.6002677757035315e-28	80	27.337216887856314	2.5608404668916784	79	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear export	0.015682200598231087	18	1.8045929951840503	1.391392872692426	18	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear transport	0.014884002143598479	26	1.8272802761032767	1.260403012169353	24	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleic acid transport	0.006348421311916226	20	2.1973342590802734	1.355815782601158	20	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleobase metabolic process	0.022675755547304235	11	1.6444382335045418	-0.8341491854516193	3	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleobase-containing compound transport	0.013347392423190973	25	1.8746035707662	0.9326770042518951	21	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleocytoplasmic transport	0.014884002143598479	26	1.8272802761032767	1.260403012169353	24	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleoside bisphosphate biosynthetic process	0.0346981609416085	11	1.4596935429058686	-0.9571445614951231	2	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleoside bisphosphate metabolic process	0.0045646883035215325	20	2.340588872605537	-1.1038710321245935	4	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleoside metabolic process	0.022675755547304235	11	1.6444382335045418	-0.3493456401073716	4	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleotide-excision repair	0.014652890167765302	11	1.8340767056773455	1.7409931514643322	10	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	2.0378868091680483e-26	84	25.690819941781456	2.4254800993702297	80	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic acid biosynthetic process	0.0198126862593598	35	1.703056637610063	-1.2566966234484496	8	27		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic acid catabolic process	0.001690609132468493	38	2.7719567893471417	-1.296619218979501	3	35		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic acid transport	2.2747290541461343e-5	46	4.643070325291211	-1.4691850449797095	6	40		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic anion transport	7.703090684400113e-4	50	3.1133349893901614	-1.499759786037281	6	44		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic cyclic compound catabolic process	0.014007962153291396	54	1.8536250402997465	0.13856398448155424	31	23		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound biosynthetic process	1.3293248822591066e-5	32	4.87636886606292	-1.5532343237192618	4	28		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound metabolic process	3.3169337022386882e-9	63	8.479263208926598	-1.3165746813779735	7	56		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound transport	0.0036505277946859826	25	2.437644340543891	-1.2896832099576188	3	22		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organophosphate catabolic process	0.01972771562785676	20	1.7049232009948327	-0.1982335126634202	7	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	polyol metabolic process	0.01471984235178531	17	1.8320968412292504	-1.5254838537290627	1	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle	0.03357080034798988	12	1.474038304787965	2.2517134818155	11	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle process	0.014884002143598479	12	1.8272802761032767	2.2517134818155	11	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	postreplication repair	0.0366380434801957	7	1.4360677262826274	2.5027625553126307	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to chromosome	0.008644573132318423	9	2.0632564472548025	2.4572834838227773	9	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to mitochondrion	0.010150530879698774	14	1.9935112432587039	1.2006916520019588	13	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to organelle	0.010150530879698774	60	1.9935112432587039	0.9890115133426605	46	14		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein monoubiquitination	0.01242664778032428	7	1.9056460110892623	1.0794340542132883	5	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein targeting to mitochondrion	0.02760439962987743	12	1.5590216939238324	1.220479784877172	11	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex assembly	6.485920243585092e-8	32	7.188028396086089	2.336176859269398	32	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex organization	1.0699903099025337e-5	77	4.9706201553754585	1.8062939686522372	72	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	purine nucleobase metabolic process	0.04174548622777199	8	1.3793904761647482	-1.2262201975686284	1	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	purine nucleoside bisphosphate biosynthetic process	0.0346981609416085	11	1.4596935429058686	-0.9571445614951231	2	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	purine nucleoside bisphosphate metabolic process	0.0045646883035215325	20	2.340588872605537	-1.1038710321245935	4	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	rRNA 3'-end processing	0.039448121445908535	5	1.4039736734457198	1.3754667172505626	5	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	rRNA metabolic process	0.0015196133018460874	39	2.818266913529353	1.185374073803132	38	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	rRNA processing	5.333133802042232e-4	38	3.2730175202436835	1.1896760470650098	37	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal homologous recombination	4.2902452324266415e-7	17	6.36751788262979	2.298426669558725	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal meiotic recombination	4.2902452324266415e-7	17	6.36751788262979	2.298426669558725	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	1.8898933449863688e-22	51	21.723562704287538	2.1334708001403477	50	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA metabolic process	0.0012594694124150078	28	2.8998123753518024	2.183178493077275	27	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA replication	3.0679525013337886e-4	11	3.5131513685067333	2.656953137911801	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of G2/M transition of mitotic cell cycle	7.115839399259873e-5	15	4.147773862274778	2.5518911898251346	15	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle	4.243040431485455e-9	107	8.372322829867283	1.9997777850714025	95	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle G2/M phase transition	7.115839399259873e-5	16	4.147773862274778	2.5808832334511678	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	3.197670645346949e-14	52	13.495166269881352	2.285602291417428	50	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.9618792238615699e-16	76	15.707327731933113	2.3019664883517184	72	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome organization	2.741340815517802e-7	23	6.562036967708421	2.247273791862672	23	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome segregation	2.6478639682666644e-7	19	6.5771043301646115	2.5342492771644665	19	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome separation	1.0449472706356037e-5	13	4.98090562405031	2.644990062610396	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of circadian rhythm	0.042197121674479046	11	1.374717171870635	-1.3287066279887385	1	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of metaphase/anaphase transition of cell cycle	1.2833509435381949e-6	14	5.891654565760001	2.559705747775232	14	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle	2.048861170836263e-4	58	3.688487468042136	2.0866621638311904	53	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle phase transition	1.1791202541455468e-10	37	9.928441900546478	2.3378410209783347	36	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic metaphase/anaphase transition	5.977742179267191e-7	14	6.223462820065588	2.559705747775232	14	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic nuclear division	1.6474479202013633e-7	19	6.783188305612051	2.476294976501085	18	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid segregation	2.605822166520867e-5	11	4.584055225896636	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid separation	1.2833509435381949e-6	13	5.891654565760001	2.644990062610396	13	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of nuclear division	2.022019928411749e-7	20	6.6942145684499605	2.5738233998869	19	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of organelle organization	0.04918079063420883	70	1.30820449378937	1.551688423408366	56	14		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of sister chromatid segregation	2.3706823518860848e-7	17	6.625126633311904	2.4858157198423587	17	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of type I interferon production	0.010867861375779303	6	1.963855909830708	1.1339659999902143	4	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	replication fork processing	2.4294596638224973e-8	15	7.614490307107142	2.1479365137644404	15	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reproduction	7.780238195252464e-4	65	3.10900710669923	1.7402875417872108	57	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reproductive process	0.001055027187887061	64	2.976736348520616	1.806795547488867	57	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	resolution of meiotic recombination intermediates	0.0027189805188870594	7	2.5655939040602234	2.166596928766574	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to bacterium	0.002388323324415952	45	2.621906880011434	1.2887156915835574	33	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	1.2884440379503157e-4	91	3.8899344397728934	1.0895727093086633	63	28		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to cold	0.0021660583191462556	8	2.664329854570143	-0.9393572764040609	1	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to estradiol	0.01242664778032428	8	1.9056460110892623	-6.125213669905227	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to estrogen	1.9990129228558757e-7	18	6.699184398324676	-4.159586616601126	0	18		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	1.554531901653143e-4	90	3.8084003610638506	1.1136995152569344	63	27		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to hormone	6.613797599485844e-4	52	3.1795490998322693	-2.398730286763326	3	49		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to lipid	1.360116939307803e-4	43	3.8664237505174253	-1.8823215292471234	9	34		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to other organism	1.554531901653143e-4	90	3.8084003610638506	1.1136995152569344	63	27		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to oxidative stress	0.01972771562785676	20	1.7049232009948327	-0.07228789330521118	7	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to temperature stimulus	0.041044654253931084	14	1.3867433983301627	-0.7862513819829525	3	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to type II interferon	0.028039199253027548	11	1.552234393164622	0.886604774081761	7	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to xenobiotic stimulus	5.252868058066822e-9	34	8.279603507701205	-1.7190507200109861	2	32		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	retinal metabolic process	0.006189993176954695	6	2.2083098296895036	-1.3644873165661038	0	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	retinoid metabolic process	0.009883988316881634	12	2.0050677766164613	-0.9483785821110972	2	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ribonucleoprotein complex biogenesis	2.5460315796093638e-5	70	4.59413621389327	1.2085273370845153	68	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ribonucleoside bisphosphate biosynthetic process	0.0346981609416085	11	1.4596935429058686	-0.9571445614951231	2	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ribonucleoside bisphosphate metabolic process	0.0045646883035215325	20	2.340588872605537	-1.1038710321245935	4	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ribosomal large subunit biogenesis	0.021622614683256304	16	1.6650917907781546	1.049516119074896	15	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ribosome biogenesis	3.465412444286461e-4	51	3.460245069387543	1.1309480849162101	49	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	secondary alcohol biosynthetic process	1.0449472706356037e-5	13	4.98090562405031	-1.3075727495935137	2	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	secondary alcohol metabolic process	4.243040431485455e-9	30	8.372322829867283	-1.2978113125813178	4	26		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	serine family amino acid catabolic process	0.0021660583191462556	8	2.664329854570143	-1.4686060653560968	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	serine family amino acid metabolic process	0.00913289202384778	11	2.039391676888858	-1.2954495600781888	1	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sexual reproduction	2.199853772242712e-5	62	4.657606186459027	1.8408838351873942	56	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	signal transduction in response to DNA damage	1.0731307344982773e-5	22	4.969347366745511	2.28629492937936	22	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	9.742744265881339e-24	50	23.011318696954874	2.6671058348862324	50	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	small molecule biosynthetic process	3.2361684688665884e-6	71	5.489968877914314	-1.2230183050238719	14	57		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	small molecule catabolic process	1.2211251798287985e-4	50	3.9132398134324533	-1.260460422009992	5	45		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sphingolipid metabolic process	0.023148264560398837	24	1.6354815627494461	-1.1801590062604477	3	21		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly	1.9345577485056482e-7	23	6.713418301619651	2.3825136842278547	23	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly checkpoint signaling	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle checkpoint signaling	1.983820987788771e-6	11	5.702497519441458	2.9108125561820755	11	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle elongation	3.754577869635143e-5	8	4.425438884010978	2.9010629203009324	8	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle midzone assembly	0.006189993176954695	6	2.2083098296895036	2.836796738566573	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle organization	4.840066077695837e-12	40	11.315148709226913	2.558176469394983	40	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spliceosomal snRNP assembly	3.465412444286461e-4	12	3.460245069387543	1.4287428024354691	12	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	steroid biosynthetic process	1.3062123174655428e-7	28	6.883986225197759	-1.4601789913384828	4	24		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	steroid catabolic process	0.039448121445908535	5	1.4039736734457198	-1.9890270710689637	0	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	steroid metabolic process	6.035554000656159e-12	45	11.219282860051248	-1.5564572661442926	4	41		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol biosynthetic process	7.62049138250479e-7	17	6.118017023695854	-1.289698021437549	3	14		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol metabolic process	2.323107533041381e-10	32	9.633930686917104	-1.294332502948243	4	28		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol transport	0.00524288179552859	14	2.280429933651595	-1.369177201641818	1	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance	2.9546911890539646e-4	16	3.529487902903914	1.6124207762848353	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance via telomerase	0.01242664778032428	7	1.9056460110892623	1.6450882012649557	7	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance via telomere lengthening	0.017237214372445873	8	1.7635329171901841	1.5747729906624965	8	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere organization	4.036865969359575e-4	16	3.3939556696468682	1.6124207762848353	16	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	terpenoid metabolic process	0.010150530879698774	13	1.9935112432587039	-0.9852594313693998	2	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	thioester metabolic process	0.015650576916106735	16	1.8054696487332726	-0.9156231239696913	4	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	translesion synthesis	0.0270553436405494	6	1.5677469455515225	2.715181774371953	6	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	triglyceride biosynthetic process	0.017237214372445873	8	1.7635329171901841	-1.5673562920955086	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	triglyceride metabolic process	0.042197121674479046	11	1.374717171870635	-1.6673153315484468	0	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	type I interferon production	0.010867861375779303	6	1.963855909830708	1.1339659999902143	4	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	vitamin biosynthetic process	0.0021660583191462556	8	2.664329854570143	-1.888849029908014	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	vitamin metabolic process	0.0026029398821668863	15	2.5845358622959465	-1.4164495655116887	2	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	xenobiotic metabolic process	7.087731167984005e-8	22	7.149492763253517	-2.0138807199267665	0	22		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	cellular response to cytokine stimulus	0.019948752032706036	4	1.7000842680104133	-2.2226177720359437	0	4		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	cytokine-mediated signaling pathway	0.018463950535768166	4	1.7336753719814526	-2.2226177720359437	0	4		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	defense response	6.277293774617835e-9	13	8.202227546080858	-2.3895565275600252	2	11		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	defense response to other organism	2.385333183312793e-8	11	7.6224509501383695	-2.7003660089551524	1	10		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	defense response to symbiont	1.2546117842738256e-6	6	5.901490637553459	-2.7352807824655536	0	6		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	defense response to virus	1.2546117842738256e-6	6	5.901490637553459	-2.7352807824655536	0	6		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	intermediate filament organization	0.03599102230529104	2	1.443805817274815	-1.3329800826996037	1	1		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	2.385333183312793e-8	12	7.6224509501383695	-2.652608890948205	1	11		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to cytokine	0.025966166299630614	4	1.585592165804598	-2.2226177720359437	0	4		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	2.385333183312793e-8	12	7.6224509501383695	-2.652608890948205	1	11		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to other organism	2.385333183312793e-8	12	7.6224509501383695	-2.652608890948205	1	11		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	response to virus	6.277293774617835e-9	8	8.202227546080858	-2.819604833210911	0	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	2'-deoxyribonucleotide metabolic process	0.003345946170210515	6	2.475481050273979	1.3421015330119395	5	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA biosynthetic process	4.55873269438777e-5	15	4.341155872320041	1.9865694770294808	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA conformation change	3.108009962124743e-7	16	6.507517597821938	1.9483791817783207	15	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage checkpoint signaling	6.25260207582277e-5	15	4.203939209536731	2.178979310623698	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	6.394580010424908e-28	122	27.194187974272847	1.9008755833443065	119	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA duplex unwinding	1.2397569479699845e-7	14	6.906663449113425	2.195668780436603	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA geometric change	1.2397569479699845e-7	14	6.906663449113425	2.195668780436603	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA integrity checkpoint signaling	2.0317483789593244e-6	18	5.692130078079033	2.1887273274166783	18	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.3421853239245398e-18	59	17.87218751427061	1.9895526003813475	59	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	6.041391321743347e-28	104	27.218863032608628	1.9644999004087185	103	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	1.7949401374912012e-44	82	43.74595003086882	1.9626667112243794	80	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication checkpoint signaling	6.147342880396234e-4	7	3.2113125625565373	1.7882630530927068	7	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	4.3687869921040184e-17	21	16.359639129565778	2.2051571557296032	21	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation	1.0448392570452772e-9	13	8.980950518306896	2.2387920213610104	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation involved in DNA replication	1.9737508421902206e-9	12	8.704707671672193	2.3363460346745466	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA synthesis involved in DNA repair	0.038778120342599316	6	1.411413245917993	2.5156339465808824	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	3.6147114317162305e-34	56	33.4419263674194	2.019820279470999	56	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication maintenance of fidelity	1.0080507008304975e-5	12	4.99651762410362	2.1034969662296104	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	G2/M transition of mitotic cell cycle	2.9491097124425306e-6	16	5.530309070573978	2.4593370770865506	16	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA-templated DNA biosynthetic process	0.020176704611800822	6	1.695149764054415	1.5332084299712891	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	T cell activation	0.046474980433949764	23	1.3327807843947823	0.24811444579889796	16	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	acrosome reaction	0.020176704611800822	6	1.695149764054415	4.608921617436293	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alcohol catabolic process	0.028634319584469325	6	1.5431131322370926	-0.9615927975222427	1	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alcohol metabolic process	0.01662457362227505	28	1.7792494844229176	-0.8003690091452597	5	23		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	anaphase-promoting complex-dependent catabolic process	0.020176704611800822	6	1.695149764054415	1.4146875730616069	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	attachment of spindle microtubules to kinetochore	0.003345946170210515	7	2.475481050273979	1.9385219841731753	6	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	carboxylic acid transport	4.840769497650229e-4	35	3.3150855966158543	-0.742442736407386	9	26		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell chemotaxis	0.03350261683977366	23	1.4749212695396259	1.4664192985207465	18	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle DNA replication	2.1049929457169375e-12	16	11.676749355239876	2.2554322965808584	16	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle G2/M phase transition	1.2107016071723863e-5	16	4.916962881073923	2.4593370770865506	16	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle checkpoint signaling	1.442003449787643e-10	29	9.841033700627724	2.2516158960029924	29	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	7.061546606791527e-16	57	15.151100170161438	2.14394901050265	55	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell division	8.805050518821015e-14	76	13.055268147932678	2.328815525292541	74	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to chemokine	0.003345946170210515	13	2.475481050273979	1.6136630780176482	10	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to cytokine stimulus	0.005965216484247715	30	2.2243737906846412	0.822169124899069	20	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to interleukin-1	0.010940415661506008	10	1.960966177447826	1.9208276937367832	8	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to tumor necrosis factor	0.02366510739505236	11	1.6258915203118633	1.8596576705853483	9	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to type II interferon	8.328125840294691e-4	12	3.079452721137688	1.6323606413375145	9	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to xenobiotic stimulus	0.0010884415937114894	19	2.9631948704440716	-1.7110171521436583	0	19		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centriole assembly	5.49931405583442e-4	10	3.259691477841079	1.58018880852267	9	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centriole replication	0.008129477461003435	8	2.0899373686858844	1.4739976712841505	7	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centromere complex assembly	1.130262400222515e-8	13	7.946820719579073	2.225938646849881	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centrosome cycle	8.439033429501738e-5	18	4.073707292743128	2.002092213495947	17	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	centrosome duplication	0.04471025547416218	9	1.3495928485685167	1.5958533896292693	8	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chemokine-mediated signaling pathway	0.007630645024151514	12	2.1174387492548776	1.6296246529792446	9	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol efflux	4.084885260041059e-4	9	3.3888201378172114	-1.4656752883268278	1	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol homeostasis	0.0031352232810963284	10	2.5037315245956187	-1.3456781616358198	1	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol metabolic process	0.006591862828697394	15	2.180991838531757	-0.8548022325841559	2	13		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cholesterol transport	0.009190494976104913	11	2.0366610980151734	-1.4704706072682567	1	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromatin organization	0.020176704611800822	47	1.695149764054415	1.3777760598283042	42	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome condensation	0.005410031947565921	10	2.266800170270395	2.3849323216328795	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome localization	0.0011696679617882412	11	2.9319374056289282	2.143291427686293	10	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.977982340964168e-32	94	31.703777590016923	2.083212639111904	92	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	6.834039930973444e-32	79	31.16532248796764	2.2724075725033925	77	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome separation	3.661881290239274e-6	13	5.436295738633358	2.3699210027479602	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cytokine-mediated signaling pathway	0.011738839086645352	28	1.9303748505495153	0.7904088086263719	18	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cytokinetic process	0.04471025547416218	7	1.3495928485685167	1.7104226188710545	6	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	defense response	2.770009678560674e-4	74	3.557518713484956	0.6807010053236675	46	28		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	defense response to other organism	1.5474486569089914e-6	66	5.810383751607373	0.7415746156235649	42	24		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	defense response to symbiont	6.439145105996254e-6	24	5.191171787980807	-0.018112703639118276	13	11		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	defense response to virus	6.439145105996254e-6	24	5.191171787980807	-0.018112703639118276	13	11		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribonucleotide metabolic process	0.003345946170210515	7	2.475481050273979	1.4639996962851434	6	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	deoxyribose phosphate metabolic process	0.005766167699441432	6	2.2391127310281203	1.3421015330119395	5	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	developmental process involved in reproduction	0.014151603516229046	30	1.8491943475040704	2.0019886482476457	22	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	1.3242846019891187e-13	48	12.878018670643367	2.0556041511601615	48	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via break-induced replication	3.2467378542707313e-10	12	9.488552775445353	2.4055409211068763	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	4.454122717566259e-16	39	15.351237821691818	2.1023917790005795	39	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	egg coat formation	0.01411373094367738	6	1.8503581659716033	4.608921617436293	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	establishment of chromosome localization	8.473408887922394e-4	11	3.071941836023921	2.143291427686293	10	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	fatty acid transport	0.01251319708087999	13	1.9026317153110632	-0.38641954532752104	4	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	female gamete generation	0.008598764818742019	17	2.065563929097238	3.3564054711726676	15	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	gamete generation	0.004286064086487436	31	2.3679413395471585	1.9926650745429626	23	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	germ cell development	0.04838912852929335	19	1.3152521993075181	2.81575817047996	15	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	granulocyte chemotaxis	0.01455286355927196	17	1.8370515423737181	1.680716621492721	13	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	homologous recombination	9.045466134441151e-6	14	5.0435690479971544	1.9681686483537406	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	innate immune response	0.001149239632389468	38	2.9395894054513567	0.8746456014994706	25	13		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	interstrand cross-link repair	2.9331258939657128e-5	11	4.532669296078012	2.118510366609281	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore assembly	1.232294081204849e-4	7	3.9092856374608362	2.081029631414423	7	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	kinetochore organization	1.852321106646676e-5	8	4.732283724588992	2.125156693880109	8	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	leukocyte chemotaxis	0.042895762074766704	18	1.3675856122082324	1.6547058110505608	14	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid catabolic process	0.023833692076626535	31	1.622808675895081	-0.8250930154055581	6	25		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid homeostasis	8.029615578686197e-4	17	3.095305246259513	-1.2605283657544042	2	15		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid localization	0.008213868406182193	41	2.085452259228498	-0.9477931731311291	8	33		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lipid transport	0.004286064086487436	40	2.3679413395471585	-0.9308398135283251	8	32		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lymphocyte chemotaxis	0.031102080729384616	9	1.5072105556978466	2.0107526678236294	7	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	lymphocyte migration	0.04471025547416218	11	1.3495928485685167	1.936130296344	9	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	male gamete generation	0.04097233201238328	17	1.3875093167086308	0.967230526728257	11	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I	4.55873269438777e-5	16	4.341155872320041	2.0160371081885202	16	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiosis I cell cycle process	9.161153411453714e-6	18	5.038049844160223	1.9565455151113875	18	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	2.33285537573157e-13	38	12.63211218425323	2.1092257596060957	38	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle process	8.399738535783908e-12	31	11.075734232299256	2.1638432795195404	31	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic chromosome segregation	0.0099175259397094	9	2.0035966549367035	2.445781675233602	9	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic nuclear division	2.8455612537790577e-8	23	7.545832061297294	2.221762483627497	23	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase chromosome alignment	7.932700286526805e-5	11	4.1005789539284265	2.143291427686293	10	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of cell cycle	4.7631203890322447e-7	14	6.322108441450486	2.1417741207531704	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of mitotic cell cycle	2.4778996819787445e-6	13	5.605916280060429	2.0464474843724623	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization	2.9491097124425306e-6	67	5.530309070573978	1.8378811105822528	58	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization involved in mitosis	5.613853075554133e-6	25	5.250738957806154	2.4144525148325453	25	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	microtubule organizing center organization	4.899795067307184e-5	20	4.309822083848803	2.0023783278940273	19	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mismatch repair	0.0020518691048564282	7	2.687850347679007	1.8641997378055932	7	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA damage checkpoint signaling	3.661881290239274e-6	13	5.436295738633358	2.25235713903875	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA integrity checkpoint signaling	3.0190801223177534e-7	15	6.520125361233695	2.3191483560717407	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic DNA replication	1.55107687558709e-8	11	7.809366676837661	2.3117390322289957	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2 DNA damage checkpoint signaling	0.003345946170210515	6	2.475481050273979	2.5987805312426695	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic G2/M transition checkpoint	4.084885260041059e-4	9	3.3888201378172114	2.511242859588024	9	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle checkpoint signaling	7.294280551194414e-11	25	10.137017536951431	2.303059329626098	25	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle phase transition	6.80458300803173e-13	45	12.167198483665587	2.136712387757202	43	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	1.3344351976492616e-36	114	35.87470251141313	2.203841756722162	109	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cytokinesis	0.04224064192419976	10	1.3742694905211328	2.036600338450031	9	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic intra-S DNA damage checkpoint signaling	0.0017895086678945574	6	2.7472661936642204	1.777353149241602	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic metaphase chromosome alignment	6.147342880396234e-4	7	3.2113125625565373	1.936756889061544	6	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	2.0084222307916147e-22	52	21.697144980159326	2.277506647737265	50	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic recombination	0.038246026144706194	5	1.4174136824209913	1.7271476973508024	5	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	6.449132355716743e-22	41	21.190498709933866	2.3115991969772405	40	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid separation	1.6662961308134933e-5	11	4.778247814123968	2.225542957310162	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly	0.0099175259397094	9	2.0035966549367035	2.026136014196717	9	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle assembly checkpoint signaling	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle checkpoint signaling	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle organization	1.2149168886429812e-7	23	6.915453430739179	2.44595360644198	23	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid metabolic process	0.03208210703285204	43	1.4937371166132203	-0.7532347875332165	11	32		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocarboxylic acid transport	0.0039186280063862435	19	2.4068659619471786	-0.641487981948729	5	14		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monocyte chemotaxis	0.020176704611800822	9	1.695149764054415	2.0107526678236294	7	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	monosaccharide metabolic process	0.028634319584469325	18	1.5431131322370926	-0.8505822411775907	3	15		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	multicellular organism reproduction	0.010164315076061947	31	1.9929218810405755	1.9926650745429626	23	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	multicellular organismal reproductive process	0.005632891788586399	31	2.2492685917561652	1.9926650745429626	23	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of DNA metabolic process	0.03306122589478594	11	1.480681047029839	1.7423179401490292	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of G2/M transition of mitotic cell cycle	8.029615578686197e-4	10	3.095305246259513	2.4192961137767366	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle	2.099041837849156e-10	40	9.677978905026013	1.908493333176576	36	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle G2/M phase transition	0.0011538251774212346	10	2.937859988609103	2.4192961137767366	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle phase transition	3.683466534462357e-11	33	10.433743271503234	2.1371188191969233	32	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle process	5.6122376961680444e-12	37	11.250863943497553	2.1093660211839045	35	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome organization	2.0317483789593244e-6	12	5.692130078079033	2.2013996037321033	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome segregation	4.999087437731545e-7	11	6.301109267049726	2.379116208479883	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of chromosome separation	4.999087437731545e-7	11	6.301109267049726	2.379116208479883	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of metaphase/anaphase transition of cell cycle	4.999087437731545e-7	11	6.301109267049726	2.379116208479883	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle	6.4275225243159946e-9	30	8.191956392760714	2.050279270475608	28	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle phase transition	2.3640752458105814e-9	23	8.626338704474263	2.1229845443933617	22	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic metaphase/anaphase transition	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic nuclear division	9.161153411453714e-6	11	5.038049844160223	2.359858958357026	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid segregation	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic sister chromatid separation	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of nuclear division	6.015285228582629e-6	12	5.220743774764268	2.422413311078127	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of organelle organization	0.03159966012783777	20	1.5003175884385074	1.8538315927662503	17	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of sister chromatid segregation	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	neutrophil chemotaxis	0.005601559424679324	17	2.2516910524126783	1.680716621492721	13	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	non-membrane-bounded organelle assembly	0.012211648880889738	38	1.9132256913766759	1.628148455876103	33	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear DNA replication	1.3790144110564315e-10	14	9.860431195311037	2.21369347801551	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	1.8289445680778714e-26	56	25.737799456985428	2.291654840195552	55	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	8.650325273909887e-29	72	28.062967561667186	2.268594127150131	70	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nucleotide-excision repair	0.008749581548298026	10	2.0580127167617692	1.7205228958104835	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	oogenesis	0.00604207771749605	16	2.2188136928226507	3.4474181630628764	14	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	2.325442014417376e-26	74	25.633494485278472	2.218563731191216	71	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic acid transport	2.5869163713503496e-4	36	3.5872176107299683	-0.7516128175224998	9	27		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic anion transport	0.0020564616628637555	40	2.686879382319122	-0.8809503078637044	9	31		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound catabolic process	0.004286064086487436	9	2.3679413395471585	-0.9191349340750271	2	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organic hydroxy compound metabolic process	0.00553786898993191	37	2.2566573226284814	-0.8950760332034591	6	31		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of acrosome reaction	0.009190494976104913	6	2.0366610980151734	4.608921617436293	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle	0.005057943861435068	12	2.296025995237615	1.6907057841143356	10	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of cell cycle process	0.0019495285693053195	12	2.710070396074488	1.6907057841143356	10	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	positive regulation of immune response	0.04946097085406965	25	1.305737363259253	-0.21593997559866823	15	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein localization to chromosome	0.008129477461003435	8	2.0899373686858844	1.9838108370835574	8	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein monoubiquitination	0.020176704611800822	6	1.695149764054415	1.1614802304171403	5	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex assembly	1.430263607841282e-4	22	3.8445839115697997	2.01198414237777	22	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	protein-DNA complex organization	1.3225571376994423e-4	60	3.8785855563048424	1.515743214696112	55	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal homologous recombination	3.727045885829158e-5	13	4.4286352603613395	2.039717603465787	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reciprocal meiotic recombination	3.727045885829158e-5	13	4.4286352603613395	2.039717603465787	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	9.369856313032428e-17	40	16.028267068977282	2.1065144912382356	40	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA metabolic process	1.2119557579057924e-5	28	4.91651323367475	1.765388665950538	27	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of DNA replication	3.3769667609101345e-6	12	5.4714732140534705	2.1335137503606236	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of G2/M transition of mitotic cell cycle	2.010858630892987e-5	14	4.696618460472968	2.255271610189824	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of acrosome reaction	0.009190494976104913	6	2.0366610980151734	4.608921617436293	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle	2.3695712548473746e-11	95	10.625330227195962	1.7464356495985647	82	13		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle G2/M phase transition	8.439033429501738e-5	14	4.073707292743128	2.255271610189824	14	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	3.962981532165565e-13	44	12.401977951510695	2.0525868751422047	43	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	3.5916291189838024e-17	67	16.444708516073447	2.053929714270665	63	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome organization	1.55107687558709e-8	22	7.809366676837661	1.8233437891286355	21	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome segregation	3.8557620792381447e-8	18	7.41388977219189	1.9577666556308626	17	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome separation	4.8633998980205897e-5	11	4.313060018656533	2.379116208479883	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of lymphocyte activation	0.03511973095325812	18	1.4544488198149936	0.2521509553080838	13	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of meiotic cell cycle	0.01411373094367738	6	1.8503581659716033	2.6935488907100025	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of metaphase/anaphase transition of cell cycle	6.015285228582629e-6	12	5.220743774764268	2.267975657924608	12	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle	9.161153411453714e-6	52	5.038049844160223	1.6937075312725896	46	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle phase transition	2.573783181689985e-10	32	9.589428041332837	2.008149573646252	31	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic metaphase/anaphase transition	2.9331258939657128e-5	11	4.532669296078012	2.1667897728539023	11	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic nuclear division	1.3699507024395052e-6	16	5.863295060612718	2.238182079729252	15	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid segregation	2.7874572931823873e-6	11	5.554791777747303	1.979048463153683	10	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic sister chromatid separation	8.297497602081298e-5	10	4.081052864427404	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of nuclear division	1.6516940159219685e-7	18	6.782070404657809	2.3247002497598666	17	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of organelle organization	0.001494963033187428	64	2.8253695462567463	1.3404729170657856	49	15		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of sister chromatid segregation	5.764412391582351e-8	16	7.239244956903507	1.9489442999808755	15	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	replication fork processing	1.3674107802296462e-4	10	3.8641010005835645	2.126940042305221	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reproduction	6.516702992198945e-8	66	7.185972072128301	1.9916384613788023	57	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	reproductive process	4.566466774438328e-8	66	7.340419697926417	1.9916384613788023	57	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	resolution of meiotic recombination intermediates	0.038246026144706194	5	1.4174136824209913	2.0923268339502585	5	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to bacterium	0.03266866316287653	33	1.4858686369621128	1.2816728117259086	25	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	2.50301718555119e-9	90	8.601536168544223	0.8406878467612715	59	31		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to chemokine	0.003345946170210515	13	2.475481050273979	1.6136630780176482	10	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to cytokine	0.02404409461689264	30	1.6189915716902152	0.822169124899069	20	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	3.5753516877587532e-9	89	8.446681232592738	0.8636510411370275	59	30		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to interleukin-1	0.02464834679811741	10	1.6082122041973972	1.9208276937367832	8	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to lipid	0.047275648461694	28	1.3253625053934681	-0.8954279007492746	6	22		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to other organism	3.5753516877587532e-9	89	8.446681232592738	0.8636510411370275	59	30		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to tumor necrosis factor	0.02366510739505236	11	1.6258915203118633	1.8596576705853483	9	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to type II interferon	2.3108803037705602e-4	13	3.636222549007353	1.5922946633081032	10	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to virus	2.8606594092618425e-6	27	5.543533846313338	0.1330113326468671	15	12		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	response to xenobiotic stimulus	5.656662466518779e-4	21	3.2474397348713553	-1.7631213809515682	0	21		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	secondary alcohol metabolic process	0.019014735523185115	15	1.7209097108319462	-0.8548022325841559	2	13		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sexual reproduction	1.0276470267307256e-10	65	9.9881560299581	2.0439777974400486	57	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	signal transduction in response to DNA damage	3.619582976053005e-6	20	5.441341463066781	2.0743529124249873	20	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.0582636254821515e-25	47	24.975406131137802	2.258817179890697	46	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	small molecule biosynthetic process	0.017461030677535728	46	1.757930124642173	-0.9679114848129738	10	36		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly	9.161153411453714e-6	18	5.038049844160223	2.1635977400234156	18	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle assembly checkpoint signaling	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle checkpoint signaling	2.9491097124425306e-6	10	5.530309070573978	2.278925789957634	10	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle elongation	1.232294081204849e-4	7	3.9092856374608362	2.365842675201519	7	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle midzone assembly	0.01635367411240765	5	1.7863846608943723	2.3212153627251224	5	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spindle organization	1.9494880349689494e-10	33	9.710079425960943	2.4149256071847303	33	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	spliceosomal snRNP assembly	0.005766167699441432	9	2.2391127310281203	1.2240425431585165	9	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	steroid catabolic process	0.0017895086678945574	6	2.7472661936642204	-1.9295428698912618	0	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	steroid metabolic process	6.147342880396234e-4	25	3.2113125625565373	-1.2593026993383245	2	23		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol homeostasis	0.0031352232810963284	10	2.5037315245956187	-1.3456781616358198	1	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol metabolic process	0.0030416292362556076	17	2.516893726003534	-1.0019416500205047	2	15		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sterol transport	0.020176704611800822	11	1.695149764054415	-1.4704706072682567	1	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance	6.25260207582277e-5	15	4.203939209536731	1.501025688082204	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance via telomerase	0.020176704611800822	6	1.695149764054415	1.5332084299712891	6	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere maintenance via telomere lengthening	0.020218325980992255	7	1.6942548055854874	1.5152751764850796	7	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	telomere organization	8.439033429501738e-5	15	4.073707292743128	1.501025688082204	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	water transport	0.038778120342599316	6	1.411413245917993	-1.8681509018616005	0	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	xenobiotic metabolic process	3.3504890906851896e-5	16	4.474891791804454	-1.7164866073322624	0	16		

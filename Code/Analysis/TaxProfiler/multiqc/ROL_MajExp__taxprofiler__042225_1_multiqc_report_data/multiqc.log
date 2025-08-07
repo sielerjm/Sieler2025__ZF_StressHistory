@@ -1,0 +1,14 @@
+[2025-04-22 21:26:57,468] multiqc.config                                     [INFO   ]  Loading config settings from: multiqc_config.yml
+[2025-04-22 21:26:57,503] multiqc.core.update_config                         [INFO   ]  Report title: ROL_MajExp__taxprofiler__042225_1
+[2025-04-22 21:26:59,710] multiqc.core.file_search                           [INFO   ]  Search path: /nfs3/Sharpton_Lab/prod/prod_restructure/projects/sielerjm/ZF__MajorExp/Databases/Deworming/Nextflow/work/ca/f69cb119076f80a0ee129468787b65
+[2025-04-22 21:26:59,710] multiqc.core.file_search                           [INFO   ]  Only using modules: fastqc, fastqc, nonpareil, porechop, porechop, bowtie2, samtools, kraken, kraken, kraken, malt, kaiju, custom_content, nanoq, diamond, adapterremoval, bbduk, motus, fastp, filtlong, prinseqplusplus
+[2025-04-22 21:26:59,961] multiqc.modules.bowtie2.bowtie2                    [INFO   ]  Found 14 reports
+[2025-04-22 21:27:00,318] multiqc.modules.samtools.samtools                  [INFO   ]  Found 14 stats reports
+[2025-04-22 21:27:00,331] multiqc.modules.kraken.kraken                      [INFO   ]  Found 14 reports
+[2025-04-22 21:27:00,341] multiqc.modules.kraken.kraken                      [INFO   ]  Found 14 reports
+[2025-04-22 21:27:00,364] multiqc.modules.custom_content.custom_content      [WARNING]  HTML plot type found with more than one dataset in nf-core-taxprofiler-summary
+[2025-04-22 21:27:00,364] multiqc.modules.custom_content.custom_content      [INFO   ]  nf-core-taxprofiler-summary: Found 1 sample (html)
+[2025-04-22 21:27:00,364] multiqc.modules.custom_content.custom_content      [WARNING]  HTML plot type found with more than one dataset in nf-core-taxprofiler-methods-description
+[2025-04-22 21:27:00,364] multiqc.modules.custom_content.custom_content      [INFO   ]  nf-core-taxprofiler-methods-description: Found 1 sample (html)
+[2025-04-22 21:27:00,368] multiqc.core.file_search                           [INFO   ]  Only using modules: bowtie2, samtools, kraken, kraken, nf-core-taxprofiler-summary, nf-core-taxprofiler-methods-description
+[2025-04-22 21:27:00,370] multiqc.core.write_results                         [INFO   ]  Rendering plots. Export plots to formats png, svg, pdf is requested, so it might take a while. To disable plot export, set `export_plots: false` in config, or remove the `--export-plots` command line flag

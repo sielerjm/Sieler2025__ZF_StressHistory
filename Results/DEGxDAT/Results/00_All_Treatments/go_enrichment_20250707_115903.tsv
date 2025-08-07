@@ -1,0 +1,6 @@
+ID	Description	p.adjust	Count	geneID	log_padj
+GO:0006997	nucleus organization	0.008214582947620544	7	wrap53/chmp2a/bend3/nsfl1c/bmb/coil/lmnl3	2.0854144806945047
+GO:0019941	modification-dependent protein catabolic process	0.013747863509325574	22	uchl5/psmd4a/psmd6/lonp1/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.8617647882485882
+GO:0043632	modification-dependent macromolecule catabolic process	0.013747863509325574	22	uchl5/psmd4a/psmd6/lonp1/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.8617647882485882
+GO:0006511	ubiquitin-dependent protein catabolic process	0.017068892330289312	21	uchl5/psmd4a/psmd6/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.7677946611026998
+GO:0006998	nuclear envelope organization	0.09685480615825985	4	chmp2a/nsfl1c/bmb/lmnl3	1.013878823719031

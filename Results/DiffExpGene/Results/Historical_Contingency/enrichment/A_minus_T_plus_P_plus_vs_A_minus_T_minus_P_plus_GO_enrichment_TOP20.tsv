@@ -1,0 +1,4 @@
+Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+actomyosin structure organization	0.04125057541383792	4	1.3845699889974097	-1.0322457716366826	1	3		
+regulation of reactive oxygen species metabolic process	0.04125057541383792	2	1.3845699889974097	2.697010623341024	2	0		
+one-carbon compound transport	0.0950842017473607	2	1.0218916351540606	1.214654166568672	1	1		

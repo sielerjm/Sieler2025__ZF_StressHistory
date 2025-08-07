@@ -1,0 +1,162 @@
+
+SUMMARISING RUN PARAMETERS
+==========================
+Input filename: TS047_RoL_RNA_177_trimmed_2.fastq.gz
+Trimming mode: paired-end
+Trim Galore version: 0.6.10
+Cutadapt version: 4.9
+Python version: could not detect
+Number of cores used for trimming: 8
+Quality Phred score cutoff: 20
+Quality encoding type selected: ASCII+33
+Using Illumina adapter for trimming (count: 20066). Second best hit was smallRNA (count: 7)
+Adapter sequence: 'AGATCGGAAGAGC' (Illumina TruSeq, Sanger iPCR; auto-detected)
+Maximum trimming error rate: 0.1 (default)
+Minimum required adapter overlap (stringency): 1 bp
+Minimum required sequence length for both reads before a sequence pair gets removed: 20 bp
+Running FastQC on the data once trimming has completed
+Running FastQC with the following extra arguments: -t 12
+Output file will be GZIP compressed
+
+
+This is cutadapt 4.9 with Python 3.12.7
+Command line parameters: -j 8 -e 0.1 -q 20 -O 1 -a AGATCGGAAGAGC TS047_RoL_RNA_177_trimmed_2.fastq.gz
+Processing single-end reads on 8 cores ...
+Finished in 80.088 s (3.320 µs/read; 18.07 M reads/minute).
+
+=== Summary ===
+
+Total reads processed:              24,120,243
+Reads with adapters:                 9,553,114 (39.6%)
+Reads written (passing filters):    24,120,243 (100.0%)
+
+Total basepairs processed: 2,436,144,543 bp
+Quality-trimmed:               3,215,088 bp (0.1%)
+Total written (filtered):  2,405,572,284 bp (98.7%)
+
+=== Adapter 1 ===
+
+Sequence: AGATCGGAAGAGC; Type: regular 3'; Length: 13; Trimmed: 9553114 times
+
+Minimum overlap: 1
+No. of allowed errors:
+1-9 bp: 0; 10-13 bp: 1
+
+Bases preceding removed adapters:
+  A: 29.9%
+  C: 32.0%
+  G: 24.2%
+  T: 13.8%
+  none/other: 0.0%
+
+Overview of removed sequences
+length	count	expect	max.err	error counts
+1	5925730	6030060.8	0	5925730
+2	1710324	1507515.2	0	1710324
+3	647042	376878.8	0	647042
+4	190217	94219.7	0	190217
+5	109338	23554.9	0	109338
+6	80491	5888.7	0	80491
+7	70065	1472.2	0	70065
+8	66455	368.0	0	66455
+9	63425	92.0	0	62791 634
+10	60055	23.0	1	58762 1293
+11	55201	5.8	1	53810 1391
+12	53540	1.4	1	52133 1407
+13	47776	0.4	1	46795 981
+14	46990	0.4	1	45671 1319
+15	43847	0.4	1	42707 1140
+16	40203	0.4	1	39201 1002
+17	37347	0.4	1	36417 930
+18	33719	0.4	1	32840 879
+19	63237	0.4	1	62048 1189
+20	14208	0.4	1	13764 444
+21	10833	0.4	1	10461 372
+22	17541	0.4	1	17093 448
+23	20141	0.4	1	19625 516
+24	28739	0.4	1	28226 513
+25	6655	0.4	1	6290 365
+26	14539	0.4	1	14099 440
+27	27857	0.4	1	27293 564
+28	1956	0.4	1	1751 205
+29	15936	0.4	1	15506 430
+30	5184	0.4	1	4909 275
+31	2785	0.4	1	2649 136
+32	4243	0.4	1	4062 181
+33	6596	0.4	1	6430 166
+34	9244	0.4	1	9092 152
+35	1449	0.4	1	1375 74
+36	1762	0.4	1	1663 99
+37	1893	0.4	1	1664 229
+38	4285	0.4	1	4202 83
+39	1178	0.4	1	1113 65
+40	470	0.4	1	366 104
+41	2079	0.4	1	1981 98
+42	125	0.4	1	94 31
+43	1306	0.4	1	1197 109
+44	263	0.4	1	161 102
+45	1138	0.4	1	1068 70
+46	125	0.4	1	76 49
+47	102	0.4	1	89 13
+48	359	0.4	1	324 35
+49	158	0.4	1	23 135
+50	215	0.4	1	127 88
+51	228	0.4	1	56 172
+52	210	0.4	1	187 23
+53	56	0.4	1	10 46
+54	142	0.4	1	93 49
+55	68	0.4	1	40 28
+56	76	0.4	1	16 60
+57	116	0.4	1	75 41
+58	68	0.4	1	25 43
+59	71	0.4	1	7 64
+60	81	0.4	1	6 75
+61	43	0.4	1	13 30
+62	81	0.4	1	45 36
+63	70	0.4	1	3 67
+64	27	0.4	1	9 18
+65	29	0.4	1	3 26
+66	94	0.4	1	8 86
+67	37	0.4	1	15 22
+68	19	0.4	1	5 14
+69	29	0.4	1	1 28
+70	70	0.4	1	12 58
+71	57	0.4	1	1 56
+72	32	0.4	1	14 18
+73	66	0.4	1	9 57
+74	32	0.4	1	10 22
+75	108	0.4	1	8 100
+76	114	0.4	1	4 110
+77	34	0.4	1	0 34
+78	40	0.4	1	6 34
+79	25	0.4	1	11 14
+80	41	0.4	1	8 33
+81	43	0.4	1	21 22
+82	68	0.4	1	16 52
+83	116	0.4	1	21 95
+84	191	0.4	1	48 143
+85	210	0.4	1	27 183
+86	63	0.4	1	21 42
+87	46	0.4	1	20 26
+88	69	0.4	1	34 35
+89	70	0.4	1	34 36
+90	120	0.4	1	27 93
+91	108	0.4	1	51 57
+92	273	0.4	1	105 168
+93	130	0.4	1	59 71
+94	112	0.4	1	83 29
+95	78	0.4	1	63 15
+96	122	0.4	1	94 28
+97	166	0.4	1	154 12
+98	236	0.4	1	183 53
+99	259	0.4	1	54 205
+100	54	0.4	1	8 46
+101	50	0.4	1	15 35
+
+RUN STATISTICS FOR INPUT FILE: TS047_RoL_RNA_177_trimmed_2.fastq.gz
+=============================================
+24120243 sequences processed in total
+
+Total number of sequences analysed for the sequence pair length validation: 24120243
+
+Number of sequence pairs removed because at least one read was shorter than the length cutoff (20 bp): 15764 (0.07%)

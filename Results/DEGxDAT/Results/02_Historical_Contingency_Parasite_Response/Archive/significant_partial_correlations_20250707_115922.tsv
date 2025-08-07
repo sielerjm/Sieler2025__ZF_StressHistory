@@ -1,0 +1,3 @@
+gene_id	taxa_id	correlation	p_value	fdr	abs_correlation	comparison_name	base_treatment	comparison_treatment
+zranb2	Uliginosibacterium	0.6274041385118716	0.023976023976023976	0.023976023976023976	0.6274041385118716	A- T- P+ vs A+ T- P+	A- T- P+	A+ T- P+
+lsm14b	Polymorphobacter	-0.3765261696581867	0.00999000999000999	0.02997002997002997	0.3765261696581867	A- T- P+ vs A- T+ P+	A- T- P+	A- T+ P+

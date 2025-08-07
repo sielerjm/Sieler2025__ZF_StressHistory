@@ -1,0 +1,108 @@
+2025-05-26 19:57:55.203611 INFO::Writing function arguments to log file
+2025-05-26 19:57:55.204926 DEBUG::Function arguments
+2025-05-26 19:57:55.205352 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden
+2025-05-26 19:57:55.20573 DEBUG::Min Abundance: 0.000000
+2025-05-26 19:57:55.206048 DEBUG::Min Prevalence: 0.000000
+2025-05-26 19:57:55.206367 DEBUG::Normalization: TSS
+2025-05-26 19:57:55.206668 DEBUG::Transform: LOG
+2025-05-26 19:57:55.206953 DEBUG::Analysis method: LM
+2025-05-26 19:57:55.20725 DEBUG::Max significance: 0.250000
+2025-05-26 19:57:55.207664 DEBUG::Random effects:
+2025-05-26 19:57:55.208071 DEBUG::Fixed effects: Total.Worm.Count
+2025-05-26 19:57:55.208437 DEBUG::Correction method: BH
+2025-05-26 19:57:55.20877 DEBUG::Standardize: FALSE
+2025-05-26 19:57:55.209116 DEBUG::Cores: 8
+2025-05-26 19:57:55.209435 INFO::Verifying options selected are valid
+2025-05-26 19:57:55.210521 INFO::Determining format of input files
+2025-05-26 19:57:55.211481 INFO::Input format is data samples as rows and metadata samples as rows
+2025-05-26 19:57:55.214275 DEBUG::A total of 129 samples were found in both the data and metadata
+2025-05-26 19:57:55.214795 DEBUG::Reordering data/metadata to use same sample ordering
+2025-05-26 19:57:55.220168 INFO::Formula for fixed effects: expr ~  Total.Worm.Count
+2025-05-26 19:57:55.221724 INFO::Filter data based on min abundance and min prevalence
+2025-05-26 19:57:55.227369 INFO::Total samples in data: 129
+2025-05-26 19:57:55.228371 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-05-26 19:57:55.237694 INFO::Total filtered features: 0
+2025-05-26 19:57:55.239022 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-05-26 19:57:55.276764 INFO::Total filtered features with variance filtering: 0
+2025-05-26 19:57:55.278258 INFO::Filtered feature names from variance filtering:
+2025-05-26 19:57:55.279205 INFO::Running selected normalization method: TSS
+2025-05-26 19:57:55.288944 INFO::Bypass z-score application to metadata
+2025-05-26 19:57:55.290418 INFO::Running selected transform method: LOG
+2025-05-26 19:57:55.304956 INFO::Running selected analysis method: LM
+2025-05-26 19:57:55.306423 INFO::Creating cluster of 8 R processes
+2025-05-26 19:58:08.864225 INFO::Counting total values for each feature
+2025-05-26 19:58:08.891584 INFO::Writing filtered data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/features/filtered_data.tsv
+2025-05-26 19:58:08.927323 INFO::Writing filtered, normalized data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/features/filtered_data_norm.tsv
+2025-05-26 19:58:09.000078 INFO::Writing filtered, normalized, transformed data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/features/filtered_data_norm_transformed.tsv
+2025-05-26 19:58:09.349907 INFO::Writing residuals to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/fits/residuals.rds
+2025-05-26 19:58:12.007265 INFO::Writing fitted values to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/fits/fitted.rds
+2025-05-26 19:58:12.017252 INFO::Writing all results to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/all_results.tsv
+2025-05-26 19:58:12.025477 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/significant_results.tsv
+2025-05-26 19:58:12.03188 INFO::Writing heatmap of significant results to file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden/heatmap.pdf
+2025-05-26 19:58:12.037186 INFO::Writing association plots (one for each significant association) to output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__ParasiteOnly_WormBurden
+2025-05-26 19:58:12.046084 INFO::Plotting associations from most to least significant, grouped by metadata
+2025-05-26 19:58:12.047813 INFO::Plotting data for metadata number 1, Total.Worm.Count
+2025-05-26 19:58:12.050159 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Aggregatilineales_Genus
+2025-05-26 19:58:12.249678 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Brucella
+2025-05-26 19:58:12.438673 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs vadinHA49_Genus
+2025-05-26 19:58:12.620365 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Bacillaceae_Genus
+2025-05-26 19:58:12.79427 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kineococcus
+2025-05-26 19:58:12.96079 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Ruminiclostridium
+2025-05-26 19:58:15.098145 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Arthrobacter
+2025-05-26 19:58:15.402427 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Altererythrobacter
+2025-05-26 19:58:15.602027 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dietzia
+2025-05-26 19:58:15.760318 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Pirellulaceae_Genus
+2025-05-26 19:58:15.991007 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs CM1G08
+2025-05-26 19:58:17.342823 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chitinivorax
+2025-05-26 19:58:17.635138 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Sporomusaceae_Genus
+2025-05-26 19:58:17.907938 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Acetobacteroides
+2025-05-26 19:58:18.322997 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Sphingomonas
+2025-05-26 19:58:20.314809 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs alphaI_cluster
+2025-05-26 19:58:20.476643 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Burkholderia.Caballeronia.Paraburkholderia
+2025-05-26 19:58:20.626634 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Candidatus_Alysiosphaera
+2025-05-26 19:58:20.779126 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs NS9_marine_group_Genus
+2025-05-26 19:58:20.931242 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dechlorobacter
+2025-05-26 19:58:21.268033 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Nitrospira
+2025-05-26 19:58:24.513003 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Microscillaceae_Genus
+2025-05-26 19:58:24.679676 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs X0319.6G20_Genus
+2025-05-26 19:58:24.853091 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Spirosomataceae_Genus
+2025-05-26 19:58:25.016528 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Microtrichaceae_Genus
+2025-05-26 19:58:27.263045 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Polymorphobacter
+2025-05-26 19:58:27.436558 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs env.OPS_17_Genus
+2025-05-26 19:58:27.594701 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kapabacteriales_Genus
+2025-05-26 19:58:27.751152 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodovarius
+2025-05-26 19:58:27.908944 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Staphylococcus
+2025-05-26 19:58:30.202169 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Curvibacter
+2025-05-26 19:58:30.444397 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Reyranella
+2025-05-26 19:58:30.61214 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Pseudobdellovibrionaceae_Genus
+2025-05-26 19:58:30.782239 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chitinibacter
+2025-05-26 19:58:30.941534 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Aquihabitans
+2025-05-26 19:58:31.277852 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Candidatus_Nomurabacteria_Genus
+2025-05-26 19:58:33.318219 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Parvibium
+2025-05-26 19:58:33.48257 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Leptothrix
+2025-05-26 19:58:33.635296 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Absconditabacteriales_.SR1._Genus
+2025-05-26 19:58:33.788457 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Bacteriovorax
+2025-05-26 19:58:33.940249 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kinneretia
+2025-05-26 19:58:34.322156 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Gemmataceae_Genus
+2025-05-26 19:58:36.419617 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs PeM15_Genus
+2025-05-26 19:58:36.616494 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhizobiaceae_Genus
+2025-05-26 19:58:36.796889 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Mycobacterium
+2025-05-26 19:58:37.148509 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Nocardia
+2025-05-26 19:58:39.040231 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Roseomonas
+2025-05-26 19:58:39.306181 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dechloromonas
+2025-05-26 19:58:39.527606 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Vogesella
+2025-05-26 19:58:39.757173 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Permianibacter
+2025-05-26 19:58:39.96731 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rubrivivax
+2025-05-26 19:58:40.290134 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dinghuibacter
+2025-05-26 19:58:42.419471 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Blastocatella
+2025-05-26 19:58:42.596045 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Alcaligenaceae_Genus
+2025-05-26 19:58:42.775985 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodocyclaceae_Genus
+2025-05-26 19:58:42.947189 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodovastum
+2025-05-26 19:58:44.259628 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Saprospiraceae_Genus
+2025-05-26 19:58:44.43041 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Fundidesulfovibrio
+2025-05-26 19:58:44.587189 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Agromyces
+2025-05-26 19:58:44.760316 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Bradyrhizobium
+2025-05-26 19:58:44.925176 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chthoniobacter
+2025-05-26 19:58:46.055462 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Opitutus
+2025-05-26 19:58:47.255674 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Niveibacterium
+2025-05-26 19:58:47.429228 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Turneriella

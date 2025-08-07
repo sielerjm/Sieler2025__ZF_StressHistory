@@ -1,0 +1,26 @@
+=== COMBINED ENRICHMENT ANALYSIS SUMMARY ===
+Date: 2025-07-10 19:12:52
+Analyses included: All_Treatments, Parasite_Effect, Historical_Contingency, Recovery_Analysis
+
+GO ENRICHMENT SUMMARY:
+  Total terms analyzed: 1691
+  Significant terms (padj < 0.05): 1311
+  Analyses included: 4
+  Contrasts analyzed: 9
+
+KEGG ENRICHMENT SUMMARY:
+  Total pathways analyzed: 382
+  Significant pathways (padj < 0.05): 303
+  Analyses included: 4
+  Contrasts analyzed: 9
+
+FILES CREATED:
+  - ALL_ANALYSES_GO_enrichment_ALL.tsv (all GO results)
+  - ALL_ANALYSES_GO_enrichment_TOP100.tsv (top 100 GO terms)
+  - ALL_ANALYSES_GO_enrichment_SIGNIFICANT.tsv (significant GO terms only)
+  - ALL_ANALYSES_KEGG_enrichment_ALL.tsv (all KEGG results)
+  - ALL_ANALYSES_KEGG_enrichment_TOP100.tsv (top 100 KEGG pathways)
+  - ALL_ANALYSES_KEGG_enrichment_SIGNIFICANT.tsv (significant KEGG pathways only)
+  - ALL_ANALYSES_enrichment_summary_stats.rds (summary statistics)
+  - This text summary
+

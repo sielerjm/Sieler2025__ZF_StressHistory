@@ -1,0 +1,290 @@
+<!--
+  ~ Copyright 2013-2024, Seqera Labs
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+</head>
+<body>
+<pre class="mermaid" style="text-align: center;">
+flowchart TB
+    subgraph " "
+    v4[" "]
+    v8[" "]
+    v55["Channel.fromList"]
+    v134["alignment_mode"]
+    v135["lib_type"]
+    v160["ch_samplesheet"]
+    v163["transcript_fasta"]
+    v164["alignment_mode"]
+    v165["lib_type"]
+    v174["quant_type"]
+    v175["id"]
+    v176["extra"]
+    v181["quant_type"]
+    v214["pca_header_multiqc"]
+    v215["clustering_header_multiqc"]
+    v231["Channel.of"]
+    v236["Channel.fromPath"]
+    v239[" "]
+    v241[" "]
+    v253["sample_names"]
+    end
+    subgraph NFCORE_RNASEQ
+    subgraph PREPARE_GENOME
+    v5([GUNZIP_FASTA])
+    v9([GUNZIP_GTF])
+    v12([GTF_FILTER])
+    v14([GTF2BED])
+    v17([MAKE_TRANSCRIPTS_FASTA])
+    v21([CUSTOM_GETCHROMSIZES])
+    v44([SALMON_INDEX])
+    v10(( ))
+    v23(( ))
+    v25(( ))
+    v171(( ))
+    end
+    subgraph RNASEQ
+    subgraph FASTQ_QC_TRIM_FILTER_SETSTRANDEDNESS
+    v67([CAT_FASTQ])
+    v71([FQ_LINT])
+    subgraph FASTQ_FASTQC_UMITOOLS_TRIMGALORE
+    v83([FASTQC])
+    v99([TRIMGALORE])
+    end
+    v119([FQ_LINT_AFTER_TRIMMING])
+    subgraph FASTQ_SUBSAMPLE_FQ_SALMON
+    v131([FQ_SUBSAMPLE])
+    v136([SALMON_QUANT])
+    end
+    v56(( ))
+    v74(( ))
+    end
+    subgraph QUANTIFY_PSEUDO_ALIGNMENT
+    v166([SALMON_QUANT])
+    v177([CUSTOM_TX2GENE])
+    v182([TXIMETA_TXIMPORT])
+    v188([SE_GENE])
+    v194([SE_GENE_LENGTH_SCALED])
+    v200([SE_GENE_SCALED])
+    v206([SE_TRANSCRIPT])
+    v161(( ))
+    v172(( ))
+    v179(( ))
+    v186(( ))
+    v192(( ))
+    v198(( ))
+    v204(( ))
+    v213(( ))
+    end
+    v216([DESEQ2_QC_PSEUDO])
+    v254([MULTIQC])
+    v6(( ))
+    v250(( ))
+    v251(( ))
+    v252(( ))
+    v266(( ))
+    end
+    end
+    subgraph " "
+    v15["ch_gene_bed"]
+    v18[" "]
+    v22[" "]
+    v24["ch_fai"]
+    v26["ch_chrom_sizes"]
+    v77["ch_reads"]
+    v84["fastqc_html"]
+    v100["trim_html"]
+    v101["trim_unpaired"]
+    v120[" "]
+    v122["lint_log"]
+    v129["ch_genome_fasta"]
+    v137["json_info"]
+    v138["results"]
+    v167[" "]
+    v168[" "]
+    v183["lengths_transcript"]
+    v184["lengths_gene"]
+    v189[" "]
+    v190["merged_gene_rds"]
+    v195[" "]
+    v196[" "]
+    v197["merged_gene_rds_length_scaled"]
+    v201[" "]
+    v202[" "]
+    v203["merged_gene_rds_scaled"]
+    v207[" "]
+    v208[" "]
+    v209["merged_transcript_rds"]
+    v217[" "]
+    v218[" "]
+    v219[" "]
+    v220[" "]
+    v221[" "]
+    v222[" "]
+    v255[" "]
+    v256[" "]
+    v257[" "]
+    v259["versions"]
+    v261[" "]
+    v267[" "]
+    end
+    v4 --> v5
+    v5 --> v6
+    v8 --> v9
+    v9 --> v6
+    v9 --> v10
+    v6 --> v12
+    v10 --> v12
+    v12 --> v14
+    v12 --> v17
+    v12 --> v136
+    v12 --> v166
+    v12 --> v6
+    v12 --> v171
+    v14 --> v15
+    v14 --> v6
+    v6 --> v17
+    v17 --> v18
+    v17 --> v44
+    v17 --> v136
+    v17 --> v6
+    v6 --> v21
+    v21 --> v22
+    v21 --> v6
+    v21 --> v23
+    v21 --> v25
+    v23 --> v24
+    v25 --> v26
+    v6 --> v44
+    v44 --> v136
+    v44 --> v166
+    v44 --> v6
+    v55 --> v56
+    v56 --> v67
+    v67 --> v6
+    v67 --> v56
+    v56 --> v71
+    v71 --> v6
+    v71 --> v56
+    v71 --> v74
+    v56 --> v77
+    v56 --> v83
+    v83 --> v84
+    v83 --> v6
+    v56 --> v99
+    v99 --> v101
+    v99 --> v100
+    v99 --> v6
+    v6 --> v119
+    v119 --> v120
+    v119 --> v6
+    v119 --> v74
+    v74 --> v122
+    v6 --> v129
+    v6 --> v131
+    v131 --> v136
+    v131 --> v6
+    v134 --> v136
+    v135 --> v136
+    v136 --> v138
+    v136 --> v137
+    v136 --> v6
+    v160 --> v161
+    v163 --> v166
+    v164 --> v166
+    v165 --> v166
+    v6 --> v166
+    v166 --> v168
+    v166 --> v167
+    v166 --> v6
+    v166 --> v172
+    v166 --> v179
+    v174 --> v177
+    v175 --> v177
+    v176 --> v177
+    v171 --> v177
+    v172 --> v177
+    v177 --> v182
+    v177 --> v188
+    v177 --> v194
+    v177 --> v200
+    v177 --> v206
+    v177 --> v6
+    v181 --> v182
+    v179 --> v182
+    v182 --> v184
+    v182 --> v183
+    v182 --> v6
+    v182 --> v186
+    v182 --> v192
+    v182 --> v198
+    v182 --> v204
+    v182 --> v213
+    v161 --> v188
+    v186 --> v188
+    v188 --> v190
+    v188 --> v189
+    v188 --> v6
+    v161 --> v194
+    v192 --> v194
+    v194 --> v197
+    v194 --> v196
+    v194 --> v195
+    v161 --> v200
+    v198 --> v200
+    v200 --> v203
+    v200 --> v202
+    v200 --> v201
+    v161 --> v206
+    v204 --> v206
+    v206 --> v209
+    v206 --> v208
+    v206 --> v207
+    v214 --> v216
+    v215 --> v216
+    v213 --> v216
+    v216 --> v222
+    v216 --> v221
+    v216 --> v220
+    v216 --> v219
+    v216 --> v218
+    v216 --> v217
+    v216 --> v6
+    v231 --> v6
+    v236 --> v250
+    v239 --> v6
+    v241 --> v6
+    v253 --> v254
+    v6 --> v254
+    v56 --> v254
+    v250 --> v254
+    v251 --> v254
+    v252 --> v254
+    v254 --> v257
+    v254 --> v256
+    v254 --> v255
+    v254 --> v266
+    v6 --> v259
+    v6 --> v261
+    v266 --> v267
+
+</pre>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, maxTextSize: Number.MAX_SAFE_INTEGER, maxEdges: Number.MAX_SAFE_INTEGER });
+</script>
+</body>
+</html>

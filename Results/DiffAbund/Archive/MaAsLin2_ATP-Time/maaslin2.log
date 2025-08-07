@@ -1,0 +1,41 @@
+2025-04-30 20:44:26.662726 INFO::Writing function arguments to log file
+2025-04-30 20:44:26.664008 DEBUG::Function arguments
+2025-04-30 20:44:26.664423 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time
+2025-04-30 20:44:26.664772 DEBUG::Min Abundance: 0.000000
+2025-04-30 20:44:26.66509 DEBUG::Min Prevalence: 0.000000
+2025-04-30 20:44:26.665389 DEBUG::Normalization: TSS
+2025-04-30 20:44:26.665679 DEBUG::Transform: LOG
+2025-04-30 20:44:26.665951 DEBUG::Analysis method: LM
+2025-04-30 20:44:26.666226 DEBUG::Max significance: 0.250000
+2025-04-30 20:44:26.666532 DEBUG::Random effects:
+2025-04-30 20:44:26.666868 DEBUG::Fixed effects: Antibiotics,Temperature,Pathogen,Timepoint
+2025-04-30 20:44:26.667162 DEBUG::Correction method: BH
+2025-04-30 20:44:26.667444 DEBUG::Standardize: FALSE
+2025-04-30 20:44:26.667705 DEBUG::Cores: 8
+2025-04-30 20:44:26.667945 INFO::Verifying options selected are valid
+2025-04-30 20:44:26.668796 INFO::Determining format of input files
+2025-04-30 20:44:26.669641 INFO::Input format is data samples as rows and metadata samples as rows
+2025-04-30 20:44:26.672007 DEBUG::A total of 594 samples were found in both the data and metadata
+2025-04-30 20:44:26.672376 DEBUG::Reordering data/metadata to use same sample ordering
+2025-04-30 20:44:26.677078 INFO::Formula for fixed effects: expr ~  Antibiotics + Temperature + Pathogen + Timepoint
+2025-04-30 20:44:26.678127 INFO::Filter data based on min abundance and min prevalence
+2025-04-30 20:44:26.678881 INFO::Total samples in data: 594
+2025-04-30 20:44:26.679614 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-04-30 20:44:26.692175 INFO::Total filtered features: 0
+2025-04-30 20:44:26.69334 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-04-30 20:44:26.785705 INFO::Total filtered features with variance filtering: 0
+2025-04-30 20:44:26.786938 INFO::Filtered feature names from variance filtering:
+2025-04-30 20:44:26.787718 INFO::Running selected normalization method: TSS
+2025-04-30 20:44:28.937028 INFO::Bypass z-score application to metadata
+2025-04-30 20:44:28.938992 INFO::Running selected transform method: LOG
+2025-04-30 20:44:29.084079 INFO::Running selected analysis method: LM
+2025-04-30 20:44:29.085551 INFO::Creating cluster of 8 R processes
+2025-04-30 20:44:54.692542 INFO::Counting total values for each feature
+2025-04-30 20:44:54.79073 INFO::Writing filtered data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/features/filtered_data.tsv
+2025-04-30 20:44:54.915995 INFO::Writing filtered, normalized data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/features/filtered_data_norm.tsv
+2025-04-30 20:44:55.190256 INFO::Writing filtered, normalized, transformed data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/features/filtered_data_norm_transformed.tsv
+2025-04-30 20:44:55.788302 INFO::Writing residuals to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/fits/residuals.rds
+2025-04-30 20:44:55.817802 INFO::Writing fitted values to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/fits/fitted.rds
+2025-04-30 20:44:55.834999 INFO::Writing all results to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/all_results.tsv
+2025-04-30 20:44:55.859698 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/significant_results.tsv
+2025-04-30 20:44:55.870256 INFO::Writing heatmap of significant results to file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time/heatmap.pdf

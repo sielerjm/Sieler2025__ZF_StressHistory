@@ -1,0 +1,21 @@
+=== ENRICHMENT ANALYSIS REPORT ===
+Analysis: All_Treatments
+Date: 2025-07-10 19:12:41
+
+GO ENRICHMENT SUMMARY:
+  Total terms analyzed: 1263
+  Significant terms (padj < 0.05): 1017
+  Contrasts analyzed: 7
+
+KEGG ENRICHMENT SUMMARY:
+  Total pathways analyzed: 294
+  Significant pathways (padj < 0.05): 243
+  Contrasts analyzed: 7
+
+FILES SAVED:
+  - Individual contrast files (ALL and TOP20)
+  - Combined summary files (ALL and TOP50)
+  - Significant results only (padj < 0.05)
+  - Comprehensive report (RDS format)
+  - This text summary
+

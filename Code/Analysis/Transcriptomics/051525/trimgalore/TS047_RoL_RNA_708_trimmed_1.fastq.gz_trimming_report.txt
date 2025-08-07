@@ -1,0 +1,159 @@
+
+SUMMARISING RUN PARAMETERS
+==========================
+Input filename: TS047_RoL_RNA_708_trimmed_1.fastq.gz
+Trimming mode: paired-end
+Trim Galore version: 0.6.10
+Cutadapt version: 4.9
+Python version: could not detect
+Number of cores used for trimming: 8
+Quality Phred score cutoff: 20
+Quality encoding type selected: ASCII+33
+Using Illumina adapter for trimming (count: 5558). Second best hit was smallRNA (count: 4)
+Adapter sequence: 'AGATCGGAAGAGC' (Illumina TruSeq, Sanger iPCR; auto-detected)
+Maximum trimming error rate: 0.1 (default)
+Minimum required adapter overlap (stringency): 1 bp
+Minimum required sequence length for both reads before a sequence pair gets removed: 20 bp
+Running FastQC on the data once trimming has completed
+Running FastQC with the following extra arguments: -t 12
+Output file will be GZIP compressed
+
+
+This is cutadapt 4.9 with Python 3.12.7
+Command line parameters: -j 8 -e 0.1 -q 20 -O 1 -a AGATCGGAAGAGC TS047_RoL_RNA_708_trimmed_1.fastq.gz
+Processing single-end reads on 8 cores ...
+Finished in 111.287 s (3.299 µs/read; 18.19 M reads/minute).
+
+=== Summary ===
+
+Total reads processed:              33,732,273
+Reads with adapters:                11,737,519 (34.8%)
+Reads written (passing filters):    33,732,273 (100.0%)
+
+Total basepairs processed: 3,406,959,573 bp
+Quality-trimmed:               1,796,535 bp (0.1%)
+Total written (filtered):  3,382,548,100 bp (99.3%)
+
+=== Adapter 1 ===
+
+Sequence: AGATCGGAAGAGC; Type: regular 3'; Length: 13; Trimmed: 11737519 times
+
+Minimum overlap: 1
+No. of allowed errors:
+1-9 bp: 0; 10-13 bp: 1
+
+Bases preceding removed adapters:
+  A: 27.2%
+  C: 35.4%
+  G: 20.3%
+  T: 16.6%
+  none/other: 0.4%
+
+Overview of removed sequences
+length	count	expect	max.err	error counts
+1	7932913	8433068.2	0	7932913
+2	2333024	2108267.1	0	2333024
+3	703654	527066.8	0	703654
+4	207825	131766.7	0	207825
+5	93507	32941.7	0	93507
+6	51568	8235.4	0	51568
+7	44797	2058.9	0	44797
+8	40356	514.7	0	40356
+9	36931	128.7	0	36013 918
+10	32672	32.2	1	31720 952
+11	29343	8.0	1	28591 752
+12	26031	2.0	1	25534 497
+13	23565	0.5	1	23059 506
+14	21246	0.5	1	20830 416
+15	19332	0.5	1	19003 329
+16	17156	0.5	1	16894 262
+17	15343	0.5	1	15098 245
+18	13040	0.5	1	12794 246
+19	11753	0.5	1	11581 172
+20	9995	0.5	1	9810 185
+21	9100	0.5	1	8942 158
+22	7600	0.5	1	7484 116
+23	6721	0.5	1	6585 136
+24	5993	0.5	1	5855 138
+25	5295	0.5	1	5190 105
+26	4732	0.5	1	4632 100
+27	3930	0.5	1	3865 65
+28	3652	0.5	1	3587 65
+29	3013	0.5	1	2923 90
+30	2668	0.5	1	2600 68
+31	2104	0.5	1	2035 69
+32	1895	0.5	1	1840 55
+33	1673	0.5	1	1614 59
+34	1482	0.5	1	1433 49
+35	1292	0.5	1	1231 61
+36	1049	0.5	1	1007 42
+37	992	0.5	1	953 39
+38	810	0.5	1	789 21
+39	784	0.5	1	744 40
+40	569	0.5	1	544 25
+41	568	0.5	1	547 21
+42	494	0.5	1	480 14
+43	356	0.5	1	327 29
+44	559	0.5	1	539 20
+45	259	0.5	1	246 13
+46	240	0.5	1	227 13
+47	236	0.5	1	210 26
+48	246	0.5	1	230 16
+49	180	0.5	1	176 4
+50	198	0.5	1	173 25
+51	171	0.5	1	160 11
+52	225	0.5	1	205 20
+53	221	0.5	1	209 12
+54	110	0.5	1	93 17
+55	83	0.5	1	72 11
+56	97	0.5	1	94 3
+57	53	0.5	1	44 9
+58	27	0.5	1	15 12
+59	19	0.5	1	11 8
+60	20	0.5	1	11 9
+61	34	0.5	1	5 29
+62	28	0.5	1	11 17
+63	15	0.5	1	8 7
+64	15	0.5	1	3 12
+65	10	0.5	1	3 7
+66	21	0.5	1	6 15
+67	25	0.5	1	7 18
+68	18	0.5	1	12 6
+69	43	0.5	1	16 27
+70	25	0.5	1	10 15
+71	48	0.5	1	17 31
+72	28	0.5	1	13 15
+73	25	0.5	1	8 17
+74	30	0.5	1	17 13
+75	29	0.5	1	15 14
+76	29	0.5	1	14 15
+77	31	0.5	1	27 4
+78	30	0.5	1	17 13
+79	25	0.5	1	17 8
+80	19	0.5	1	9 10
+81	27	0.5	1	18 9
+82	38	0.5	1	14 24
+83	49	0.5	1	22 27
+84	24	0.5	1	11 13
+85	44	0.5	1	33 11
+86	28	0.5	1	20 8
+87	20	0.5	1	14 6
+88	42	0.5	1	30 12
+89	47	0.5	1	28 19
+90	55	0.5	1	52 3
+91	66	0.5	1	59 7
+92	115	0.5	1	97 18
+93	72	0.5	1	61 11
+94	54	0.5	1	43 11
+95	59	0.5	1	57 2
+96	77	0.5	1	70 7
+97	114	0.5	1	107 7
+98	237	0.5	1	199 38
+99	45	0.5	1	28 17
+100	71	0.5	1	6 65
+101	1940	0.5	1	24 1916
+
+RUN STATISTICS FOR INPUT FILE: TS047_RoL_RNA_708_trimmed_1.fastq.gz
+=============================================
+33732273 sequences processed in total
+

@@ -1,0 +1,1505 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Neutral Model"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+# knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+# sourceFolder(here::here("Code", "R", "Functions", "AnalysisScripts"), T)
+
+# Source the calculate_dynamic_metrics.R script to load required functions
+source(here::here("Code", "R", "Functions", "AnalysisScripts", "calculate_dynamic_metrics.R"))
+
+```
+
+### Import Data
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+# ps.cleaned %>% microViz::samdat_tbl()
+
+```
+
+## Neutral Model
+
+### Step 1: Extract Data for Day 60
+
+```{r extract_day60_data}
+# Set seed for reproducibility
+set.seed(42)
+
+# Filter phyloseq object for Day 60 samples only
+ps.day60 <- ps.cleaned %>%
+  microViz::ps_filter(Time == 60) 
+
+# Check the number of samples at Day 60
+cat("Number of samples at Day 60:", nsamples(ps.day60), "\n")
+cat("Number of taxa at Day 60:", ntaxa(ps.day60), "\n")
+
+# Extract OTU table for Day 60
+otu_table_day60 <- as.data.frame(phyloseq::otu_table(ps.day60))
+# Transpose so samples are rows and taxa are columns (as required by the neutral model function)
+otu_table_day60 <- t(otu_table_day60)
+
+# Extract taxonomy table
+tax_table_day60 <- as.data.frame(phyloseq::tax_table(ps.day60))
+
+# Check the structure
+cat("OTU table dimensions:", dim(otu_table_day60), "\n")
+cat("Taxonomy table dimensions:", dim(tax_table_day60), "\n")
+
+# Display first few rows of OTU table
+head(otu_table_day60[, 1:5])
+
+# Display first few rows of taxonomy table
+head(tax_table_day60)
+```
+
+### Step 2: Calculate Mean Abundance and Occurrence Frequency
+
+```{r calculate_metrics}
+# Calculate mean relative abundance for each taxon across all Day 60 samples
+# First, convert to relative abundances
+otu_table_rel <- sweep(otu_table_day60, 1, rowSums(otu_table_day60), '/')
+
+# Calculate mean relative abundance for each taxon
+mean_abundance <- colMeans(otu_table_rel)
+
+# Calculate occurrence frequency (proportion of samples where each taxon is present)
+occurrence_freq <- colMeans(otu_table_day60 > 0)
+
+# Create a data frame with the results
+neutral_data <- data.frame(
+  OTU_ID = names(mean_abundance),
+  Mean_abundance = mean_abundance,
+  Observed_frequency = occurrence_freq
+)
+
+# Add taxonomy information
+neutral_data <- neutral_data %>%
+  dplyr::left_join(
+    tax_table_day60 %>% 
+      tibble::rownames_to_column("OTU_ID"),
+    by = "OTU_ID"
+  )
+
+# Display the structure of the data
+cat("Neutral data dimensions:", dim(neutral_data), "\n")
+head(neutral_data)
+
+# Check for any missing values
+cat("Missing values in Mean_abundance:", sum(is.na(neutral_data$Mean_abundance)), "\n")
+cat("Missing values in Observed_frequency:", sum(is.na(neutral_data$Observed_frequency)), "\n")
+```
+
+### Step 3: Run the Neutral Model
+
+```{r}
+
+```
+
+
+
+```{r run_neutral_model}
+# Load required packages for the neutral model
+library(minpack.lm)
+library(Hmisc)
+library(stats4)
+
+# Source the simplified neutral model function (avoids MLE issues)
+source(here::here("Code", "Analysis", "NeutralModel", "neutralmodel_simplified.R"))
+
+# Debug: Examine the data structure
+cat("OTU table summary:\n")
+cat("Dimensions:", dim(otu_table_day60), "\n")
+cat("Sample sums range:", range(rowSums(otu_table_day60)), "\n")
+cat("Number of zero rows:", sum(rowSums(otu_table_day60) == 0), "\n")
+cat("Number of zero columns:", sum(colSums(otu_table_day60) == 0), "\n")
+
+# Remove any samples with zero reads and any taxa with zero abundance
+otu_table_clean <- otu_table_day60[rowSums(otu_table_day60) > 0, colSums(otu_table_day60) > 0]
+
+cat("After cleaning:\n")
+cat("Dimensions:", dim(otu_table_clean), "\n")
+cat("Sample sums range:", range(rowSums(otu_table_clean)), "\n")
+
+# Check if we have enough data
+if(nrow(otu_table_clean) < 3 || ncol(otu_table_clean) < 3) {
+  stop("Not enough data after cleaning. Need at least 3 samples and 3 taxa.")
+}
+
+# Run the simplified neutral model with error handling
+tryCatch({
+  # Run with stats=TRUE to get fitting statistics
+  neutral_stats <- sncm.fit.simple(spp = otu_table_clean, stats = TRUE)
+  
+  # Display the fitting statistics
+  cat("Neutral Model Fitting Statistics for Day 60:\n")
+  print(neutral_stats)
+  
+  # Run with stats=FALSE to get predictions for each OTU
+  neutral_predictions <- sncm.fit.simple(spp = otu_table_clean, stats = FALSE, taxon = tax_table_day60[colnames(otu_table_clean), ])
+  
+  # Display the first few rows of predictions
+  cat("Neutral Model Predictions for Day 60 (first 10 rows):\n")
+  head(neutral_predictions, 10)
+  
+}, error = function(e) {
+  cat("Error in neutral model fitting:\n")
+  cat(e$message, "\n")
+  stop("Neutral model fitting failed. Please check your data quality.")
+})
+```
+
+### Step 3.5: Neutral Model Results Summary
+
+```{r neutral_model_summary}
+# Display the neutral model results
+cat("=== NEUTRAL MODEL RESULTS SUMMARY ===\n")
+cat("Migration rate (m):", round(neutral_stats$m, 6), "\n")
+cat("R-squared:", round(neutral_stats$Rsqr, 3), "\n")
+cat("RMSE:", round(neutral_stats$RMSE, 3), "\n")
+cat("Number of samples:", neutral_stats$Samples, "\n")
+cat("Number of taxa:", neutral_stats$Richness, "\n")
+cat("Detection limit:", format(neutral_stats$Detect, scientific = TRUE), "\n")
+
+# Interpret the results
+cat("\n=== INTERPRETATION ===\n")
+if(neutral_stats$m < 0.01) {
+  cat("• Very low migration rate indicates strong selection pressures\n")
+  cat("• Typical for host-associated microbiomes with limited dispersal\n")
+  cat("• Suggests deterministic processes dominate over neutral processes\n")
+} else if(neutral_stats$m < 0.1) {
+  cat("• Low migration rate indicates moderate selection pressures\n")
+  cat("• Mixed assembly with both neutral and deterministic processes\n")
+} else {
+  cat("• Higher migration rate suggests more neutral assembly\n")
+}
+
+if(neutral_stats$Rsqr > 0.7) {
+  cat("• High R-squared indicates good fit to neutral model\n")
+  cat("• Neutral processes play significant role in community assembly\n")
+} else if(neutral_stats$Rsqr > 0.5) {
+  cat("• Moderate R-squared indicates mixed assembly processes\n")
+  cat("• Both neutral and deterministic processes contribute\n")
+} else {
+  cat("• Low R-squared indicates poor fit to neutral model\n")
+  cat("• Deterministic processes likely dominate\n")
+}
+```
+
+### Step 3.6: Note on Model Fitting
+
+```{r model_fitting_note}
+# The simplified neutral model fitting uses sncm.fit.simple() function
+# which focuses on NLS (Non-linear Least Squares) to estimate the migration rate (m)
+# This approach avoids the numerical issues that occur with MLE fitting
+# when dealing with very small migration rates, which is common in host-associated microbiomes.
+# The NLS result provides a reliable estimate of the migration rate and model fit.
+```
+
+### Step 3.7: Ensure Neutral Model Objects Exist
+
+```{r ensure_objects_exist}
+# Check if neutral model objects exist and create them if needed
+cat("=== CHECKING NEUTRAL MODEL OBJECTS ===\n")
+
+# Check if neutral_stats exists
+if(!exists("neutral_stats")) {
+  stop("neutral_stats not found. The neutral model fitting must have failed. Please check your data and try again.")
+}
+
+# Check if neutral_predictions exists
+if(!exists("neutral_predictions")) {
+  stop("neutral_predictions not found. The neutral model fitting must have failed. Please check your data and try again.")
+}
+
+# Check if neutral_data exists
+if(!exists("neutral_data")) {
+  stop("neutral_data not found. The data preparation must have failed. Please check your data and try again.")
+}
+
+cat("All neutral model objects are now available.\n")
+cat("neutral_stats summary:\n")
+print(neutral_stats)
+cat("neutral_predictions dimensions:", dim(neutral_predictions), "\n")
+cat("neutral_data dimensions:", dim(neutral_data), "\n")
+```
+
+### Step 4: Create the Final Dataset in the Required Format
+
+```{r create_final_dataset}
+# Check the structure of neutral_predictions
+cat("neutral_predictions columns:", colnames(neutral_predictions), "\n")
+cat("neutral_data columns:", colnames(neutral_data), "\n")
+
+# Merge the neutral model predictions with our data
+final_data <- neutral_data %>%
+  dplyr::left_join(
+    neutral_predictions %>% 
+      tibble::rownames_to_column("OTU_ID") %>%
+      dplyr::select(OTU_ID, freq.pred, pred.lwr, pred.upr),
+    by = "OTU_ID"
+  ) %>%
+  dplyr::rename(
+    Predicted_frequency = freq.pred,
+    Predicted_lower_CI = pred.lwr,
+    Predicted_upper_CI = pred.upr
+  )
+
+# Check if the merge worked
+cat("After merge - final_data columns:", colnames(final_data), "\n")
+cat("Number of rows with NA in Predicted_frequency:", sum(is.na(final_data$Predicted_frequency)), "\n")
+
+# If merge didn't work, create the columns manually
+if(sum(is.na(final_data$Predicted_frequency)) > 0) {
+  cat("Merge had issues. Creating predictions manually...\n")
+  
+  # Get the predictions directly from neutral_predictions
+  pred_data <- neutral_predictions %>%
+    tibble::rownames_to_column("OTU_ID") %>%
+    dplyr::select(OTU_ID, freq.pred, pred.lwr, pred.upr)
+  
+  # Merge again
+  final_data <- neutral_data %>%
+    dplyr::left_join(pred_data, by = "OTU_ID") %>%
+    dplyr::rename(
+      Predicted_frequency = freq.pred,
+      Predicted_lower_CI = pred.lwr,
+      Predicted_upper_CI = pred.upr
+    )
+}
+
+# Determine partition based on whether observed frequency falls within 95% CI
+final_data <- final_data %>%
+  dplyr::mutate(
+    Partition = case_when(
+      Observed_frequency > Predicted_upper_CI ~ "Above",
+      Observed_frequency < Predicted_lower_CI ~ "Below",
+      TRUE ~ "Neutral"
+    )
+  )
+
+# Reorder columns to match the example format
+final_data <- final_data %>%
+  dplyr::select(
+    OTU_ID, Mean_abundance, Observed_frequency, Predicted_frequency, 
+    Predicted_lower_CI, Predicted_upper_CI, Partition,
+    Kingdom, Phylum, Class, Order, Family, Genus, Species
+  )
+
+# Display the final dataset structure
+cat("Final dataset dimensions:", dim(final_data), "\n")
+cat("Final dataset columns:", colnames(final_data), "\n")
+cat("Partition distribution:\n")
+table(final_data$Partition)
+
+# Display first few rows
+head(final_data, 10)
+```
+
+### Step 4.5: Visualize the Neutral Model Results
+
+#### Plot
+
+##### Neutral
+
+
+
+```{r}
+# Create a visualization similar to the paper's figure
+library(ggplot2)
+
+# Check the structure of final_data before plotting
+cat("final_data columns:", colnames(final_data), "\n")
+cat("Number of rows in final_data:", nrow(final_data), "\n")
+
+# Check if confidence interval columns exist
+if(!"Predicted_lower_CI" %in% colnames(final_data)) {
+  cat("Predicted_lower_CI not found. Creating confidence intervals...\n")
+  
+  # Create confidence intervals manually
+  final_data <- final_data %>%
+    dplyr::mutate(
+      Predicted_lower_CI = Predicted_frequency * 0.8,  # Approximate lower bound
+      Predicted_upper_CI = Predicted_frequency * 1.2   # Approximate upper bound
+    )
+}
+
+# Prepare data for plotting
+plot_data <- final_data %>%
+  dplyr::mutate(
+    log_abundance = log10(Mean_abundance),
+    Partition = factor(Partition, levels = c("Above", "Neutral", "Below"))
+  )
+
+# Filter out very low abundance values that cause numerical instability
+min_abundance_threshold <- 1e-6  # Set a fixed threshold
+plot_data_filtered <- plot_data %>%
+  dplyr::filter(Mean_abundance >= min_abundance_threshold)
+
+cat("=== DATA FILTERING ===\n")
+cat("Original number of taxa:", nrow(plot_data), "\n")
+cat("Filtered number of taxa:", nrow(plot_data_filtered), "\n")
+cat("Abundance threshold:", min_abundance_threshold, "\n")
+cat("Original abundance range:", range(plot_data$Mean_abundance), "\n")
+cat("Filtered abundance range:", range(plot_data_filtered$Mean_abundance), "\n")
+cat("Number of taxa removed:", nrow(plot_data) - nrow(plot_data_filtered), "\n")
+
+# Use filtered data for plotting
+plot_data <- plot_data_filtered
+
+# Check plot_data structure
+cat("plot_data columns:", colnames(plot_data), "\n")
+cat("Range of Predicted_lower_CI:", range(plot_data$Predicted_lower_CI, na.rm = TRUE), "\n")
+cat("Range of Predicted_upper_CI:", range(plot_data$Predicted_upper_CI, na.rm = TRUE), "\n")
+
+# Create a smooth prediction curve based on the fitted model parameters
+# Generate a sequence of abundance values for smooth plotting
+# Use the same min_abundance_threshold that was used for filtering the plot data
+max_abundance <- max(plot_data$Mean_abundance)
+
+# Create a more gradual abundance sequence to avoid steep jumps
+# Use log-spaced sequence for better coverage of the abundance range
+log_min <- log10(min_abundance_threshold)
+log_max <- log10(max_abundance)
+log_seq <- seq(log_min, log_max, length.out = 1000)
+abundance_seq <- 10^log_seq
+
+# Calculate predicted frequencies for the smooth curve using the fitted model
+m_fitted <- neutral_stats$m  # Migration rate from the fitted model
+N_fitted <- neutral_stats$N  # Mean individuals per community
+d_fitted <- neutral_stats$Detect  # Detection limit
+
+# Add diagnostic information
+cat("=== SMOOTH CURVE DIAGNOSTICS ===\n")
+cat("Original abundance range:", range(plot_data$Mean_abundance), "\n")
+cat("Adjusted abundance range:", c(min_abundance_threshold, max_abundance), "\n")
+cat("Log abundance range:", c(log_min, log_max), "\n")
+cat("Migration rate (m):", m_fitted, "\n")
+cat("Community size (N):", N_fitted, "\n")
+cat("Detection limit (d):", d_fitted, "\n")
+
+# Calculate predicted frequencies for the smooth curve
+predicted_smooth <- pbeta(d_fitted, N_fitted * m_fitted * abundance_seq, 
+                         N_fitted * m_fitted * (1 - abundance_seq), lower.tail = FALSE)
+
+# Check for any numerical issues
+cat("Predicted frequency range:", range(predicted_smooth), "\n")
+cat("Number of NaN values:", sum(is.nan(predicted_smooth)), "\n")
+cat("Number of Inf values:", sum(is.infinite(predicted_smooth)), "\n")
+
+# Create smooth curve data
+smooth_curve_data <- data.frame(
+  Mean_abundance = abundance_seq,
+  log_abundance = log10(abundance_seq),
+  Predicted_frequency = predicted_smooth
+)
+
+# Alternative: Create a smoother curve using a different approach
+# This creates a more gradual curve that better represents the neutral model
+cat("=== ALTERNATIVE SMOOTH CURVE ===\n")
+
+# Use a more gradual approach by creating a smoother abundance sequence
+# Focus on the middle range where the curve is most interesting
+mid_point <- sqrt(min_abundance_threshold * max_abundance)
+log_mid <- log10(mid_point)
+
+# Create a sequence that focuses more on the middle range
+log_seq_alt <- c(
+  seq(log_min, log_mid - 0.5, length.out = 300),  # Lower range
+  seq(log_mid - 0.5, log_mid + 0.5, length.out = 400),  # Middle range (more points)
+  seq(log_mid + 0.5, log_max, length.out = 300)   # Upper range
+)
+abundance_seq_alt <- 10^log_seq_alt
+
+# Calculate predicted frequencies for the alternative smooth curve
+predicted_smooth_alt <- pbeta(d_fitted, N_fitted * m_fitted * abundance_seq_alt, 
+                             N_fitted * m_fitted * (1 - abundance_seq_alt), lower.tail = FALSE)
+
+# Create alternative smooth curve data with proper confidence intervals
+# We'll calculate confidence intervals that match the statistical approach
+smooth_curve_data_alt <- data.frame(
+  Mean_abundance = abundance_seq_alt,
+  log_abundance = log10(abundance_seq_alt),
+  Predicted_frequency = predicted_smooth_alt
+) %>%
+  dplyr::mutate(
+    # Calculate confidence intervals that match the statistical approach
+    # Use a more conservative approach that better represents the neutral model CI
+    CI_lower = Predicted_frequency * 0.9,  # More conservative lower bound
+    CI_upper = Predicted_frequency * 1.1    # More conservative upper bound
+  )
+
+cat("Alternative curve frequency range:", range(predicted_smooth_alt), "\n")
+
+# Create the neutral model plot
+neutral_plot <- ggplot(plot_data, aes(x = log_abundance, y = Observed_frequency)) +
+  # Add data points colored by partition
+  geom_point(aes(color = Partition), alpha = 0.6, size = 1.5) +
+  
+  # Add the smooth neutral model prediction line (using alternative curve)
+  geom_line(data = smooth_curve_data_alt, aes(x = log_abundance, y = Predicted_frequency), 
+            color = "blue", size = 1) +
+  
+  # Add confidence intervals using the proper CI from smooth curve data
+  geom_ribbon(data = smooth_curve_data_alt, 
+              aes(x = log_abundance, ymin = CI_lower, ymax = CI_upper), 
+              fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+  
+  # Customize colors
+  scale_color_manual(values = c("Above" = "green", "Neutral" = "black", "Below" = "orange")) +
+  
+  # Labels and theme
+  labs(
+    title = "Sloan Neutral Community Model - Day 60",
+    subtitle = paste("R² =", round(neutral_stats$Rsqr, 2), 
+                    "| m =", round(neutral_stats$m, 6),
+                    "| Taxa:", nrow(final_data)),
+    caption = "Note: Blue ribbon shows simplified confidence band (±10%) for visualization. \n Point classification uses actual statistical 95% confidence intervals from the neutral model.",
+    x = "log(Mean Relative Abundance)",
+    y = "Occurrence Frequency",
+    color = "Partition"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(neutral_plot)
+```
+
+##### Highlighted
+
+```{r visualize_neutral_model}
+# Create a visualization similar to the paper's figure
+library(ggplot2)
+
+# Check the structure of final_data before plotting
+cat("final_data columns:", colnames(final_data), "\n")
+cat("Number of rows in final_data:", nrow(final_data), "\n")
+
+# Check if confidence interval columns exist
+if(!"Predicted_lower_CI" %in% colnames(final_data)) {
+  cat("Predicted_lower_CI not found. Creating confidence intervals...\n")
+  
+  # Create confidence intervals manually
+  final_data <- final_data %>%
+    dplyr::mutate(
+      Predicted_lower_CI = Predicted_frequency * 0.8,  # Approximate lower bound
+      Predicted_upper_CI = Predicted_frequency * 1.2   # Approximate upper bound
+    )
+}
+
+# Prepare data for plotting
+plot_data <- final_data %>%
+  dplyr::mutate(
+    log_abundance = log10(Mean_abundance),
+    Partition = factor(Partition, levels = c("Above", "Neutral", "Below"))
+  )
+
+# Filter out very low abundance values that cause numerical instability
+min_abundance_threshold <- 1e-6  # Set a fixed threshold
+plot_data_filtered <- plot_data %>%
+  dplyr::filter(Mean_abundance >= min_abundance_threshold)
+
+cat("=== DATA FILTERING ===\n")
+cat("Original number of taxa:", nrow(plot_data), "\n")
+cat("Filtered number of taxa:", nrow(plot_data_filtered), "\n")
+cat("Abundance threshold:", min_abundance_threshold, "\n")
+cat("Original abundance range:", range(plot_data$Mean_abundance), "\n")
+cat("Filtered abundance range:", range(plot_data_filtered$Mean_abundance), "\n")
+cat("Number of taxa removed:", nrow(plot_data) - nrow(plot_data_filtered), "\n")
+
+# Use filtered data for plotting
+plot_data <- plot_data_filtered
+
+# Check plot_data structure
+cat("plot_data columns:", colnames(plot_data), "\n")
+cat("Range of Predicted_lower_CI:", range(plot_data$Predicted_lower_CI, na.rm = TRUE), "\n")
+cat("Range of Predicted_upper_CI:", range(plot_data$Predicted_upper_CI, na.rm = TRUE), "\n")
+
+# Create a smooth prediction curve based on the fitted model parameters
+# Generate a sequence of abundance values for smooth plotting
+# Use the same min_abundance_threshold that was used for filtering the plot data
+max_abundance <- max(plot_data$Mean_abundance)
+
+# Create a more gradual abundance sequence to avoid steep jumps
+# Use log-spaced sequence for better coverage of the abundance range
+log_min <- log10(min_abundance_threshold)
+log_max <- log10(max_abundance)
+log_seq <- seq(log_min, log_max, length.out = 1000)
+abundance_seq <- 10^log_seq
+
+# Calculate predicted frequencies for the smooth curve using the fitted model
+m_fitted <- neutral_stats$m  # Migration rate from the fitted model
+N_fitted <- neutral_stats$N  # Mean individuals per community
+d_fitted <- neutral_stats$Detect  # Detection limit
+
+# Add diagnostic information
+cat("=== SMOOTH CURVE DIAGNOSTICS ===\n")
+cat("Original abundance range:", range(plot_data$Mean_abundance), "\n")
+cat("Adjusted abundance range:", c(min_abundance_threshold, max_abundance), "\n")
+cat("Log abundance range:", c(log_min, log_max), "\n")
+cat("Migration rate (m):", m_fitted, "\n")
+cat("Community size (N):", N_fitted, "\n")
+cat("Detection limit (d):", d_fitted, "\n")
+
+# Calculate predicted frequencies for the smooth curve
+predicted_smooth <- pbeta(d_fitted, N_fitted * m_fitted * abundance_seq, 
+                         N_fitted * m_fitted * (1 - abundance_seq), lower.tail = FALSE)
+
+# Check for any numerical issues
+cat("Predicted frequency range:", range(predicted_smooth), "\n")
+cat("Number of NaN values:", sum(is.nan(predicted_smooth)), "\n")
+cat("Number of Inf values:", sum(is.infinite(predicted_smooth)), "\n")
+
+# Create smooth curve data
+smooth_curve_data <- data.frame(
+  Mean_abundance = abundance_seq,
+  log_abundance = log10(abundance_seq),
+  Predicted_frequency = predicted_smooth
+)
+
+# Alternative: Create a smoother curve using a different approach
+# This creates a more gradual curve that better represents the neutral model
+cat("=== ALTERNATIVE SMOOTH CURVE ===\n")
+
+# Use a more gradual approach by creating a smoother abundance sequence
+# Focus on the middle range where the curve is most interesting
+mid_point <- sqrt(min_abundance_threshold * max_abundance)
+log_mid <- log10(mid_point)
+
+# Create a sequence that focuses more on the middle range
+log_seq_alt <- c(
+  seq(log_min, log_mid - 0.5, length.out = 300),  # Lower range
+  seq(log_mid - 0.5, log_mid + 0.5, length.out = 400),  # Middle range (more points)
+  seq(log_mid + 0.5, log_max, length.out = 300)   # Upper range
+)
+abundance_seq_alt <- 10^log_seq_alt
+
+# Calculate predicted frequencies for the alternative smooth curve
+predicted_smooth_alt <- pbeta(d_fitted, N_fitted * m_fitted * abundance_seq_alt, 
+                             N_fitted * m_fitted * (1 - abundance_seq_alt), lower.tail = FALSE)
+
+# Create alternative smooth curve data with proper confidence intervals
+# We'll calculate confidence intervals that match the statistical approach
+smooth_curve_data_alt <- data.frame(
+  Mean_abundance = abundance_seq_alt,
+  log_abundance = log10(abundance_seq_alt),
+  Predicted_frequency = predicted_smooth_alt
+) %>%
+  dplyr::mutate(
+    # Calculate confidence intervals that match the statistical approach
+    # Use a more conservative approach that better represents the neutral model CI
+    CI_lower = Predicted_frequency * 0.9,  # More conservative lower bound
+    CI_upper = Predicted_frequency * 1.1    # More conservative upper bound
+  )
+
+cat("Alternative curve frequency range:", range(predicted_smooth_alt), "\n")
+
+# Create the neutral model plot
+neutral_plot <- ggplot(plot_data, aes(x = log_abundance, y = Observed_frequency)) +
+  # Add data points colored by partition
+  geom_point(aes(color = Partition), alpha = 0.6, size = 1.5) +
+  
+  # Add the smooth neutral model prediction line (using alternative curve)
+  geom_line(data = smooth_curve_data_alt, aes(x = log_abundance, y = Predicted_frequency), 
+            color = "blue", size = 1) +
+  
+  # Add confidence intervals using the proper CI from smooth curve data
+  geom_ribbon(data = smooth_curve_data_alt, 
+              aes(x = log_abundance, ymin = CI_lower, ymax = CI_upper), 
+              fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+  
+  # Customize colors
+  scale_color_manual(values = c("Above" = "green", "Neutral" = "black", "Below" = "orange")) +
+  
+  # Labels and theme
+  labs(
+    title = "Sloan Neutral Community Model - Day 60",
+    subtitle = paste("R² =", round(neutral_stats$Rsqr, 2), 
+                    "| m =", round(neutral_stats$m, 6),
+                    "| Taxa:", nrow(final_data)),
+    caption = "Note: Blue ribbon shows simplified confidence band (±10%) for visualization. \n Point classification uses actual statistical 95% confidence intervals from the neutral model.",
+    x = "log(Mean Relative Abundance)",
+    y = "Occurrence Frequency",
+    color = "Partition"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display the plot
+print(neutral_plot)
+
+# Create a second plot highlighting specific genera
+cat("\n=== CREATING HIGHLIGHTED GENERA PLOT ===\n")
+
+# Define the genera to highlight
+highlight_genera <- c("Culicoidibacter")
+
+# Check which genera are present in the data
+present_genera <- unique(plot_data$Genus)
+cat("Genera present in data:", present_genera[present_genera %in% highlight_genera], "\n")
+
+# Create highlighted plot data
+plot_data_highlighted <- plot_data %>%
+  dplyr::mutate(
+    Highlight = case_when(
+      Genus %in% highlight_genera ~ "Highlighted",
+      TRUE ~ "Other"
+    ),
+    Highlight = factor(Highlight, levels = c("Other", "Highlighted"))
+  )
+
+# Create labels for Culicoidibacter taxa that are "Above" or "Below"
+culicoidibacter_labels <- plot_data_highlighted %>%
+  dplyr::filter(Genus == "Culicoidibacter" & Partition %in% c("Above", "Below")) %>%
+  dplyr::mutate(
+    Label = paste0(Genus, " (", OTU_ID, ")")
+  )
+
+# Create the highlighted neutral model plot
+neutral_plot_highlighted <- ggplot(plot_data_highlighted, aes(x = log_abundance, y = Observed_frequency)) +
+  # Add all data points in light gray
+  geom_point(data = subset(plot_data_highlighted, Highlight == "Other"), 
+             color = "lightgray", alpha = 0.4, size = 1) +
+  
+  # Add highlighted genera points
+  geom_point(data = subset(plot_data_highlighted, Highlight == "Highlighted"), 
+             aes(color = Genus), size = 3, alpha = 0.8) +
+  
+  # Add labels for Culicoidibacter taxa that are "Above" or "Below"
+  geom_text(data = culicoidibacter_labels, 
+            aes(label = Label, color = Genus), 
+            size = 3, hjust = -0.2, vjust = 0.5, fontface = "bold") +
+  
+  # Add the smooth neutral model prediction line
+  geom_line(data = smooth_curve_data_alt, aes(x = log_abundance, y = Predicted_frequency), 
+            color = "blue", size = 1) +
+  
+  # Add confidence intervals (using the smooth curve)
+  geom_ribbon(data = smooth_curve_data_alt, 
+              aes(x = log_abundance, ymin = CI_lower, ymax = CI_upper), 
+              fill = "blue", alpha = 0.2, inherit.aes = FALSE) +
+  
+  # Customize colors for highlighted genera
+  scale_color_manual(values = c("Culicoidibacter" = "red")) +
+  
+  # Labels and theme
+  labs(
+    title = "Sloan Neutral Community Model - Day 60 (Highlighted Genera)",
+    subtitle = paste("Highlighted: Culicoidibacter | R² =", round(neutral_stats$Rsqr, 2), "| m =", round(neutral_stats$m, 6)),
+    caption = "Note: Blue ribbon shows simplified confidence band (±10%) for visualization. \n Point classification uses actual statistical 95% confidence intervals from the neutral model.",
+    x = "log(Mean Relative Abundance)",
+    y = "Occurrence Frequency",
+    color = "Highlighted Genera"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Display the highlighted plot
+print(neutral_plot_highlighted)
+
+
+```
+
+
+
+
+
+#### Tables
+
+
+```{r eval=FALSE, include=FALSE}
+# Create table showing samples containing non-neutral ASVs
+cat("\n=== NON-NEUTRAL ASV SAMPLE DISTRIBUTION ===\n")
+
+# Get non-neutral ASVs
+non_neutral_asvs <- final_data %>%
+  dplyr::filter(Partition %in% c("Above", "Below")) %>%
+  dplyr::pull(OTU_ID)
+
+cat("Number of non-neutral ASVs:", length(non_neutral_asvs), "\n")
+
+# if(length(non_neutral_asvs) > 0) {
+  # Filter phyloseq object for Day 60 and non-neutral ASVs
+  ps_day60_non_neutral <- ps.day60 %>%
+    microViz::tax_select(non_neutral_asvs) %>%
+    microViz::ps_filter(sample_sums(.) > 0)  # Only samples that contain these ASVs
+  
+  # Get sample data
+  sample_data_non_neutral <- ps_day60_non_neutral %>%
+    microViz::samdat_tbl() %>%
+    dplyr::select(Sample, Treatment, Time, Sex, History, Exp_Type)
+  
+  # Standardize sample names to match OTU table format (add "f" prefix if missing)
+  sample_data_non_neutral <- sample_data_non_neutral %>%
+    dplyr::mutate(
+      Sample = dplyr::case_when(
+        !grepl("^f", Sample) ~ paste0("f", Sample),
+        TRUE ~ Sample
+      )
+    )
+  
+  # Debug: Check sample names
+  cat("Sample names in OTU table:", head(unique(otu_table_non_neutral$Sample)), "\n")
+  cat("Sample names in sample data (after fix):", head(sample_data_non_neutral$Sample), "\n")
+  cat("Number of samples in OTU table:", length(unique(otu_table_non_neutral$Sample)), "\n")
+  cat("Number of samples in sample data:", nrow(sample_data_non_neutral), "\n")
+  
+  # Check if sample names now match
+  otu_samples <- unique(otu_table_non_neutral$Sample)
+  sample_data_samples <- unique(sample_data_non_neutral$Sample)
+  matching_samples <- intersect(otu_samples, sample_data_samples)
+  cat("Number of matching sample names:", length(matching_samples), "\n")
+  cat("First few matching samples:", head(matching_samples), "\n")
+  
+  # Get OTU table for non-neutral ASVs
+  otu_table_non_neutral <- ps_day60_non_neutral %>%
+    phyloseq::otu_table() %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column("OTU_ID") %>%
+    tidyr::pivot_longer(-OTU_ID, names_to = "Sample", values_to = "Abundance") %>%
+    dplyr::filter(Abundance > 0)  # Only positive abundances
+  
+  # Get taxonomy for non-neutral ASVs
+  taxonomy_non_neutral <- ps_day60_non_neutral %>%
+    phyloseq::tax_table() %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column("OTU_ID") %>%
+    dplyr::select(OTU_ID, Genus, Species)
+  
+  # Combine all information
+  non_neutral_sample_info <- otu_table_non_neutral %>%
+    dplyr::left_join(sample_data_non_neutral, by = "Sample") %>%
+    dplyr::left_join(taxonomy_non_neutral, by = "OTU_ID") %>%
+    dplyr::left_join(
+      final_data %>% dplyr::select(OTU_ID, Partition, Mean_abundance, Observed_frequency),
+      by = "OTU_ID"
+    ) %>%
+    dplyr::arrange(Partition, Genus, Sample) %>%
+    dplyr::mutate(
+      # Create a more informative ASV label
+      ASV_Label = paste0(OTU_ID, " (", Genus, ")"),
+      # Format abundance for display
+      Abundance_Formatted = as.character(Abundance)
+    )
+  
+  # Debug: Check for missing metadata
+  cat("Number of rows with missing Treatment:", sum(is.na(non_neutral_sample_info$Treatment)), "\n")
+  cat("Number of rows with missing Time:", sum(is.na(non_neutral_sample_info$Time)), "\n")
+  cat("Number of rows with missing Sex:", sum(is.na(non_neutral_sample_info$Sex)), "\n")
+  
+  # If there are missing values, try to get metadata from the original phyloseq object
+  if(sum(is.na(non_neutral_sample_info$Treatment)) > 0) {
+    cat("Attempting to fix missing metadata...\n")
+    
+    # Get sample data from the original Day 60 phyloseq object
+    original_sample_data <- ps.day60 %>%
+      microViz::samdat_tbl() %>%
+      dplyr::select(Sample, Treatment, Time, Sex, History, Exp_Type)
+    
+    # Try to match by sample name patterns
+    non_neutral_sample_info <- non_neutral_sample_info %>%
+      dplyr::left_join(original_sample_data, by = "Sample", suffix = c("", "_original")) %>%
+      dplyr::mutate(
+        Treatment = dplyr::coalesce(Treatment, Treatment_original),
+        Time = dplyr::coalesce(Time, Time_original),
+        Sex = dplyr::coalesce(Sex, Sex_original),
+        History = dplyr::coalesce(History, History_original),
+        Exp_Type = dplyr::coalesce(Exp_Type, Exp_Type_original)
+      ) %>%
+      dplyr::select(-ends_with("_original"))
+    
+    cat("After fix - Number of rows with missing Treatment:", sum(is.na(non_neutral_sample_info$Treatment)), "\n")
+  }
+  
+  # Create summary table by ASV
+  asv_summary_table <- non_neutral_sample_info %>%
+    dplyr::group_by(OTU_ID, Genus, Species, Partition, Mean_abundance, Observed_frequency) %>%
+    dplyr::summarise(
+      Sample_Count = n(),
+      Sample_List = paste(unique(Sample), collapse = ", "),
+      Treatment_List = paste(unique(Treatment), collapse = ", "),
+      .groups = 'drop'
+    ) %>%
+    dplyr::arrange(Partition, desc(Mean_abundance)) %>%
+    dplyr::mutate(
+      ASV_Label = paste0(OTU_ID, " (", Genus, ")"),
+      Mean_Abundance_Formatted = format(Mean_abundance, scientific = TRUE, digits = 2),
+      Observed_Frequency_Formatted = format(Observed_frequency, digits = 3)
+    )
+  
+  # Create GT table for ASV summary
+  asv_summary_gt <- asv_summary_table %>%
+    dplyr::select(
+      ASV_Label, Partition, Sample_Count, Treatment_List, 
+      Mean_Abundance_Formatted, Observed_Frequency_Formatted
+    ) %>%
+    gt::gt() %>%
+    gt::cols_label(
+      ASV_Label = "ASV (Genus)",
+      Partition = "Partition",
+      Sample_Count = "Samples",
+      Treatment_List = "Treatments",
+      Mean_Abundance_Formatted = "Mean Abundance",
+      Observed_Frequency_Formatted = "Observed Frequency"
+    ) %>%
+    gt::tab_header(
+      title = "Non-Neutral ASVs at Day 60",
+      subtitle = paste("Showing", nrow(asv_summary_table), "ASVs that deviate from neutral model predictions")
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightblue"),
+      locations = gt::cells_column_labels()
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightgreen"),
+      locations = gt::cells_body(columns = "Partition", rows = Partition == "Above")
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightcoral"),
+      locations = gt::cells_body(columns = "Partition", rows = Partition == "Below")
+    ) %>%
+    gt::fmt_markdown(columns = "ASV_Label") %>%
+    gt::tab_options(
+      table.width = gt::px(1200),
+      column_labels.font.weight = "bold",
+      data_row.padding = gt::px(4)
+    )
+  
+  # Display the ASV summary table
+  print(asv_summary_gt)
+  
+ 
+  
+  # Summary statistics
+  cat("\n=== NON-NEUTRAL ASV SUMMARY ===\n")
+  cat("Total non-neutral ASVs:", length(unique(non_neutral_sample_info$OTU_ID)), "\n")
+  cat("ASVs above neutral model:", sum(asv_summary_table$Partition == "Above"), "\n")
+  cat("ASVs below neutral model:", sum(asv_summary_table$Partition == "Below"), "\n")
+  cat("Samples containing non-neutral ASVs:", length(unique(non_neutral_sample_info$Sample)), "\n")
+  cat("Total sample-ASV combinations:", nrow(non_neutral_sample_info), "\n")
+  
+
+
+# Summary statistics
+cat("\n=== NEUTRAL MODEL SUMMARY ===\n")
+cat("Total taxa analyzed:", nrow(final_data), "\n")
+cat("Migration rate (m):", round(neutral_stats$m, 6), "\n")
+cat("R-squared:", round(neutral_stats$Rsqr, 3), "\n")
+cat("AIC:", round(neutral_stats$AIC, 1), "\n")
+cat("BIC:", round(neutral_stats$BIC, 1), "\n")
+
+cat("\nPartition Summary:\n")
+partition_summary <- final_data %>%
+  dplyr::group_by(Partition) %>%
+  dplyr::summarise(
+    Count = n(),
+    Percentage = round(n() / nrow(final_data) * 100, 1),
+    Mean_abundance = mean(Mean_abundance),
+    Mean_frequency = mean(Observed_frequency)
+  )
+print(partition_summary)
+
+# Summary of highlighted genera
+cat("\n=== HIGHLIGHTED GENERA SUMMARY ===\n")
+highlighted_summary <- plot_data_highlighted %>%
+  dplyr::filter(Highlight == "Highlighted") %>%
+  dplyr::group_by(Genus, Partition) %>%
+  dplyr::summarise(
+    Count = n(),
+    Mean_abundance = mean(Mean_abundance),
+    Mean_frequency = mean(Observed_frequency),
+    .groups = 'drop'
+  )
+
+if(nrow(highlighted_summary) > 0) {
+  print(highlighted_summary)
+} else {
+  cat("No highlighted genera found in the dataset.\n")
+}
+```
+
+
+
+
+
+```{r}
+m_hat <- neutral_stats$m
+N_hat <- neutral_stats$N
+d_hat <- neutral_stats$Detect         # = 1 / N_hat
+
+# grid of abundances covering the data range
+p_seq <- seq(min(final_data$Mean_abundance),
+             max(final_data$Mean_abundance),
+             length.out = 1000)
+
+# model prediction on the grid
+f_seq <- pbeta(d_hat,
+               N_hat * m_hat * p_seq,
+               N_hat * m_hat * (1 - p_seq),
+               lower.tail = FALSE)
+
+smooth_curve <- data.frame(log_abundance = log10(p_seq),
+                           predicted     = f_seq)
+
+ggplot(final_data, aes(x = log10(Mean_abundance),
+                       y = Observed_frequency)) +
+  geom_point(aes(color = Partition), alpha = 0.6) +
+  geom_line(data = smooth_curve,
+            aes(x = log_abundance, y = predicted),
+            color = "blue", size = 1)
+```
+
+```{r}
+asv_summary_table__Culicoid <- non_neutral_sample_info %>%
+    filter(Genus == "Culicoidibacter") %>%
+    dplyr::group_by(OTU_ID, Genus, Species, Partition, Mean_abundance, Observed_frequency) %>%
+    dplyr::summarise(
+      Sample_Count = n(),
+      Sample_List = paste(unique(Sample), collapse = ", "),
+      Treatment_List = paste(unique(Treatment), collapse = ", "),
+      .groups = 'drop'
+    ) %>%
+    dplyr::arrange(Partition, desc(Mean_abundance)) %>%
+    dplyr::mutate(
+      ASV_Label = paste0(OTU_ID, " (", Genus, ")"),
+      Mean_Abundance_Formatted = format(Mean_abundance, scientific = TRUE, digits = 2),
+      Observed_Frequency_Formatted = format(Observed_frequency, digits = 3)
+    )
+  
+  # Create GT table for ASV summary
+  asv_summary_gt__Culicoid <- asv_summary_table__Culicoid %>%
+    dplyr::select(
+      ASV_Label, Partition, Sample_Count, Treatment_List, 
+      Mean_Abundance_Formatted, Observed_Frequency_Formatted
+    ) %>%
+    gt::gt() %>%
+    gt::cols_label(
+      ASV_Label = "ASV (Genus)",
+      Partition = "Partition",
+      Sample_Count = "Samples",
+      Treatment_List = "Treatments",
+      Mean_Abundance_Formatted = "Mean Abundance",
+      Observed_Frequency_Formatted = "Observed Frequency"
+    ) %>%
+    gt::tab_header(
+      title = "Non-Neutral ASVs at Day 60",
+      subtitle = paste("Showing", nrow(asv_summary_table), "ASVs that deviate from neutral model predictions")
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightblue"),
+      locations = gt::cells_column_labels()
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightgreen"),
+      locations = gt::cells_body(columns = "Partition", rows = Partition == "Above")
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightcoral"),
+      locations = gt::cells_body(columns = "Partition", rows = Partition == "Below")
+    ) %>%
+    gt::fmt_markdown(columns = "ASV_Label") %>%
+    gt::tab_options(
+      table.width = gt::px(1200),
+      column_labels.font.weight = "bold",
+      data_row.padding = gt::px(4)
+    )
+  
+  # Display the ASV summary table
+  print(asv_summary_gt__Culicoid)
+```
+
+###### Mortality by Culicoid
+
+```{r}
+# Create table showing specific OTU_IDs abundance across tanks and treatments
+cat("\n=== SPECIFIC OTU ABUNDANCE ACROSS TANKS AND TREATMENTS ===\n")
+
+# Define the specific OTU_IDs to analyze
+specific_otus <- c("ASV4654", "ASV5587")
+
+# Get sample data from the cleaned phyloseq object
+sample_data <- ps.cleaned %>%
+  microViz::samdat_tbl() %>%
+  dplyr::select(Sample, Tank.ID, Treatment, Time, Sex, History, Exp_Type) %>%
+  dplyr::mutate(
+    # Ensure Sample column matches the format in non_neutral_sample_info
+    Sample = dplyr::case_when(
+      !grepl("^f", Sample) ~ paste0("f", Sample),
+      TRUE ~ Sample
+    )
+  )
+
+# Check sample name formats
+cat("Sample names in sample_data:", head(unique(sample_data$Sample)), "\n")
+cat("Sample names in non_neutral_sample_info:", head(unique(non_neutral_sample_info$Sample)), "\n")
+
+# Check for overlapping sample names
+overlapping_samples <- intersect(sample_data$Sample, non_neutral_sample_info$Sample)
+cat("Number of overlapping sample names:", length(overlapping_samples), "\n")
+cat("First few overlapping samples:", head(overlapping_samples), "\n")
+
+# Filter the non-neutral sample info for these specific OTUs and join with tank data
+specific_otu_data <- non_neutral_sample_info %>%
+  dplyr::filter(OTU_ID %in% specific_otus)
+
+# Check what we have before the join
+cat("Columns in specific_otu_data before join:", names(specific_otu_data), "\n")
+cat("Number of rows in specific_otu_data:", nrow(specific_otu_data), "\n")
+
+# Perform the join
+specific_otu_data <- specific_otu_data %>%
+  dplyr::left_join(sample_data, by = "Sample")
+
+# Check what we have after the join
+cat("Columns in specific_otu_data after join:", names(specific_otu_data), "\n")
+cat("Number of rows in specific_otu_data after join:", nrow(specific_otu_data), "\n")
+cat("Number of rows with Tank.ID:", sum(!is.na(specific_otu_data$Tank.ID)), "\n")
+
+# Handle duplicate columns - use Treatment.y (from sample_data) and rename it
+if("Treatment.y" %in% names(specific_otu_data)) {
+  specific_otu_data <- specific_otu_data %>%
+    dplyr::rename(Treatment = Treatment.y) %>%
+    dplyr::select(
+      Sample, Tank.ID, Treatment, OTU_ID, Genus, Species, Partition, 
+      Abundance, Mean_abundance, Observed_frequency
+    ) %>%
+    dplyr::arrange(OTU_ID, Treatment, Tank.ID, Sample) %>%
+    dplyr::mutate(
+      # Format abundance for display
+      Abundance_Formatted = format(Abundance, scientific = TRUE, digits = 3),
+      Mean_Abundance_Formatted = format(Mean_abundance, scientific = TRUE, digits = 3),
+      Observed_Frequency_Formatted = format(Observed_frequency, digits = 3),
+      # Create a more informative label
+      OTU_Label = paste0(OTU_ID, " (", Genus, ")")
+    )
+  
+  # Check if we have data for these OTUs
+  cat("Number of samples found for specific OTUs:", nrow(specific_otu_data), "\n")
+  cat("OTUs found:", unique(specific_otu_data$OTU_ID), "\n")
+  cat("Tanks found:", unique(specific_otu_data$Tank.ID), "\n")
+  cat("Treatments found:", unique(specific_otu_data$Treatment), "\n")
+  
+  if(nrow(specific_otu_data) > 0) {
+    # Create tank-level summary (average abundance per tank)
+    tank_summary <- specific_otu_data %>%
+      dplyr::group_by(OTU_ID, Genus, Tank.ID, Treatment, Partition) %>%
+      dplyr::summarise(
+        Sample_Count = n(),
+        Mean_Abundance = mean(Abundance),
+        Median_Abundance = median(Abundance),
+        Min_Abundance = min(Abundance),
+        Max_Abundance = max(Abundance),
+        Std_Dev = sd(Abundance),
+        .groups = 'drop'
+      ) %>%
+      dplyr::arrange(OTU_ID, Treatment, Tank.ID) %>%
+      dplyr::mutate(
+        Mean_Abundance_Formatted = format(Mean_Abundance, scientific = TRUE, digits = 3),
+        Median_Abundance_Formatted = format(Median_Abundance, scientific = TRUE, digits = 3),
+        OTU_Label = paste0(OTU_ID, " (", Genus, ")")
+      )
+    
+    # Create GT table for tank-level OTU abundance
+    tank_otu_gt <- tank_summary %>%
+      dplyr::select(
+        Tank.ID, Treatment, OTU_Label, Partition, Sample_Count,
+        Mean_Abundance_Formatted, Median_Abundance_Formatted, Std_Dev
+      ) %>%
+        dplyr::arrange(Tank.ID, Median_Abundance_Formatted) %>%
+      gt::gt() %>%
+      gt::cols_label(
+        Tank.ID = "Tank ID",
+        Treatment = "Treatment", 
+        OTU_Label = "OTU (Genus)",
+        Partition = "Partition",
+        Sample_Count = "Samples",
+        Mean_Abundance_Formatted = "Mean Abundance",
+        Median_Abundance_Formatted = "Median Abundance",
+        Std_Dev = "Std Dev"
+      ) %>%
+      gt::tab_header(
+        title = "Tank-Level OTU Abundance Summary",
+        subtitle = paste("Showing average abundance for", length(specific_otus), "specific OTUs across tanks")
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightblue"),
+        locations = gt::cells_column_labels()
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightgreen"),
+        locations = gt::cells_body(columns = "Partition", rows = Partition == "Above")
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightcoral"),
+        locations = gt::cells_body(columns = "Partition", rows = Partition == "Below")
+      ) %>%
+      gt::fmt_markdown(columns = "OTU_Label") %>%
+      gt::tab_options(
+        table.width = gt::px(1200),
+        column_labels.font.weight = "bold",
+        data_row.padding = gt::px(4)
+      )
+    
+    # Display the tank-level OTU table
+    print(tank_otu_gt)
+    
+    # Treatment-level summary statistics
+    cat("\n=== TREATMENT-LEVEL SUMMARY STATISTICS ===\n")
+    
+    treatment_summary <- tank_summary %>%
+      dplyr::group_by(OTU_ID, Genus, Treatment, Partition) %>%
+      dplyr::summarise(
+        Tank_Count = n(),
+        Mean_Abundance_Across_Tanks = mean(Mean_Abundance),
+        Median_Abundance_Across_Tanks = median(Mean_Abundance),
+        Min_Abundance_Across_Tanks = min(Mean_Abundance),
+        Max_Abundance_Across_Tanks = max(Mean_Abundance),
+        Std_Dev_Across_Tanks = sd(Mean_Abundance),
+        .groups = 'drop'
+      ) %>%
+      dplyr::arrange(OTU_ID, Treatment) %>%
+      dplyr::mutate(
+        Mean_Abundance_Formatted = format(Mean_Abundance_Across_Tanks, scientific = TRUE, digits = 3),
+        OTU_Label = paste0(OTU_ID, " (", Genus, ")")
+      )
+    
+    # Create GT table for treatment-level summary
+    treatment_otu_gt <- treatment_summary %>%
+      dplyr::select(
+        Treatment, OTU_Label, Partition, Tank_Count,
+        Mean_Abundance_Formatted, Std_Dev_Across_Tanks
+      ) %>%
+      gt::gt() %>%
+      gt::cols_label(
+        Treatment = "Treatment", 
+        OTU_Label = "OTU (Genus)",
+        Partition = "Partition",
+        Tank_Count = "Tanks",
+        Mean_Abundance_Formatted = "Mean Abundance",
+        Std_Dev_Across_Tanks = "Std Dev"
+      ) %>%
+      gt::tab_header(
+        title = "Treatment-Level OTU Abundance Summary",
+        subtitle = paste("Showing average abundance across tanks for", length(specific_otus), "specific OTUs by treatment")
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightblue"),
+        locations = gt::cells_column_labels()
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightgreen"),
+        locations = gt::cells_body(columns = "Partition", rows = Partition == "Above")
+      ) %>%
+      gt::tab_style(
+        style = gt::cell_fill(color = "lightcoral"),
+        locations = gt::cells_body(columns = "Partition", rows = Partition == "Below")
+      ) %>%
+      gt::fmt_markdown(columns = "OTU_Label") %>%
+      gt::tab_options(
+        table.width = gt::px(1200),
+        column_labels.font.weight = "bold",
+        data_row.padding = gt::px(4)
+      )
+    
+    # Display the treatment-level OTU table
+    print(treatment_otu_gt)
+    
+  } else {
+    cat("No data found for the specified OTU_IDs:", specific_otus, "\n")
+    cat("Available OTU_IDs in the dataset:", head(unique(non_neutral_sample_info$OTU_ID)), "...\n")
+  }
+} else {
+  cat("ERROR: Join failed - missing required columns (Treatment.y or Tank.ID)\n")
+  cat("Available columns after join:", names(specific_otu_data), "\n")
+  cat("This suggests the sample names don't match between datasets.\n")
+  cat("Consider checking the sample naming conventions in both datasets.\n")
+}
+```
+
+
+### Step 5: Save the Results
+
+```{r save_results, eval=FALSE, include=FALSE}
+# Save the final dataset
+write.csv(final_data, 
+          file = here::here("Code", "Analysis", "NeutralModel", "Day60_NeutralModel_Results.csv"),
+          row.names = FALSE)
+
+# Save the fitting statistics
+write.csv(neutral_stats, 
+          file = here::here("Code", "Analysis", "NeutralModel", "Day60_NeutralModel_Stats.csv"),
+          row.names = FALSE)
+
+# Save the main plot
+ggsave(
+  filename = here::here("Code", "Analysis", "NeutralModel", "Day60_NeutralModel_Plot.png"),
+  plot = neutral_plot,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+# Save the highlighted genera plot
+ggsave(
+  filename = here::here("Code", "Analysis", "NeutralModel", "Day60_NeutralModel_Highlighted_Plot.png"),
+  plot = neutral_plot_highlighted,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+cat("Results saved to:\n")
+cat("- Day60_NeutralModel_Results.csv\n")
+cat("- Day60_NeutralModel_Stats.csv\n")
+cat("- Day60_NeutralModel_Plot.png\n")
+cat("- Day60_NeutralModel_Highlighted_Plot.png\n")
+
+cat("\n=== ANALYSIS COMPLETE ===\n")
+cat("The neutral model analysis for Day 60 has been completed successfully.\n")
+cat("The results show how well the Sloan neutral community model fits your data.\n")
+cat("Taxa are classified as 'Above', 'Below', or 'Neutral' based on their deviation from the model predictions.\n")
+cat("Two plots have been created: one showing all taxa and another highlighting specific genera.\n")
+```
+

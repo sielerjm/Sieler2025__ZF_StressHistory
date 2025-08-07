@@ -1,0 +1,3839 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Differential Gene Expression Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Create output directory if it doesn't exist
+output_dir <- here::here("Code", "Analysis", "DiffExpGene", "Results")
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+cat("Output directory created:", output_dir, "\n")
+```
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Set seed for reproducibility
+set.seed(42)
+
+# Load required libraries for DESeq2 analysis and visualization
+library(DESeq2)
+library(SummarizedExperiment)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+library(ggrepel)
+library(tidyverse)
+library(VennDiagram)
+library(gridExtra)
+library(BiocParallel)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)
+library(rstatix)
+library(coin)
+
+# Load libraries for enrichment analysis
+library(clusterProfiler)
+library(org.Dr.eg.db)
+library(AnnotationDbi)
+library(furrr)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette for plotting (original naming convention)
+treatment_order_plot <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order_plot)
+
+# Define treatment order for DESeq2 (keep original DESeq2-compatible names)
+treatment_order_deseq <- c(
+  "A_minus_T_minus_P_minus",  # Control
+  "A_minus_T_minus_P_plus",   # Parasite
+  "A_plus_T_minus_P_minus",   # Antibiotics
+  "A_plus_T_minus_P_plus",    # Antibiotics_Parasite
+  "A_minus_T_plus_P_minus",   # Temperature
+  "A_minus_T_plus_P_plus",    # Temperature_Parasite
+  "A_plus_T_plus_P_minus",    # Antibiotics_Temperature
+  "A_plus_T_plus_P_plus"      # Antibiotics_Temperature_Parasite
+)
+
+# Create mapping between DESeq2 names and plotting names
+treatment_mapping <- setNames(treatment_order_plot, treatment_order_deseq)
+
+# Mapping from DESeq2 contrast names to plotting-friendly names
+contrast_to_plotname <- c(
+  "A_minus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" = "A- T- P-",
+  "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" = "A- T- P+",
+  "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" = "A+ T- P-",
+  "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" = "A+ T- P+",
+  "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = "A- T+ P-",
+  "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" = "A- T+ P+",
+  "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = "A+ T+ P-",
+  "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" = "A+ T+ P+"
+)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to convert DESeq2 treatment names to plotting names
+convert_treatment_names <- function(deseq_names) {
+  return(treatment_mapping[deseq_names])
+}
+
+# Function to monitor system resources during analysis
+monitor_performance <- function() {
+  # Get memory usage
+  mem_usage <- gc()
+  
+  # Get CPU usage (if possible)
+  cpu_info <- tryCatch({
+    if (Sys.info()["sysname"] == "Darwin") {
+      # macOS
+      cpu_cmd <- "top -l 1 -n 0 | grep 'CPU usage'"
+      cpu_output <- system(cpu_cmd, intern = TRUE)
+      cpu_output
+    } else if (Sys.info()["sysname"] == "Linux") {
+      # Linux
+      cpu_cmd <- "top -bn1 | grep 'Cpu(s)'"
+      cpu_output <- system(cpu_cmd, intern = TRUE)
+      cpu_output
+    } else {
+      "CPU monitoring not available on this system"
+    }
+  }, error = function(e) {
+    "CPU monitoring not available"
+  })
+  
+  cat("=== Performance Monitor ===\n")
+  cat("Memory usage:\n")
+  print(mem_usage)
+  cat("CPU info:\n")
+  cat(cpu_info, "\n")
+  cat("Active parallel workers:", bp_param$workers, "\n")
+  cat("========================\n")
+}
+
+# Function to optimize memory usage
+optimize_memory <- function() {
+  cat("Optimizing memory usage...\n")
+  
+  # Force garbage collection
+  gc(verbose = FALSE)
+  
+  # Clear unnecessary objects
+  if (exists("temp_objects")) {
+    rm(temp_objects)
+  }
+  
+  cat("Memory optimization complete\n")
+}
+
+# Function to save DESeq2 results
+save_deseq_results <- function(results_list, analysis_name) {
+  # Create results directory if it doesn't exist
+  results_dir <- here::here("Code", "Analysis", "DiffExpGene", "Saved_Results")
+  dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  # Save the results list
+  results_file <- file.path(results_dir, paste0(analysis_name, "_deseq_results.rds"))
+  saveRDS(results_list, results_file)
+  
+  cat("Results saved to:", results_file, "\n")
+}
+
+# Function to load DESeq2 results
+load_deseq_results <- function(analysis_name) {
+  results_dir <- here::here("Code", "Analysis", "DiffExpGene", "Saved_Results")
+  results_file <- file.path(results_dir, paste0(analysis_name, "_deseq_results.rds"))
+  
+  if (file.exists(results_file)) {
+    cat("Loading existing results for:", analysis_name, "\n")
+    return(readRDS(results_file))
+  } else {
+    cat("No existing results found for:", analysis_name, "\n")
+    return(NULL)
+  }
+}
+
+# Function to check if results exist
+results_exist <- function(analysis_name) {
+  results_dir <- here::here("Code", "Analysis", "DiffExpGene", "Saved_Results")
+  results_file <- file.path(results_dir, paste0(analysis_name, "_deseq_results.rds"))
+  return(file.exists(results_file))
+}
+
+# Function to clean up saved results
+cleanup_saved_results <- function(analysis_names = NULL) {
+  results_dir <- here::here("Code", "Analysis", "DiffExpGene", "Saved_Results")
+  
+  if (is.null(analysis_names)) {
+    # Remove all saved results
+    if (dir.exists(results_dir)) {
+      unlink(results_dir, recursive = TRUE)
+      cat("All saved results removed\n")
+    }
+  } else {
+    # Remove specific analysis results
+    for (analysis_name in analysis_names) {
+      results_file <- file.path(results_dir, paste0(analysis_name, "_deseq_results.rds"))
+      if (file.exists(results_file)) {
+        file.remove(results_file)
+        cat("Removed saved results for:", analysis_name, "\n")
+      }
+    }
+  }
+}
+
+# Function to run DESeq2 analysis for a single comparison
+run_deseq_comparison <- function(dds, contrast_name, contrast_vector) {
+  cat("Running analysis for:", contrast_name, "\n")
+  
+  # Set seed for reproducibility within parallel processes
+  set.seed(42)
+  
+  # Optimize DESeq2 settings for speed
+  # Use faster estimation method for large datasets
+  if (nrow(dds) > 10000) {
+    # For large datasets, use faster estimation
+    dds_comparison <- DESeq(dds, 
+                           parallel = TRUE,
+                           fitType = "local",  # Faster than "parametric"
+                           betaPrior = FALSE,  # Disable beta prior for speed
+                           quiet = FALSE)
+  } else {
+    # For smaller datasets, use standard settings
+    dds_comparison <- DESeq(dds, 
+                           parallel = TRUE,
+                           quiet = FALSE)
+  }
+  
+  # Get results with optimized settings
+  res_comparison <- results(dds_comparison, 
+                           contrast = contrast_vector,
+                           parallel = TRUE,
+                           alpha = 0.05)  # Set significance threshold
+  
+  # Add gene names if available
+  if ("gene_name" %in% names(mcols(dds_comparison))) {
+    res_comparison$gene_name <- mcols(dds_comparison)$gene_name
+  }
+  
+  # Clean up memory
+  rm(dds_comparison)
+  gc()
+  
+  return(res_comparison)
+}
+
+# Function to run all comparisons for a specific analysis with enhanced parallelization
+run_analysis_set <- function(analysis_name, analysis_config, force_recompute = FALSE) {
+  cat("\n=== Running", analysis_name, "===\n")
+  cat("Description:", analysis_config$description, "\n")
+  
+  # Check if results already exist and force_recompute is FALSE
+  if (!force_recompute && results_exist(analysis_name)) {
+    cat("Loading existing results for", analysis_name, "\n")
+    return(load_deseq_results(analysis_name))
+  }
+  
+  # Create a copy of the dataset for this analysis
+  dds_analysis <- dds_filtered
+  
+  # Update design if needed
+  design(dds_analysis) <- analysis_config$design
+  
+  # Pre-estimate size factors and dispersions for better parallelization
+  cat("Pre-estimating size factors and dispersions...\n")
+  dds_analysis <- estimateSizeFactors(dds_analysis)
+  dds_analysis <- estimateDispersions(dds_analysis)
+  
+  # Run all contrasts for this analysis
+  results_list <- list()
+  
+  # Use parallel processing for multiple contrasts
+  if (length(analysis_config$contrasts) > 1) {
+    cat("Running", length(analysis_config$contrasts), "contrasts in parallel...\n")
+    
+    # Create a function for parallel execution
+    run_single_contrast <- function(contrast_info) {
+      contrast_name <- contrast_info$name
+      contrast_vector <- contrast_info$vector
+      
+      # Check if both treatment levels exist in the data
+      if (all(contrast_vector[2:3] %in% levels(colData(dds_analysis)$Treatment))) {
+        return(list(name = contrast_name, result = run_deseq_comparison(dds_analysis, contrast_name, contrast_vector)))
+      } else {
+        cat("Warning: Contrast", contrast_name, "skipped - treatment levels not found in data\n")
+        return(list(name = contrast_name, result = NULL))
+      }
+    }
+    
+    # Prepare contrast information for parallel processing
+    contrast_info_list <- lapply(names(analysis_config$contrasts), function(name) {
+      list(name = name, vector = analysis_config$contrasts[[name]])
+    })
+    
+    # Run contrasts in parallel
+    parallel_results <- BiocParallel::bplapply(contrast_info_list, run_single_contrast)
+    
+    # Organize results
+    for (result in parallel_results) {
+      if (!is.null(result$result)) {
+        results_list[[result$name]] <- result$result
+      }
+    }
+    
+  } else {
+    # For single contrast, run directly
+    for (contrast_name in names(analysis_config$contrasts)) {
+      contrast_vector <- analysis_config$contrasts[[contrast_name]]
+      
+      # Check if both treatment levels exist in the data
+      if (all(contrast_vector[2:3] %in% levels(colData(dds_analysis)$Treatment))) {
+        results_list[[contrast_name]] <- run_deseq_comparison(dds_analysis, contrast_name, contrast_vector)
+      } else {
+        cat("Warning: Contrast", contrast_name, "skipped - treatment levels not found in data\n")
+      }
+    }
+  }
+  
+  # Save the results
+  save_deseq_results(results_list, analysis_name)
+  
+  # Clean up memory
+  rm(dds_analysis)
+  gc()
+  
+  return(results_list)
+}
+
+# Function to format p-values for gt tables
+fmt_pvalues <- function(gt_tbl, columns, threshold = 0.001, decimals = 3) {
+  gt_tbl |>
+    gt::fmt_number(columns = all_of(columns), decimals = decimals) |>
+    gt::fmt(
+      columns = all_of(columns),
+      rows = Reduce(`|`, lapply(columns, function(col) gt_tbl$`_data`[[col]] < threshold)),
+      fns = function(x) rep(paste0("<", threshold), length(x))
+    )
+}
+
+# Function to save results for each analysis
+save_analysis_results <- function(analysis_name, results_list) {
+  cat("Saving results for:", analysis_name, "\n")
+  
+  # Create subdirectory for this analysis
+  analysis_dir <- file.path(output_dir, analysis_name)
+  dir.create(analysis_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  # Save each contrast result
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    
+    # Convert to data frame
+    res_df <- as.data.frame(res) %>% rownames_to_column(var = "gene")
+    
+    # Add gene names if available
+    if ("gene_name" %in% names(res_df)) {
+      res_df <- res_df %>% 
+        dplyr::select(gene_name, everything()) %>%
+        dplyr::rename(gene = gene_name)
+    }
+    
+    # Save full results
+    full_filename <- file.path(analysis_dir, paste0(contrast_name, "_full_results.tsv"))
+    write_tsv(res_df, full_filename)
+    
+    # Save significant results (padj < 0.05)
+    sig_df <- res_df %>% 
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::arrange(padj)
+    
+    if (nrow(sig_df) > 0) {
+      sig_filename <- file.path(analysis_dir, paste0(contrast_name, "_significant_results.tsv"))
+      write_tsv(sig_df, sig_filename)
+      
+      # Create summary table
+      summary_table <- data.frame(
+        Contrast = contrast_name,
+        Total_Genes = nrow(res_df),
+        Significant_Genes = nrow(sig_df),
+        Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+        Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+        stringsAsFactors = FALSE
+      )
+      
+      # Save summary
+      summary_filename <- file.path(analysis_dir, paste0(contrast_name, "_summary.tsv"))
+      write_tsv(summary_table, summary_filename)
+    }
+  }
+  
+  # Create combined summary for the analysis
+  all_summaries <- list()
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    all_summaries[[contrast_name]] <- data.frame(
+      Contrast = contrast_name,
+      Total_Genes = nrow(res_df),
+      Significant_Genes = nrow(sig_df),
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  combined_summary <- bind_rows(all_summaries)
+  combined_filename <- file.path(analysis_dir, paste0(analysis_name, "_combined_summary.tsv"))
+  write_tsv(combined_summary, combined_filename)
+  
+  # Display summary table
+  cat("\nSummary for", analysis_name, ":\n")
+  print(combined_summary %>% gt::gt())
+}
+
+# Function to convert gene IDs to Entrez IDs for enrichment analysis
+get_entrez_ids <- function(deg_df) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  # Use org.Dr.eg.db to map gene symbols to Entrez IDs
+  gene_ids <- deg_df$gene
+  
+  # Create a mapping dataframe
+  entrez_map <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = gene_ids,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "gene", value = "entrezgene_id") %>%
+    dplyr::filter(!is.na(entrezgene_id))
+  
+  # Join with original data to keep all information
+  result <- deg_df %>%
+    dplyr::left_join(entrez_map, by = "gene") %>%
+    dplyr::filter(!is.na(entrezgene_id)) %>%
+    dplyr::distinct(entrezgene_id, .keep_all = TRUE)
+  
+  return(result)
+}
+
+# Function to perform GO enrichment analysis
+perform_go_enrichment <- function(entrez_df, contrast_name) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  cat("Performing GO enrichment for:", contrast_name, "\n")
+  cat("Number of genes:", nrow(entrez_df), "\n")
+  
+  # Perform GO enrichment
+  go_results <- clusterProfiler::enrichGO(
+    gene = entrez_df$entrezgene_id,
+    OrgDb = org.Dr.eg.db,
+    keyType = "ENTREZID",
+    ont = "BP",  # Biological Process
+    pAdjustMethod = "BH",
+    pvalueCutoff = 0.1,
+    readable = TRUE
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Create a mapping of gene symbols to Entrez IDs
+  symbol_to_entrez <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = entrez_df$entrezgene_id,
+    column = "SYMBOL",
+    keytype = "ENTREZID",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "entrezgene_id", value = "SYMBOL") %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Create a mapping of gene IDs to log2FoldChange
+  gene_fc_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, log2FoldChange) %>%
+    dplyr::left_join(symbol_to_entrez, by = "entrezgene_id") %>%
+    dplyr::select(SYMBOL, log2FoldChange) %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Split the geneID column and create a long format dataframe
+  go_results_long <- go_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    # Join with the fold change data using gene symbols
+    dplyr::left_join(gene_fc_map, by = c("geneID" = "SYMBOL"))
+  
+  # Group back by GO term and calculate summary statistics
+  go_results_summary <- go_results_long %>%
+    dplyr::group_by(Description, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_log2FC = mean(log2FoldChange, na.rm = TRUE),
+      n_up = sum(log2FoldChange > 0, na.rm = TRUE),
+      n_down = sum(log2FoldChange < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      fc_list = list(log2FoldChange),
+      .groups = "drop"
+    )
+  
+  return(go_results_summary)
+}
+
+# Function to perform KEGG enrichment analysis
+perform_kegg_enrichment <- function(entrez_df, contrast_name) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  cat("Performing KEGG enrichment for:", contrast_name, "\n")
+  cat("Number of genes:", nrow(entrez_df), "\n")
+  
+  # Perform KEGG enrichment
+  kegg_results <- clusterProfiler::enrichKEGG(
+    gene = entrez_df$entrezgene_id,
+    organism = 'dre',  # Danio rerio
+    keyType = 'ncbi-geneid',
+    pvalueCutoff = 0.1,
+    pAdjustMethod = "BH"
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Create a mapping of gene IDs to log2FoldChange
+  gene_fc_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, log2FoldChange) %>%
+    dplyr::mutate(entrezgene_id = as.character(entrezgene_id))
+  
+  # Split the geneID column and create a long format dataframe
+  kegg_results_long <- kegg_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    # Convert geneID to character for joining
+    dplyr::mutate(geneID = as.character(geneID)) %>%
+    # Join with the fold change data
+    dplyr::left_join(gene_fc_map, by = c("geneID" = "entrezgene_id"))
+  
+  # Group back by KEGG pathway and calculate summary statistics
+  kegg_results_summary <- kegg_results_long %>%
+    dplyr::group_by(Description, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_log2FC = mean(log2FoldChange, na.rm = TRUE),
+      n_up = sum(log2FoldChange > 0, na.rm = TRUE),
+      n_down = sum(log2FoldChange < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      fc_list = list(log2FoldChange),
+      .groups = "drop"
+    )
+  
+  return(kegg_results_summary)
+}
+
+# Function to prepare data for enrichment heatmaps
+prepare_enrichment_heatmap <- function(enrichment_results, top_n = 15) {
+  # Get top terms from each contrast
+  top_terms <- enrichment_results %>%
+    purrr::map(~ dplyr::slice_max(.x, order_by = log_padj, n = top_n)) %>%
+    purrr::map(~ dplyr::pull(.x, Description)) %>%
+    unlist() %>%
+    unique()
+  
+  # Create matrix for heatmap
+  heatmap_data <- enrichment_results %>%
+    purrr::map_dfr(~ dplyr::filter(.x, Description %in% top_terms), .id = "contrast") %>%
+    tidyr::pivot_wider(
+      id_cols = Description,
+      names_from = contrast,
+      values_from = log_padj,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames("Description") %>%
+    as.matrix()
+  
+  return(heatmap_data)
+}
+
+# Function to prepare data for regulation heatmaps
+prepare_regulation_heatmap <- function(enrichment_results, direction = "up", top_n = 20) {
+  # Combine all results
+  all_results <- purrr::map_dfr(enrichment_results, ~.x, .id = "contrast")
+  
+  # Filter for terms with significant regulation in the specified direction
+  filtered_terms <- all_results %>%
+    dplyr::filter(
+      if(direction == "up") {
+        n_up > n_down
+      } else {
+        n_down > n_up
+      }
+    ) %>%
+    dplyr::group_by(Description) %>%
+    dplyr::summarise(
+      total_terms = n(),
+      mean_fc = mean(mean_log2FC, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(desc(total_terms)) %>%
+    dplyr::slice_head(n = top_n)
+  
+  # Create heatmap data
+  heatmap_data <- all_results %>%
+    dplyr::filter(Description %in% filtered_terms$Description) %>%
+    dplyr::select(contrast, Description, mean_log2FC) %>%
+    tidyr::pivot_wider(
+      names_from = contrast,
+      values_from = mean_log2FC,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames("Description")
+  
+  # Check if we have valid data for heatmap
+  if (nrow(heatmap_data) == 0 || ncol(heatmap_data) == 0) {
+    return(list(heatmap_data = NULL, color_scheme = NULL, valid = FALSE))
+  }
+  
+  # Set color scheme based on direction
+  if(direction == "up") {
+    color_scheme <- colorRampPalette(c("white", "red"))(100)
+    # For up-regulated, we want to show the magnitude of positive changes
+    heatmap_data[heatmap_data < 0] <- 0
+  } else {
+    color_scheme <- colorRampPalette(c("white", "blue"))(100)
+    # For down-regulated, we want to show the magnitude of negative changes
+    heatmap_data[heatmap_data > 0] <- 0
+    # Make negative values positive for visualization
+    heatmap_data <- abs(heatmap_data)
+  }
+  
+  # Check if all values are the same (which causes pheatmap to fail)
+  if (length(unique(as.vector(heatmap_data))) <= 1) {
+    return(list(heatmap_data = NULL, color_scheme = NULL, valid = FALSE))
+  }
+  
+  return(list(heatmap_data = heatmap_data, color_scheme = color_scheme, valid = TRUE))
+}
+
+# Function to run enrichment analysis for a specific analysis
+run_enrichment_analysis <- function(analysis_name, results_list) {
+  cat("\n=== Running Enrichment Analysis for:", analysis_name, "===\n")
+  
+  # Convert results to tidy format and filter significant genes
+  contrast_tibbles <- purrr::map(results_list, ~
+    as.data.frame(.) %>%
+      tibble::rownames_to_column("gene") %>%
+      dplyr::filter(
+        padj < 0.05, 
+        abs(log2FoldChange) > 1,
+        !gene %in% genes_to_exclude  # Filter out excluded genes
+      ) %>%
+      dplyr::select(gene, log2FoldChange, padj)
+  )
+  
+  # Convert to Entrez IDs
+  entrez_by_contrast <- purrr::map(contrast_tibbles, get_entrez_ids)
+  
+  # Run GO enrichment
+  cat("Running GO enrichment...\n")
+  go_by_contrast <- purrr::map2(entrez_by_contrast, names(entrez_by_contrast), 
+                               perform_go_enrichment)
+  names(go_by_contrast) <- names(entrez_by_contrast)
+  
+  # Run KEGG enrichment
+  cat("Running KEGG enrichment...\n")
+  kegg_by_contrast <- purrr::map2(entrez_by_contrast, names(entrez_by_contrast), 
+                                 perform_kegg_enrichment)
+  names(kegg_by_contrast) <- names(entrez_by_contrast)
+  
+  return(list(
+    go_results = go_by_contrast,
+    kegg_results = kegg_by_contrast,
+    entrez_data = entrez_by_contrast
+  ))
+}
+
+# Function to save enrichment results
+save_enrichment_results <- function(enrichment_results, analysis_name) {
+  cat("Saving enrichment results for:", analysis_name, "\n")
+  
+  # Create subdirectory for this analysis
+  analysis_dir <- file.path(output_dir, analysis_name, "enrichment")
+  dir.create(analysis_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  # Save GO results
+  for (contrast_name in names(enrichment_results$go_results)) {
+    go_res <- enrichment_results$go_results[[contrast_name]]
+    if (nrow(go_res) > 0) {
+      go_filename <- file.path(analysis_dir, paste0(contrast_name, "_GO_enrichment.tsv"))
+      write_tsv(go_res, go_filename)
+    }
+  }
+  
+  # Save KEGG results
+  for (contrast_name in names(enrichment_results$kegg_results)) {
+    kegg_res <- enrichment_results$kegg_results[[contrast_name]]
+    if (nrow(kegg_res) > 0) {
+      kegg_filename <- file.path(analysis_dir, paste0(contrast_name, "_KEGG_enrichment.tsv"))
+      write_tsv(kegg_res, kegg_filename)
+    }
+  }
+  
+  # Save combined summary
+  if (length(enrichment_results$go_results) > 0) {
+    go_summary <- purrr::map_dfr(enrichment_results$go_results, ~.x, .id = "contrast")
+    go_summary_filename <- file.path(analysis_dir, paste0(analysis_name, "_GO_summary.tsv"))
+    write_tsv(go_summary, go_summary_filename)
+  }
+  
+  if (length(enrichment_results$kegg_results) > 0) {
+    kegg_summary <- purrr::map_dfr(enrichment_results$kegg_results, ~.x, .id = "contrast")
+    kegg_summary_filename <- file.path(analysis_dir, paste0(analysis_name, "_KEGG_summary.tsv"))
+    write_tsv(kegg_summary, kegg_summary_filename)
+  }
+  
+  cat("Enrichment results saved to:", analysis_dir, "\n")
+}
+
+```
+
+### Import Data
+
+```{r}
+
+# Read in metadata sheet
+Metadata <- readxl::read_excel(here::here("Data", "Transcriptomics", "Data", "ROL_MajorExperiment__MetadataSheet__Corrected_05092025.xlsx"))
+
+# Read in SummarizedExperiment object
+se <- readRDS(here::here("Data", "Transcriptomics", "Results", "rnaseq", "051525", "salmon", "salmon.merged.gene_counts_length_scaled.SummarizedExperiment.rds"))
+
+# Print basic information about the dataset
+cat("Number of genes:", nrow(se), "\n")
+cat("Number of samples:", ncol(se), "\n")
+cat("Sample names:", colnames(se), "\n")
+cat("Available assays:", assayNames(se), "\n")
+cat("Column data (metadata):", names(colData(se)), "\n")
+```
+
+### Data Preprocessing
+
+```{r}
+
+# Clean sample names by removing "TS047_RoL_RNA_" prefix
+clean_names <- gsub("TS047_RoL_RNA_", "", colnames(se))
+
+# Update column names in the SummarizedExperiment object
+colnames(se) <- clean_names
+
+# Correct specific sample names if needed
+# Rename sample 136 to 138
+clean_names[clean_names == "136"] <- "138"
+colnames(se) <- clean_names
+
+# Create a data frame for the metadata columns we want to add
+metadata_cols <- c("Time", "Antibiotics", "Temperature", 
+                  "Pathogen", "History", "Length.mm", "Weight.g", "Total.Worm.Count")
+
+# Initialize a data frame to store the metadata
+sample_metadata <- data.frame(
+  Sample_Name = clean_names,
+  stringsAsFactors = FALSE
+)
+rownames(sample_metadata) <- clean_names
+
+# Add each metadata column
+for (col in metadata_cols) {
+  values <- rep(NA, length(clean_names))
+  
+  for (i in seq_along(clean_names)) {
+    matches <- which(Metadata$Sample_Name == clean_names[i])
+    
+    if (length(matches) == 1) {
+      values[i] <- Metadata[matches, col, drop = TRUE]
+    }
+  }
+  
+  sample_metadata[[col]] <- values
+}
+
+# Add the metadata to the SummarizedExperiment object
+colData(se) <- DataFrame(sample_metadata)
+
+cat("Metadata added to SummarizedExperiment object\n")
+```
+
+### Create DESeq2 Dataset
+
+```{r}
+
+# Remove samples with NA values in treatment columns
+se_filtered <- se[, !is.na(colData(se)$Antibiotics) & !is.na(colData(se)$Temperature) & !is.na(colData(se)$Pathogen)]
+cat("Number of samples after removing NAs:", ncol(se_filtered), "\n")
+
+# Create treatment combinations using DESeq2-compatible format
+colData(se_filtered)$Treatment <- paste0(
+  ifelse(colData(se_filtered)$Antibiotics == 1, "A_plus", "A_minus"), "_",
+  ifelse(colData(se_filtered)$Temperature == 1, "T_plus", "T_minus"), "_",
+  ifelse(colData(se_filtered)$Pathogen == 1, "P_plus", "P_minus")
+)
+
+# Create plotting-friendly treatment names
+colData(se_filtered)$Treatment_Plot <- paste0(
+  ifelse(colData(se_filtered)$Antibiotics == 1, "A+", "A-"), " ",
+  ifelse(colData(se_filtered)$Temperature == 1, "T+", "T-"), " ",
+  ifelse(colData(se_filtered)$Pathogen == 1, "P+", "P-")
+)
+
+# Convert treatment to factor with specified order (DESeq2 names)
+colData(se_filtered)$Treatment <- factor(colData(se_filtered)$Treatment, levels = treatment_order_deseq)
+
+# Convert plotting treatment to factor with specified order
+colData(se_filtered)$Treatment_Plot <- factor(colData(se_filtered)$Treatment_Plot, levels = treatment_order_plot)
+
+# Print the distribution of treatment combinations
+cat("\nTreatment combination distribution:\n")
+print(table(colData(se_filtered)$Treatment))
+print(table(colData(se_filtered)$Treatment_Plot))
+
+# Clean other factor levels
+colData(se_filtered)$Time <- factor(colData(se_filtered)$Time)
+colData(se_filtered)$Antibiotics <- factor(colData(se_filtered)$Antibiotics)
+colData(se_filtered)$Temperature <- factor(colData(se_filtered)$Temperature)
+colData(se_filtered)$Pathogen <- factor(colData(se_filtered)$Pathogen)
+
+# Create initial design formula
+design_formula <- ~ Treatment
+
+# Use length-scaled counts for DESeq2 analysis
+if (!"counts" %in% assayNames(se_filtered)) {
+  # Read in the length-scaled counts file
+  length_scaled_counts <- read.table(here::here("Data", "Transcriptomics", "Results", "rnaseq", "051525", "salmon", "salmon.merged.gene_counts_length_scaled.tsv"), 
+                          header = TRUE, row.names = 1) 
+  
+  # Convert to matrix and ensure it's numeric
+  counts_matrix <- as.matrix(length_scaled_counts)
+  mode(counts_matrix) <- "numeric"
+  
+  # Round to nearest integer (DESeq2 requires integer counts)
+  counts_matrix <- round(counts_matrix)
+  
+  # Ensure the order of samples matches the SummarizedExperiment
+  counts_matrix <- counts_matrix[, colnames(se_filtered)]
+} else {
+  # If counts are available, use them
+  counts_matrix <- as.matrix(assays(se_filtered)$counts)
+  mode(counts_matrix) <- "numeric"
+  counts_matrix <- round(counts_matrix)
+}
+
+# Create initial DESeq2 dataset
+dds_initial <- DESeqDataSetFromMatrix(
+  countData = counts_matrix,
+  colData = colData(se_filtered),
+  design = design_formula
+)
+
+# Pre-filtering: remove low abundance transcripts
+cpm <- counts(dds_initial) / colSums(counts(dds_initial)) * 1e6
+
+# Keep genes that have at least 2 CPM in at least 3 samples
+keep <- rowSums(cpm >= 2) >= 3
+
+dds_filtered <- dds_initial[keep,]
+
+# Print filtering statistics
+cat("Number of genes before filtering:", nrow(counts_matrix), "\n")
+cat("Number of genes after filtering:", nrow(dds_filtered), "\n")
+cat("Number of genes removed:", nrow(counts_matrix) - nrow(dds_filtered), "\n")
+cat("Percentage of genes kept:", round(nrow(dds_filtered)/nrow(counts_matrix)*100, 2), "%\n")
+
+# Transform counts for visualization
+rld <- vst(dds_filtered, blind=FALSE)
+
+# Estimate size factors
+dds_filtered <- estimateSizeFactors(dds_filtered)
+
+# Get normalized counts
+normalized_counts <- counts(dds_filtered, normalized=TRUE)
+
+# After dds_filtered is created and before any downstream analyses:
+
+# List of genes to exclude
+genes_to_exclude <- c(
+  "zgc:112970",
+  "lectin",
+  "zp2.6",
+  "qdprb.4",
+  "bncr",
+  "avd",
+  "tdgf1",
+  "adad2",
+  "LOC137488852",
+  "ppt2a.1",
+  "snapc1a",
+  "exd1",
+  "LOC141381090",
+  "LOC141381093",
+  "LOC141378343",
+  "LOC101884348"
+)
+
+# Remove these genes from dds_filtered, rld, and normalized_counts
+keep_genes <- !(rownames(dds_filtered) %in% genes_to_exclude)
+dds_filtered <- dds_filtered[keep_genes, ]
+
+# Re-transform counts for visualization after filtering
+rld <- vst(dds_filtered, blind=FALSE)
+
+# Estimate size factors again after filtering
+dds_filtered <- estimateSizeFactors(dds_filtered)
+
+# Get normalized counts after filtering
+normalized_counts <- counts(dds_filtered, normalized=TRUE)
+
+# Print exclusion summary
+cat("Number of genes excluded:", length(genes_to_exclude), "\n")
+cat("Number of genes remaining after exclusion:", nrow(dds_filtered), "\n")
+```
+
+### Set up parallel processing
+
+```{r}
+
+# Enhanced parallel processing setup
+# Detect number of available cores
+available_cores <- parallel::detectCores()
+cat("Available cores:", available_cores, "\n")
+
+# Use 75% of available cores to avoid overwhelming the system
+# Leave some cores free for other processes
+num_cores <- max(1, floor(available_cores * 0.75))
+cat("Using cores for parallel processing:", num_cores, "\n")
+
+# Create optimized BiocParallel parameters
+bp_param <- MulticoreParam(
+  workers = num_cores,
+  tasks = num_cores * 2,  # Increase task granularity
+  progressbar = TRUE      # Enable progress reporting
+)
+
+# Register the optimized parameters
+register(bp_param)
+
+cat("Parallel processing configured with", num_cores, "cores\n")
+cat("Task granularity:", bp_param$tasks, "\n")
+cat("Progress bar enabled:", bp_param$progressbar, "\n")
+```
+
+### Define Analysis Comparisons
+
+```{r}
+
+# Define the specific comparisons for our analysis
+comparisons <- list(
+  
+  # 1. All Treatment Groups (comprehensive analysis)
+  "All_Treatments" = list(
+    description = "Comprehensive analysis across all treatment combinations",
+    design = ~ Treatment,
+    contrasts = list(
+      "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_minus_T_minus_P_plus", "A_minus_T_minus_P_minus"),
+      "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_minus_P_minus", "A_minus_T_minus_P_minus"),
+      "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_minus_P_plus", "A_minus_T_minus_P_minus"),
+      "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_minus_T_plus_P_minus", "A_minus_T_minus_P_minus"),
+      "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_minus_T_plus_P_plus", "A_minus_T_minus_P_minus"),
+      "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_plus_P_minus", "A_minus_T_minus_P_minus"),
+      "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_plus_P_plus", "A_minus_T_minus_P_minus")
+    )
+  ),
+  
+  # 2. Parasite Effect (A_minus_T_minus_P_minus vs A_minus_T_minus_P_plus)
+  "Parasite_Effect" = list(
+    description = "Baseline parasite effect: A_minus_T_minus_P_minus vs A_minus_T_minus_P_plus",
+    design = ~ Treatment,
+    contrasts = list(
+      "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_minus_T_minus_P_plus", "A_minus_T_minus_P_minus")
+    )
+  ),
+  
+  # 3. Historical Contingency (A_minus_T_minus_P_plus vs A_plus_T_minus_P_plus, A_minus_T_plus_P_plus, A_plus_T_plus_P_plus)
+  "Historical_Contingency" = list(
+    description = "How prior stressors affect parasite response: A_minus_T_minus_P_plus vs (A_plus_T_minus_P_plus, A_minus_T_plus_P_plus, A_plus_T_plus_P_plus)",
+    design = ~ Treatment,
+    contrasts = list(
+      "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" = c("Treatment", "A_plus_T_minus_P_plus", "A_minus_T_minus_P_plus"),
+      "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" = c("Treatment", "A_minus_T_plus_P_plus", "A_minus_T_minus_P_plus"),
+      "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" = c("Treatment", "A_plus_T_plus_P_plus", "A_minus_T_minus_P_plus")
+    )
+  ),
+  
+  # 4. Recovery Analysis (A_minus_T_minus_P_minus vs A_plus_T_minus_P_minus, A_minus_T_plus_P_minus, A_plus_T_plus_P_minus)
+  "Recovery_Analysis" = list(
+    description = "How prior stressors affect recovery: A_minus_T_minus_P_minus vs (A_plus_T_minus_P_minus, A_minus_T_plus_P_minus, A_plus_T_plus_P_minus)",
+    design = ~ Treatment,
+    contrasts = list(
+      "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_minus_P_minus", "A_minus_T_minus_P_minus"),
+      "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_minus_T_plus_P_minus", "A_minus_T_minus_P_minus"),
+      "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" = c("Treatment", "A_plus_T_plus_P_minus", "A_minus_T_minus_P_minus")
+    )
+  )
+)
+```
+
+## Code {.tabset}
+
+### (hide)
+
+```{r}
+
+```
+
+
+### Quality Control {.tabset}
+
+#### Sample Distance Heatmap
+
+```{r echo=FALSE}
+
+# Sample distance heatmap with enhanced annotation bars and legend
+
+# Calculate sample distances
+sampleDists <- dist(t(assay(rld)))
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- colnames(rld)
+colnames(sampleDistMatrix) <- colnames(rld)
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(9, "Spectral")))(255)
+
+# Create annotation data frame using plotting-friendly names
+annotation_col <- data.frame(
+  Antibiotics = factor(colData(rld)$Antibiotics, levels = c(0, 1), labels = c("ABX-", "ABX+")),
+  Temperature = factor(colData(rld)$Temperature, levels = c(0, 1), labels = c("TEMP-", "TEMP+")),
+  Pathogen = factor(colData(rld)$Pathogen, levels = c(0, 1), labels = c("PATH-", "PATH+")),
+  Treatment = factor(colData(rld)$Treatment_Plot)
+)
+rownames(annotation_col) <- colnames(rld)
+
+# Define colors for the annotations (matching your palette)
+ann_colors <- list(
+  Antibiotics = c("ABX-" = "white", "ABX+" = "#A6CEE3"),
+  Temperature = c("TEMP-" = "white", "TEMP+" = "#FDBF6F"),
+  Pathogen = c("PATH-" = "white", "PATH+" = "#E31A1C"),
+  Treatment = treatment_color_scale
+)
+
+# Plot sample distance heatmap
+pheatmap::pheatmap(
+  sampleDistMatrix,
+  clustering_distance_rows = sampleDists,
+  clustering_distance_cols = sampleDists,
+  col = colors,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  main = "Sample-to-Sample Distances",
+  show_colnames = FALSE,
+  show_rownames = TRUE,
+  fontsize_row = 6,
+  annotation_legend = TRUE,         # Show annotation legend
+  annotation_names_col = TRUE,      # Show annotation names above bars
+  annotation_names_row = FALSE,     # Hide row annotation names
+  legend = TRUE,                    # Show color scale legend
+  border_color = NA,                # Remove grid for a cleaner look
+  treeheight_row = 40,              # Height of row dendrogram
+  treeheight_col = 40,              # Height of column dendrogram
+  annotation_legend_side = "right", # Place annotation legend on the right
+  annotation_bar_height = 0.04      # Increase annotation bar height (default is 0.02)
+)
+```
+
+#### Principal Component Analysis
+
+```{r echo=FALSE}
+
+# Perform PCA
+pcaData <- plotPCA(rld, intgroup=c("Antibiotics", "Temperature", "Pathogen", "Treatment_Plot"), 
+                  returnData=TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+# Convert binary variables to factors with proper labels
+pcaData$antibiotics <- factor(pcaData$Antibiotics, levels = c(0, 1), labels = c("ABX-", "ABX+"))
+pcaData$temperature <- factor(pcaData$Temperature, levels = c(0, 1), labels = c("TEMP-", "TEMP+"))
+pcaData$pathogen <- factor(pcaData$Pathogen, levels = c(0, 1), labels = c("PATH-", "PATH+"))
+
+# Create PCA plot for all treatments combined using plotting-friendly names
+ggplot(pcaData, aes(PC1, PC2, color=Treatment_Plot)) +
+  geom_point(size=3) +
+  geom_text_repel(aes(label=name), size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) +
+  coord_fixed() +
+  theme_bw() +
+  scale_color_manual(values = treatment_color_scale,
+                    labels = c("Control", "Parasite", "Antibiotics", "Antibiotics+Parasite", 
+                              "Temperature", "Temperature+Parasite", "Antibiotics+Temperature", 
+                              "Antibiotics+Temperature+Parasite")) +
+  ggtitle("PCA by Treatment Combination") +
+  theme(legend.position = "right",
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 10))
+```
+
+### Manage Saved Results
+
+```{r}
+
+# Check which analyses have saved results
+cat("=== Checking for saved results ===\n")
+for (analysis_name in names(comparisons)) {
+  if (results_exist(analysis_name)) {
+    cat("✓", analysis_name, "- results found\n")
+  } else {
+    cat("✗", analysis_name, "- no saved results\n")
+  }
+}
+
+# Set this to TRUE if you want to recompute all analyses
+# Set to FALSE to use existing results when available
+force_recompute_all <- FALSE
+
+# You can also set individual analyses to recompute
+force_recompute_individual <- list(
+  "All_Treatments" = FALSE,
+  "Parasite_Effect" = FALSE,
+  "Historical_Contingency" = FALSE,
+  "Recovery_Analysis" = FALSE
+)
+
+cat("\nForce recompute all:", force_recompute_all, "\n")
+cat("Individual force recompute settings:\n")
+for (analysis_name in names(force_recompute_individual)) {
+  cat("  ", analysis_name, ":", force_recompute_individual[[analysis_name]], "\n")
+}
+
+# Uncomment the lines below if you want to clean up saved results
+# cleanup_saved_results()  # Remove all saved results
+# cleanup_saved_results(c("All_Treatments", "Parasite_Effect"))  # Remove specific analyses
+
+cat("\n=== Usage Instructions ===\n")
+cat("1. Set force_recompute_all = TRUE to recompute all analyses\n")
+cat("2. Set individual force_recompute_individual values to TRUE to recompute specific analyses\n")
+cat("3. Use cleanup_saved_results() to remove all saved results\n")
+cat("4. Use cleanup_saved_results(c('analysis1', 'analysis2')) to remove specific analyses\n")
+```
+
+### Run DESeq2 Analyses
+
+```{r}
+
+# Monitor initial performance
+cat("=== Starting DESeq2 Analysis ===\n")
+monitor_performance()
+
+# Optimize memory before starting
+optimize_memory()
+
+# Run all analyses
+all_results <- list()
+
+for (analysis_name in names(comparisons)) {
+  cat("\n--- Starting analysis:", analysis_name, "---\n")
+  
+  # Monitor performance before each analysis
+  monitor_performance()
+  
+  # Run the analysis
+  all_results[[analysis_name]] <- run_analysis_set(analysis_name, comparisons[[analysis_name]], force_recompute_all || force_recompute_individual[[analysis_name]])
+  
+  # Optimize memory after each analysis
+  optimize_memory()
+  
+  cat("--- Completed analysis:", analysis_name, "---\n")
+}
+
+# Final performance check
+cat("\n=== Final Performance Check ===\n")
+monitor_performance()
+
+# Print summary of results
+cat("\n=== Analysis Summary ===\n")
+for (analysis_name in names(all_results)) {
+  cat("\n", analysis_name, ":\n")
+  for (contrast_name in names(all_results[[analysis_name]])) {
+    res <- all_results[[analysis_name]][[contrast_name]]
+    cat("  ", contrast_name, ":\n")
+    cat("    Significant genes (padj < 0.05):", sum(res$padj < 0.05, na.rm=TRUE), "\n")
+    cat("    Upregulated genes:", sum(res$padj < 0.05 & res$log2FoldChange > 0, na.rm=TRUE), "\n")
+    cat("    Downregulated genes:", sum(res$padj < 0.05 & res$log2FoldChange < 0, na.rm=TRUE), "\n")
+  }
+}
+
+
+```
+
+
+
+
+## Results Overview {.tabset}
+
+### Heatmap  {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=10, fig.width=12, message=FALSE, warning=FALSE}
+
+# List of genes to exclude
+genes_to_exclude <- c(
+  "zgc:112970",
+  "lectin",
+  "zp2.6",
+  "qdprb.4",
+  "bncr",
+  "avd",
+  "tdgf1",
+  "adad2",
+  "LOC137488852",
+  "ppt2a.1",
+  "snapc1a",
+  "exd1",
+  "LOC141381090",
+  "LOC141381093",
+  "LOC141378343",
+  "LOC101884348"
+)
+
+# --- Combine top significant genes across all contrasts (All_Treatments), excluding unwanted genes ---
+if (!is.null(all_results[["All_Treatments"]])) {
+  topN <- 20
+  top_genes_all <- lapply(all_results[["All_Treatments"]], function(res) {
+    res_df <- as.data.frame(res)
+    res_df$gene <- rownames(res_df)
+    res_df %>%
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::filter(!gene %in% genes_to_exclude) %>%  # Exclude unwanted genes
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = topN) %>%
+      dplyr::pull(gene)
+  })
+  top_genes_list <- unique(unlist(top_genes_all))
+
+  # Print exclusion summary
+  cat("Number of genes excluded:", length(genes_to_exclude), "\n")
+  cat("Number of genes remaining in top_genes_list:", length(top_genes_list), "\n")
+
+  # --- Get normalized counts for these genes ---
+  heatmap_data <- normalized_counts[top_genes_list, ]
+
+  # --- Build annotation data frame for columns (samples) ---
+  annotation_col <- data.frame(
+    Worm.Count = colData(se_filtered)$Total.Worm.Count,
+    Treatment = factor(colData(se_filtered)$Treatment_Plot, levels = treatment_order_plot),
+    Pathogen = factor(colData(se_filtered)$Pathogen, levels = c(0, 1), labels = c("PATH-", "PATH+")),
+    Temperature = factor(colData(se_filtered)$Temperature, levels = c(0, 1), labels = c("TEMP-", "TEMP+")),
+    Antibiotics = factor(colData(se_filtered)$Antibiotics, levels = c(0, 1), labels = c("ABX-", "ABX+"))
+  )
+  rownames(annotation_col) <- colnames(se_filtered)
+
+  # --- Define annotation colors ---
+  ann_colors <- list(
+    Worm.Count = colorRampPalette(c("white", "darkred"))(16),
+    Treatment = treatment_color_scale,
+    Pathogen = c("PATH-" = "white", "PATH+" = "#E31A1C"),
+    Temperature = c("TEMP-" = "white", "TEMP+" = "#FDBF6F"),
+    Antibiotics = c("ABX-" = "white", "ABX+" = "#A6CEE3")
+  )
+
+  # --- Heatmap color palette ---
+  heatmap_colors <- colorRampPalette(c("blue", "white", "red"))(100)
+
+  # --- Plot the heatmap ---
+  pheatmap::pheatmap(
+    log2(heatmap_data + 1),
+    scale = "row",
+    annotation_col = annotation_col,
+    annotation_colors = ann_colors,
+    col = heatmap_colors,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    fontsize_row = 8,
+    fontsize_col = 8,
+    angle_col = 90,
+    main = "Expression of Top Significant Genes (All Contrasts)",
+    cluster_cols = TRUE,
+    cluster_rows = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    annotation_names_col = TRUE,
+    annotation_legend = TRUE
+  )
+} else {
+  cat("Note: Top significant genes heatmap requires DESeq2 analyses to be completed first.\n")
+  cat("Run the 'Run DESeq2 Analyses' section to generate this visualization.\n")
+}
+``` 
+
+### Sig Genes {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=10, fig.width=14, message=FALSE, warning=FALSE}
+
+# Create a combined summary plot across all analyses
+all_summary_data <- list()
+
+for (analysis_name in names(all_results)) {
+  for (contrast_name in names(all_results[[analysis_name]])) {
+    res <- all_results[[analysis_name]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Create readable contrast names
+    readable_name <- case_when(
+      contrast_name == "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T- P+ vs A- T- P-",
+      contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "ABX vs A- T- P-",
+      contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P+ vs A- T- P-",
+      contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs A- T- P-",
+      contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P+ vs A- T- P-",
+      contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs A- T- P-",
+      contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P+ vs A- T- P-",
+      contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T- P+ vs A- T- P+",
+      contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A- T+ P+ vs A- T- P+",
+      contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T+ P+ vs A- T- P+",
+      TRUE ~ contrast_name
+    )
+    
+    all_summary_data[[paste(analysis_name, contrast_name, sep = "_")]] <- data.frame(
+      Analysis = analysis_name,
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+}
+
+if (length(all_summary_data) > 0) {
+  combined_summary_df <- bind_rows(all_summary_data)
+  
+  # Set desired facet order for Analysis
+  desired_facet_order <- c("All_Treatments", "Parasite_Effect", "Historical_Contingency", "Recovery_Analysis")
+  combined_summary_df$Analysis <- factor(combined_summary_df$Analysis, levels = desired_facet_order)
+  
+  # Create long format for plotting
+  combined_summary_long <- combined_summary_df %>%
+    tidyr::pivot_longer(cols = c(Upregulated, Downregulated),
+                       names_to = "Direction",
+                       values_to = "Count")
+  combined_summary_long$Direction <- factor(combined_summary_long$Direction, levels = c("Upregulated", "Downregulated"))
+  combined_summary_long$Analysis <- factor(combined_summary_long$Analysis, levels = desired_facet_order)
+  
+  # For each Analysis, order Contrast by total gene count (Up + Down) within that Analysis
+  library(dplyr)
+
+  # Calculate total per contrast per analysis
+  order_df <- combined_summary_long %>%
+    group_by(Analysis, Contrast) %>%
+    summarise(Total = sum(Count, na.rm = TRUE), .groups = 'drop')
+
+  # Create a factor with levels ordered by Total (greatest to least) within each Analysis
+  order_df <- order_df %>%
+    group_by(Analysis) %>%
+    arrange(desc(Total)) %>%
+    mutate(Contrast_ordered = factor(Contrast, levels = unique(Contrast))) %>%
+    ungroup()
+
+  # Join back to your long data
+  combined_summary_long2 <- combined_summary_long %>%
+    left_join(order_df %>% select(Analysis, Contrast, Contrast_ordered), by = c("Analysis", "Contrast"))
+
+  # Now plot using the new variable
+  p_combined <- ggplot(combined_summary_long2, aes(x = Contrast_ordered, y = Count, fill = Direction)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+    geom_text(aes(label = Count),
+              position = position_dodge(width = 0.7),
+              vjust = -0.5,
+              color = "black",
+              size = 3.75,
+              fontface = "bold") +
+    facet_wrap(~Analysis, scales = "free", ncol = 2) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+          axis.text.y = element_text(size = 9),
+          axis.title = element_text(size = 11, face = "bold"),
+          plot.title = element_text(size = 14, face = "bold"),
+          legend.position = "bottom",
+          legend.title = element_text(size = 10, face = "bold"),
+          legend.text = element_text(size = 9),
+          strip.text = element_text(size = 10, face = "bold"),
+          strip.background = element_rect(fill = "lightblue")) +
+    labs(title = "Comprehensive Summary of Differential Gene Expression",
+         subtitle = "All analyses combined (padj < 0.05)",
+         x = "Treatment Combination",
+         y = "Number of Genes",
+         fill = "Regulation Direction") +
+    scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"),
+                     labels = c("Upregulated", "Downregulated")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p_combined)
+  
+  # Create comprehensive summary table
+  comprehensive_table <- combined_summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Comprehensive Differential Gene Expression Summary",
+      subtitle = "All analyses and comparisons"
+    ) %>%
+    gt::cols_label(
+      Analysis = "Analysis Type",
+      Contrast = "Treatment Combination",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "#F7F7F7"),
+      locations = cells_body(rows = seq(1, nrow(combined_summary_df), 2))
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "#E8F4FD"),
+      locations = cells_body(columns = Analysis)
+    )
+  
+  # print(comprehensive_table)
+  
+} else {
+  cat("No results available for combined summary.")
+}
+
+
+```
+
+## 00) All Treatment Groups Analysis {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### Sig Genes {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create detailed bar plots for All_Treatments analysis
+if (!is.null(all_results[["All_Treatments"]])) {
+  ###
+      # Collect summary data
+  summary_data <- list()
+  for (contrast_name in names(all_results[["All_Treatments"]])) {
+    res <- all_results[["All_Treatments"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Map to plotting-friendly names
+    readable_name <- case_when(
+        contrast_name == "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T- P+ vs. A- T- P-",
+        contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P- vs. A- T- P-",
+        contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P+ vs. A- T- P-",
+        contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs. A- T- P-",
+        contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P+ vs. A- T- P-",
+        contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs. A- T- P-",
+        contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P+ vs. A- T- P-",
+      TRUE ~ contrast_name
+    )
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  # Set PlotName to the readable Contrast names and order them as desired
+  summary_df$PlotName <- factor(summary_df$Contrast, levels = c(
+    "A- T- P+ vs. A- T- P-",
+    "A+ T- P- vs. A- T- P-",
+    "A+ T- P+ vs. A- T- P-",
+    "A- T+ P- vs. A- T- P-",
+    "A- T+ P+ vs. A- T- P-",
+    "A+ T+ P- vs. A- T- P-",
+    "A+ T+ P+ vs. A- T- P-"
+  ))
+  
+  # Create long format for plotting
+  summary_long <- summary_df %>%
+    tidyr::pivot_longer(cols = c(Upregulated, Downregulated),
+                       names_to = "Direction",
+                       values_to = "Count")
+  summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated"))
+  summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName))
+  
+  # Create bar plot with better formatting
+  p1 <- ggplot(summary_long, aes(x = reorder(PlotName, Count, FUN = sum, decreasing = TRUE), y = Count, fill = Direction)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+    geom_text(aes(label = Count), 
+              position = position_dodge(width = 0.7),
+              vjust = -0.5,
+              color = "black",
+              size = 5,
+              fontface = "bold") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 14, face = "bold"),
+          legend.position = "bottom",
+          legend.title = element_text(size = 11, face = "bold"),
+          legend.text = element_text(size = 10)) +
+    labs(title = "Differential Gene Expression Summary - All Treatment Groups",
+         subtitle = "Number of significantly up and down regulated genes (padj < 0.05)",
+         x = "Treatment Combination",
+         y = "Number of Genes",
+         fill = "Regulation Direction") +
+    scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"),
+                     labels = c("Upregulated", "Downregulated")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+    scale_x_discrete(limits = rev(levels(reorder(summary_long$PlotName, summary_long$Count, FUN = sum, decreasing = F))))
+  
+  print(p1)
+  
+  # Create a summary table
+  summary_table <- summary_df %>%
+      dplyr::select(!(PlotName)) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics - All Treatment Groups",
+      subtitle = "Number of significantly differentially expressed genes"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No All_Treatments results available for summary plots.")
+}
+
+
+
+```
+
+
+### Volcano Plots {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create volcano plots for all contrasts in All_Treatments analysis
+if (!is.null(all_results[["All_Treatments"]])) {
+  
+  # Get the results
+  results_list <- all_results[["All_Treatments"]]
+  
+  # Create a list to store plots
+  volcano_plots <- list()
+  
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Create volcano plot
+    p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+      geom_point(aes(color = ifelse(padj < 0.05, 
+                                   ifelse(log2FoldChange > 0, "Up", "Down"), 
+                                   "Not Significant")), 
+                 alpha = 0.6, size = 1) +
+      scale_color_manual(values = c("Down" = "blue", "Not Significant" = "grey", "Up" = "red")) +
+      geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      labs(title = paste("Volcano Plot:", contrast_name),
+           x = "log2 Fold Change",
+           y = "-log10(adjusted p-value)",
+           color = "Significance") +
+      theme_bw() +
+      theme(legend.position = "bottom")
+    
+    volcano_plots[[contrast_name]] <- p
+  }
+  
+  # Display plots in a grid
+  do.call(gridExtra::grid.arrange, c(volcano_plots, ncol = 2))
+  
+} else {
+  cat("No All_Treatments results available for volcano plot visualization.")
+}
+```
+
+### Summary Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary tables for All_Treatments analysis
+if (!is.null(all_results[["All_Treatments"]])) {
+  
+  # Create summary data frame
+  summary_data <- list()
+  for (contrast_name in names(all_results[["All_Treatments"]])) {
+    res <- all_results[["All_Treatments"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = contrast_name,
+      Total_Genes = nrow(res_df),
+      Significant_Genes = nrow(sig_df),
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary of Differential Gene Expression",
+      subtitle = "All Treatment Groups Analysis"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Total_Genes = "Total Genes",
+      Significant_Genes = "Significant Genes",
+      Upregulated = "Upregulated",
+      Downregulated = "Downregulated"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Total_Genes, Significant_Genes, Upregulated, Downregulated),
+      decimals = 0
+    )
+  
+  
+} else {
+  cat("No All_Treatments results available for summary table.")
+}
+
+
+```
+
+```{r}
+summary_table
+```
+
+### Top Genes Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create top genes tables for All_Treatments analysis
+if (!is.null(all_results[["All_Treatments"]])) {
+  
+  for (contrast_name in names(all_results[["All_Treatments"]])) {
+    res <- all_results[["All_Treatments"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Add gene column from row names
+    res_df$gene <- rownames(res_df)
+    
+    # Get top 10 upregulated and downregulated genes
+    top_up <- res_df %>%
+      dplyr::filter(padj < 0.05, log2FoldChange > 0) %>%
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = 10) %>%
+      dplyr::select(gene, log2FoldChange, padj, baseMean)
+    
+    top_down <- res_df %>%
+      dplyr::filter(padj < 0.05, log2FoldChange < 0) %>%
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = 10) %>%
+      dplyr::select(gene, log2FoldChange, padj, baseMean)
+    
+    # Create tables
+    if (nrow(top_up) > 0) {
+      cat("### Top 10 Upregulated Genes:", contrast_name, "\n")
+      up_table <- top_up %>%
+        gt::gt() %>%
+        gt::tab_header(
+          title = paste("Top 10 Upregulated Genes:", contrast_name)
+        ) %>%
+        gt::cols_label(
+          gene = "Gene",
+          log2FoldChange = "log2 Fold Change",
+          padj = "Adjusted p-value",
+          baseMean = "Base Mean"
+        ) %>%
+        gt::fmt_number(
+          columns = c(log2FoldChange, baseMean),
+          decimals = 2
+        ) %>%
+        gt::fmt_scientific(
+          columns = padj,
+          decimals = 3
+        )
+      
+      # print(up_table)
+      # cat("\n")
+    }
+    
+    if (nrow(top_down) > 0) {
+      cat("### Top 10 Downregulated Genes:", contrast_name, "\n")
+      down_table <- top_down %>%
+        gt::gt() %>%
+        gt::tab_header(
+          title = paste("Top 10 Downregulated Genes:", contrast_name)
+        ) %>%
+        gt::cols_label(
+          gene = "Gene",
+          log2FoldChange = "log2 Fold Change",
+          padj = "Adjusted p-value",
+          baseMean = "Base Mean"
+        ) %>%
+        gt::fmt_number(
+          columns = c(log2FoldChange, baseMean),
+          decimals = 2
+        ) %>%
+        gt::fmt_scientific(
+          columns = padj,
+          decimals = 3
+        )
+      
+      # print(down_table)
+      # cat("\n")
+    }
+  }
+  
+} else {
+  cat("No All_Treatments results available for top genes tables.")
+}
+
+# up_table
+# down_table
+```
+
+## 01) Parasite Effect Analysis {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+
+### Sig Genes {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create bar plot for Parasite Effect analysis
+if (!is.null(all_results[["Parasite_Effect"]])) {
+  
+  # Collect summary data
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Parasite_Effect"]])) {
+    res <- all_results[["Parasite_Effect"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = "A- T- P+ vs. A- T- P-", # Parasite
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  # Set PlotName to the readable Contrast name
+  summary_df$PlotName <- factor(summary_df$Contrast, levels = c("A- T- P+ vs. A- T- P-"))
+  
+  # Create long format for plotting
+  summary_long <- summary_df %>%
+    tidyr::pivot_longer(cols = c(Upregulated, Downregulated),
+                       names_to = "Direction",
+                       values_to = "Count")
+  summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated"))
+  summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName))
+  
+  # Create bar plot
+  p2 <- ggplot(summary_long, aes(x = reorder(PlotName, Count, FUN = sum, decreasing = TRUE), y = Count, fill = Direction)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+    geom_text(aes(label = Count), 
+              position = position_dodge(width = 0.6),
+              vjust = -0.5,
+              color = "black",
+              size = 6,
+              fontface = "bold") +
+    theme_bw() +
+    theme(axis.text.x = element_text(size = 12),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 14, face = "bold"),
+          legend.position = "bottom",
+          legend.title = element_text(size = 11, face = "bold"),
+          legend.text = element_text(size = 10)) +
+    labs(title = "Parasite Effect on Gene Expression",
+         subtitle = "A- T- P+ vs A- T- P- (padj < 0.05)",
+         x = "Treatment Combination",
+         y = "Number of Genes",
+         fill = "Regulation Direction") +
+    scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"),
+                     labels = c("Upregulated", "Downregulated")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p2)
+  
+  # Create a summary table
+  summary_table <- summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics - Parasite Effect",
+      subtitle = "Number of significantly differentially expressed genes"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No Parasite_Effect results available for summary plots.")
+}
+
+
+
+```
+
+### Volcano Plot {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create volcano plot for Parasite Effect analysis
+if (!is.null(all_results[["Parasite_Effect"]])) {
+  
+  # Get the results
+  results_list <- all_results[["Parasite_Effect"]]
+  
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Create volcano plot
+    p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+      geom_point(aes(color = ifelse(padj < 0.05, 
+                                   ifelse(log2FoldChange > 0, "Up", "Down"), 
+                                   "Not Significant")), 
+                 alpha = 0.6, size = 1) +
+      scale_color_manual(values = c("Down" = "blue", "Not Significant" = "grey", "Up" = "red")) +
+      geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      labs(title = paste("Volcano Plot: Parasite Effect"),
+           subtitle = contrast_name,
+           x = "log2 Fold Change",
+           y = "-log10(adjusted p-value)",
+           color = "Significance") +
+      theme_bw() +
+      theme(legend.position = "bottom")
+    
+    print(p)
+  }
+  
+} else {
+  cat("No Parasite_Effect results available for volcano plot visualization.")
+}
+```
+
+### Summary Table {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary table for Parasite Effect analysis
+if (!is.null(all_results[["Parasite_Effect"]])) {
+  
+  # Create summary data frame
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Parasite_Effect"]])) {
+    res <- all_results[["Parasite_Effect"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = contrast_name,
+      Total_Genes = nrow(res_df),
+      Significant_Genes = nrow(sig_df),
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary of Differential Gene Expression",
+      subtitle = "Parasite Effect Analysis (A- T- P- vs A- T- P+)"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Total_Genes = "Total Genes",
+      Significant_Genes = "Significant Genes",
+      Upregulated = "Upregulated",
+      Downregulated = "Downregulated"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Total_Genes, Significant_Genes, Upregulated, Downregulated),
+      decimals = 0
+    )
+  
+  } else {
+  cat("No Parasite_Effect results available for summary table.")
+}
+
+
+```
+
+```{r}
+summary_table
+```
+
+### Top Genes Table {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create top genes table for Parasite Effect analysis
+if (!is.null(all_results[["Parasite_Effect"]])) {
+  
+  for (contrast_name in names(all_results[["Parasite_Effect"]])) {
+    res <- all_results[["Parasite_Effect"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Add gene column from row names
+    res_df$gene <- rownames(res_df)
+    
+    # Get top 20 significant genes
+    top_genes <- res_df %>%
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = 20) %>%
+      dplyr::select(gene, log2FoldChange, padj, baseMean)
+    
+    if (nrow(top_genes) > 0) {
+      cat("### Top 20 Significant Genes:", contrast_name, "\n")
+      top_table <- top_genes %>%
+        gt::gt() %>%
+        gt::tab_header(
+          title = paste("Top 20 Significant Genes: Parasite Effect")
+        ) %>%
+        gt::cols_label(
+          gene = "Gene",
+          log2FoldChange = "log2 Fold Change",
+          padj = "Adjusted p-value",
+          baseMean = "Base Mean"
+        ) %>%
+        gt::fmt_number(
+          columns = c(log2FoldChange, baseMean),
+          decimals = 2
+        ) %>%
+        gt::fmt_scientific(
+          columns = padj,
+          decimals = 3
+        )
+      
+      # print(top_table)
+    }
+  }
+  
+} else {
+  cat("No Parasite_Effect results available for top genes table.")
+}
+```
+
+## 02) Historical Contingency Analysis {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+### Sig Genes {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create bar plots for Historical Contingency analysis
+if (!is.null(all_results[["Historical_Contingency"]])) {
+  
+  # Collect summary data
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Historical_Contingency"]])) {
+    res <- all_results[["Historical_Contingency"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Map to plotting-friendly names
+    readable_name <- case_when(
+      contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T- P+ vs. A- T- P+",
+      contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A- T+ P+ vs. A- T- P+", 
+      contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T+ P+ vs. A- T- P+",
+      TRUE ~ contrast_name
+    )
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  # Set PlotName to the readable Contrast names and order them as desired
+  summary_df$PlotName <- factor(summary_df$Contrast, levels = c(
+    "A+ T- P+ vs. A- T- P+",
+    "A- T+ P+ vs. A- T- P+",
+    "A+ T+ P+ vs. A- T- P+"
+  ))
+  
+  # Create long format for plotting
+  summary_long <- summary_df %>%
+    tidyr::pivot_longer(cols = c(Upregulated, Downregulated),
+                       names_to = "Direction",
+                       values_to = "Count")
+  summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated"))
+  summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName))
+  
+  # Create bar plot
+  p3 <- ggplot(summary_long, aes(x = reorder(PlotName, Count, FUN = sum, decreasing = TRUE), y = Count, fill = Direction)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+    geom_text(aes(label = Count), 
+              position = position_dodge(width = 0.7),
+              vjust = -0.5,
+              color = "black",
+              size = 6,
+              fontface = "bold") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 0, hjust = .5, size = 10),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 14, face = "bold"),
+          legend.position = "bottom",
+          legend.title = element_text(size = 11, face = "bold"),
+          legend.text = element_text(size = 10)) +
+    labs(title = "Historical Contingency Effects on Parasite Response",
+         subtitle = "Prior stressors vs baseline parasite response (padj < 0.05)",
+         x = "Treatment Combination",
+         y = "Number of Genes",
+         fill = "Regulation Direction") +
+    scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"),
+                     labels = c("Upregulated", "Downregulated")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p3)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+    dplyr::select(!(PlotName)) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Historical Contingency Summary",
+      subtitle = "Effect of prior stressors on parasite response"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No Historical_Contingency results available for summary plots.")
+}
+
+
+```
+
+### Volcano Plots {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create volcano plots for Historical Contingency analysis
+if (!is.null(all_results[["Historical_Contingency"]])) {
+  
+  # Get the results
+  results_list <- all_results[["Historical_Contingency"]]
+  
+  # Create a list to store plots
+  volcano_plots <- list()
+  
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Create volcano plot
+    p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+      geom_point(aes(color = ifelse(padj < 0.05, 
+                                   ifelse(log2FoldChange > 0, "Up", "Down"), 
+                                   "Not Significant")), 
+                 alpha = 0.6, size = 1) +
+      scale_color_manual(values = c("Down" = "blue", "Not Significant" = "grey", "Up" = "red")) +
+      geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      labs(title = paste("Volcano Plot:", contrast_name),
+           subtitle = "Historical Contingency Analysis",
+           x = "log2 Fold Change",
+           y = "-log10(adjusted p-value)",
+           color = "Significance") +
+      theme_bw() +
+      theme(legend.position = "bottom")
+    
+    volcano_plots[[contrast_name]] <- p
+  }
+  
+  # Display plots in a grid
+  do.call(gridExtra::grid.arrange, c(volcano_plots, ncol = 2))
+  
+} else {
+  cat("No Historical_Contingency results available for volcano plot visualization.")
+}
+```
+
+### Summary Table {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary table for Historical Contingency analysis
+if (!is.null(all_results[["Historical_Contingency"]])) {
+  
+  # Create summary data frame
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Historical_Contingency"]])) {
+    res <- all_results[["Historical_Contingency"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Create more readable contrast names
+    readable_name <- case_when(
+      contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" ~ "ABX+PARA+ vs PARA+",
+      contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "TEMP+PARA+ vs PARA+", 
+      contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "ABX+TEMP+PARA+ vs PARA+",
+      TRUE ~ contrast_name
+    )
+    
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Historical Contingency Summary",
+      subtitle = "Effect of prior stressors on parasite response"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No Historical_Contingency results available for summary table.")
+}
+
+
+
+```
+
+```{r}
+summary_table
+```
+
+### Top Genes Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create top genes tables for Historical Contingency analysis
+if (!is.null(all_results[["Historical_Contingency"]])) {
+  
+  for (contrast_name in names(all_results[["Historical_Contingency"]])) {
+    res <- all_results[["Historical_Contingency"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Add gene column from row names
+    res_df$gene <- rownames(res_df)
+    
+    # Get top 15 significant genes
+    top_genes <- res_df %>%
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = 15) %>%
+      dplyr::select(gene, log2FoldChange, padj, baseMean)
+    
+    if (nrow(top_genes) > 0) {
+      cat("### Top 15 Significant Genes:", contrast_name, "\n")
+      top_table <- top_genes %>%
+        gt::gt() %>%
+        gt::tab_header(
+          title = paste("Top 15 Significant Genes:", contrast_name)
+        ) %>%
+        gt::cols_label(
+          gene = "Gene",
+          log2FoldChange = "log2 Fold Change",
+          padj = "Adjusted p-value",
+          baseMean = "Base Mean"
+        ) %>%
+        gt::fmt_number(
+          columns = c(log2FoldChange, baseMean),
+          decimals = 2
+        ) %>%
+        gt::fmt_scientific(
+          columns = padj,
+          decimals = 3
+        )
+      
+      # print(top_table)
+      # cat("\n")
+    }
+  }
+  
+} else {
+  cat("No Historical_Contingency results available for top genes tables.")
+}
+```
+
+## 03) Recovery Analysis {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+### Sig Genes {.tabset .tabset-fade .tabset-pills}
+
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create bar plots for Recovery analysis
+if (!is.null(all_results[["Recovery_Analysis"]])) {
+  
+  # Collect summary data
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Recovery_Analysis"]])) {
+    res <- all_results[["Recovery_Analysis"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Map to plotting-friendly names
+    readable_name <- case_when(
+      contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P- vs. A- T- P-",
+      contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs. A- T- P-",
+      contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs. A- T- P-",
+      TRUE ~ contrast_name
+    )
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  # Set PlotName to the readable Contrast names and order them as desired
+  summary_df$PlotName <- factor(summary_df$Contrast, levels = c(
+    "A+ T- P- vs. A- T- P-",
+    "A- T+ P- vs. A- T- P-",
+    "A+ T+ P- vs. A- T- P-"
+  ))
+  
+  # Create long format for plotting
+  summary_long <- summary_df %>%
+    tidyr::pivot_longer(cols = c(Upregulated, Downregulated),
+                       names_to = "Direction",
+                       values_to = "Count")
+  summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated"))
+  summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName))
+  
+  # Create bar plot
+  p4 <- ggplot(summary_long, aes(x = reorder(PlotName, Count, FUN = sum, decreasing = TRUE), y = Count, fill = Direction)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+    geom_text(aes(label = Count), 
+              position = position_dodge(width = 0.7),
+              vjust = -0.5,
+              color = "black",
+              size = 6,
+              fontface = "bold") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 10),
+          axis.text.y = element_text(size = 10),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.title = element_text(size = 14, face = "bold"),
+          legend.position = "bottom",
+          legend.title = element_text(size = 11, face = "bold"),
+          legend.text = element_text(size = 10)) +
+    labs(title = "Recovery Analysis - Effect of Prior Stressors",
+         subtitle = "Prior stressors vs control recovery (padj < 0.05)",
+         x = "Treatment Combination",
+         y = "Number of Genes",
+         fill = "Regulation Direction") +
+    scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"),
+                     labels = c("Upregulated", "Downregulated")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p4)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+      dplyr::select(!(PlotName)) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Recovery Analysis Summary",
+      subtitle = "Effect of prior stressors on recovery"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No Recovery_Analysis results available for summary plots.")
+}
+
+
+```
+
+### Volcano Plots {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create volcano plots for Recovery analysis
+if (!is.null(all_results[["Recovery_Analysis"]])) {
+  
+  # Get the results
+  results_list <- all_results[["Recovery_Analysis"]]
+  
+  # Create a list to store plots
+  volcano_plots <- list()
+  
+  for (contrast_name in names(results_list)) {
+    res <- results_list[[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Create volcano plot
+    p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj))) +
+      geom_point(aes(color = ifelse(padj < 0.05, 
+                                   ifelse(log2FoldChange > 0, "Up", "Down"), 
+                                   "Not Significant")), 
+                 alpha = 0.6, size = 1) +
+      scale_color_manual(values = c("Down" = "blue", "Not Significant" = "grey", "Up" = "red")) +
+      geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      labs(title = paste("Volcano Plot:", contrast_name),
+           subtitle = "Recovery Analysis",
+           x = "log2 Fold Change",
+           y = "-log10(adjusted p-value)",
+           color = "Significance") +
+      theme_bw() +
+      theme(legend.position = "bottom")
+    
+    volcano_plots[[contrast_name]] <- p
+  }
+  
+  # Display plots in a grid
+  do.call(gridExtra::grid.arrange, c(volcano_plots, ncol = 2))
+  
+} else {
+  cat("No Recovery_Analysis results available for volcano plot visualization.")
+}
+```
+
+### Summary Table {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary table for Recovery analysis
+if (!is.null(all_results[["Recovery_Analysis"]])) {
+  
+  # Create summary data frame
+  summary_data <- list()
+  for (contrast_name in names(all_results[["Recovery_Analysis"]])) {
+    res <- all_results[["Recovery_Analysis"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    
+    # Create more readable contrast names
+    readable_name <- case_when(
+      contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "ABX+ vs Control",
+      contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "TEMP+ vs Control",
+      contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "ABX+TEMP+ vs Control",
+      TRUE ~ contrast_name
+    )
+    
+    summary_data[[contrast_name]] <- data.frame(
+      Contrast = readable_name,
+      Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE),
+      Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE),
+      Total_Significant = nrow(sig_df),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_df <- bind_rows(summary_data)
+  
+  # Create summary table
+  summary_table <- summary_df %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Recovery Analysis Summary",
+      subtitle = "Effect of prior stressors on recovery"
+    ) %>%
+    gt::cols_label(
+      Contrast = "Treatment Comparison",
+      Upregulated = "Upregulated Genes",
+      Downregulated = "Downregulated Genes",
+      Total_Significant = "Total Significant"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Upregulated, Downregulated, Total_Significant),
+      decimals = 0
+    )
+  
+  # print(summary_table)
+  
+} else {
+  cat("No Recovery_Analysis results available for summary table.")
+}
+
+
+
+```
+
+```{r}
+summary_table
+```
+
+### Top Genes Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create top genes tables for Recovery analysis
+if (!is.null(all_results[["Recovery_Analysis"]])) {
+  
+  for (contrast_name in names(all_results[["Recovery_Analysis"]])) {
+    res <- all_results[["Recovery_Analysis"]][[contrast_name]]
+    res_df <- as.data.frame(res)
+    
+    # Add gene column from row names
+    res_df$gene <- rownames(res_df)
+    
+    # Get top 15 significant genes
+    top_genes <- res_df %>%
+      dplyr::filter(padj < 0.05) %>%
+      dplyr::arrange(padj) %>%
+      dplyr::slice_head(n = 15) %>%
+      dplyr::select(gene, log2FoldChange, padj, baseMean)
+    
+    if (nrow(top_genes) > 0) {
+      cat("### Top 15 Significant Genes:", contrast_name, "\n")
+      top_table <- top_genes %>%
+        gt::gt() %>%
+        gt::tab_header(
+          title = paste("Top 15 Significant Genes:", contrast_name)
+        ) %>%
+        gt::cols_label(
+          gene = "Gene",
+          log2FoldChange = "log2 Fold Change",
+          padj = "Adjusted p-value",
+          baseMean = "Base Mean"
+        ) %>%
+        gt::fmt_number(
+          columns = c(log2FoldChange, baseMean),
+          decimals = 2
+        ) %>%
+        gt::fmt_scientific(
+          columns = padj,
+          decimals = 3
+        )
+      
+      # print(top_table)
+      # cat("\n")
+    }
+  }
+  
+} else {
+  cat("No Recovery_Analysis results available for top genes tables.")
+}
+```
+
+<!-- ## Summary Plots -->
+
+<!-- ### All Treatment Groups Analysis -->
+
+
+<!-- ```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE} -->
+
+<!-- # Create detailed bar plots for All_Treatments analysis -->
+<!-- if (!is.null(all_results[["All_Treatments"]])) { -->
+<!--   ### -->
+<!--       # Collect summary data -->
+<!--   summary_data <- list() -->
+<!--   for (contrast_name in names(all_results[["All_Treatments"]])) { -->
+<!--     res <- all_results[["All_Treatments"]][[contrast_name]] -->
+<!--     res_df <- as.data.frame(res) -->
+<!--     sig_df <- res_df %>% dplyr::filter(padj < 0.05) -->
+
+<!--     # Map to plotting-friendly names -->
+<!--     readable_name <- case_when( -->
+<!--         contrast_name == "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T- P+ vs. A- T- P-", -->
+<!--         contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P- vs. A- T- P-", -->
+<!--         contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P+ vs. A- T- P-", -->
+<!--         contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs. A- T- P-", -->
+<!--         contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P+ vs. A- T- P-", -->
+<!--         contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs. A- T- P-", -->
+<!--         contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P+ vs. A- T- P-", -->
+<!--       TRUE ~ contrast_name -->
+<!--     ) -->
+<!--     summary_data[[contrast_name]] <- data.frame( -->
+<!--       Contrast = readable_name, -->
+<!--       Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE), -->
+<!--       Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE), -->
+<!--       Total_Significant = nrow(sig_df), -->
+<!--       stringsAsFactors = FALSE -->
+<!--     ) -->
+<!--   } -->
+
+<!--   summary_df <- bind_rows(summary_data) -->
+<!--   # Set PlotName to the readable Contrast names and order them as desired -->
+<!--   summary_df$PlotName <- factor(summary_df$Contrast, levels = c( -->
+<!--     "A- T- P+ vs. A- T- P-", -->
+<!--     "A+ T- P- vs. A- T- P-", -->
+<!--     "A+ T- P+ vs. A- T- P-", -->
+<!--     "A- T+ P- vs. A- T- P-", -->
+<!--     "A- T+ P+ vs. A- T- P-", -->
+<!--     "A+ T+ P- vs. A- T- P-", -->
+<!--     "A+ T+ P+ vs. A- T- P-" -->
+<!--   )) -->
+
+<!--   # Create long format for plotting -->
+<!--   summary_long <- summary_df %>% -->
+<!--     tidyr::pivot_longer(cols = c(Upregulated, Downregulated), -->
+<!--                        names_to = "Direction", -->
+<!--                        values_to = "Count") -->
+<!--   summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated")) -->
+<!--   summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName)) -->
+
+<!--   # Create bar plot with better formatting -->
+<!--   p1 <- ggplot(summary_long, aes(x = reorder(PlotName, Count, FUN = sum, decreasing = TRUE), y = Count, fill = Direction)) + -->
+<!--     geom_bar(stat = "identity", position = "dodge", width = 0.7) + -->
+<!--     geom_text(aes(label = Count),  -->
+<!--               position = position_dodge(width = 0.7), -->
+<!--               vjust = -0.5, -->
+<!--               color = "black", -->
+<!--               size = 5, -->
+<!--               fontface = "bold") + -->
+<!--     theme_bw() + -->
+<!--     theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 10), -->
+<!--           axis.text.y = element_text(size = 10), -->
+<!--           axis.title = element_text(size = 12, face = "bold"), -->
+<!--           plot.title = element_text(size = 14, face = "bold"), -->
+<!--           legend.position = "bottom", -->
+<!--           legend.title = element_text(size = 11, face = "bold"), -->
+<!--           legend.text = element_text(size = 10)) + -->
+<!--     labs(title = "Differential Gene Expression Summary - All Treatment Groups", -->
+<!--          subtitle = "Number of significantly up and down regulated genes (padj < 0.05)", -->
+<!--          x = "Treatment Combination", -->
+<!--          y = "Number of Genes", -->
+<!--          fill = "Regulation Direction") + -->
+<!--     scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"), -->
+<!--                      labels = c("Upregulated", "Downregulated")) + -->
+<!--     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + -->
+<!--     scale_x_discrete(limits = rev(levels(reorder(summary_long$PlotName, summary_long$Count, FUN = sum, decreasing = TRUE)))) -->
+
+<!--   print(p1) -->
+
+<!--   # Create a summary table -->
+<!--   summary_table <- summary_df %>% -->
+<!--       dplyr::select(!(PlotName)) %>% -->
+<!--     gt::gt() %>% -->
+<!--     gt::tab_header( -->
+<!--       title = "Summary Statistics - All Treatment Groups", -->
+<!--       subtitle = "Number of significantly differentially expressed genes" -->
+<!--     ) %>% -->
+<!--     gt::cols_label( -->
+<!--       Contrast = "Treatment Comparison", -->
+<!--       Upregulated = "Upregulated Genes", -->
+<!--       Downregulated = "Downregulated Genes", -->
+<!--       Total_Significant = "Total Significant" -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_text(weight = "bold"), -->
+<!--       locations = cells_column_labels() -->
+<!--     ) %>% -->
+<!--     gt::fmt_number( -->
+<!--       columns = c(Upregulated, Downregulated, Total_Significant), -->
+<!--       decimals = 0 -->
+<!--     ) -->
+
+<!--   # print(summary_table) -->
+
+<!-- } else { -->
+<!--   cat("No All_Treatments results available for summary plots.") -->
+<!-- } -->
+
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- summary_table -->
+<!-- ``` -->
+
+<!-- ### Parasite Effect Analysis -->
+
+<!-- ```{r echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE} -->
+
+<!-- # Create bar plot for Parasite Effect analysis -->
+<!-- if (!is.null(all_results[["Parasite_Effect"]])) { -->
+
+<!--   # Collect summary data -->
+<!--   summary_data <- list() -->
+<!--   for (contrast_name in names(all_results[["Parasite_Effect"]])) { -->
+<!--     res <- all_results[["Parasite_Effect"]][[contrast_name]] -->
+<!--     res_df <- as.data.frame(res) -->
+<!--     sig_df <- res_df %>% dplyr::filter(padj < 0.05) -->
+
+<!--     summary_data[[contrast_name]] <- data.frame( -->
+<!--       Contrast = "A- T- P+ vs. A- T- P-", # Parasite -->
+<!--       Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE), -->
+<!--       Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE), -->
+<!--       Total_Significant = nrow(sig_df), -->
+<!--       stringsAsFactors = FALSE -->
+<!--     ) -->
+<!--   } -->
+
+<!--   summary_df <- bind_rows(summary_data) -->
+<!--   # Set PlotName to the readable Contrast name -->
+<!--   summary_df$PlotName <- factor(summary_df$Contrast, levels = c("A- T- P+ vs. A- T- P-")) -->
+
+<!--   # Create long format for plotting -->
+<!--   summary_long <- summary_df %>% -->
+<!--     tidyr::pivot_longer(cols = c(Upregulated, Downregulated), -->
+<!--                        names_to = "Direction", -->
+<!--                        values_to = "Count") -->
+<!--   summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated")) -->
+<!--   summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName)) -->
+
+<!--   # Create bar plot -->
+<!--   p2 <- ggplot(summary_long, aes(x = PlotName, y = Count, fill = Direction)) + -->
+<!--     geom_bar(stat = "identity", position = "dodge", width = 0.6) + -->
+<!--     geom_text(aes(label = Count),  -->
+<!--               position = position_dodge(width = 0.6), -->
+<!--               vjust = -0.5, -->
+<!--               color = "black", -->
+<!--               size = 6, -->
+<!--               fontface = "bold") + -->
+<!--     theme_bw() + -->
+<!--     theme(axis.text.x = element_text(size = 12), -->
+<!--           axis.text.y = element_text(size = 10), -->
+<!--           axis.title = element_text(size = 12, face = "bold"), -->
+<!--           plot.title = element_text(size = 14, face = "bold"), -->
+<!--           legend.position = "bottom", -->
+<!--           legend.title = element_text(size = 11, face = "bold"), -->
+<!--           legend.text = element_text(size = 10)) + -->
+<!--     labs(title = "Parasite Effect on Gene Expression", -->
+<!--          subtitle = "A- T- P+ vs A- T- P- (padj < 0.05)", -->
+<!--          x = "Treatment Combination", -->
+<!--          y = "Number of Genes", -->
+<!--          fill = "Regulation Direction") + -->
+<!--     scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"), -->
+<!--                      labels = c("Upregulated", "Downregulated")) + -->
+<!--     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) -->
+
+<!--   print(p2) -->
+
+<!--   # Create a summary table
+<!--   summary_table <- summary_df %>% -->
+<!--     gt::gt() %>% -->
+<!--     gt::tab_header( -->
+<!--       title = "Summary Statistics - Parasite Effect", -->
+<!--       subtitle = "Number of significantly differentially expressed genes" -->
+<!--     ) %>% -->
+<!--     gt::cols_label( -->
+<!--       Contrast = "Treatment Comparison", -->
+<!--       Upregulated = "Upregulated Genes", -->
+<!--       Downregulated = "Downregulated Genes", -->
+<!--       Total_Significant = "Total Significant" -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_text(weight = "bold"), -->
+<!--       locations = cells_column_labels() -->
+<!--     ) %>% -->
+<!--     gt::fmt_number( -->
+<!--       columns = c(Upregulated, Downregulated, Total_Significant), -->
+<!--       decimals = 0 -->
+<!--     ) -->
+
+<!--   # print(summary_table) -->
+
+<!-- } else { -->
+<!--   cat("No Parasite_Effect results available for summary plots.") -->
+<!-- } -->
+
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- summary_table -->
+<!-- ``` -->
+
+<!-- ### Historical Contingency Analysis -->
+
+<!-- ```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE} -->
+
+<!-- # Create bar plots for Historical Contingency analysis -->
+<!-- if (!is.null(all_results[["Historical_Contingency"]])) { -->
+
+<!--   # Collect summary data -->
+<!--   summary_data <- list() -->
+<!--   for (contrast_name in names(all_results[["Historical_Contingency"]])) { -->
+<!--     res <- all_results[["Historical_Contingency"]][[contrast_name]] -->
+<!--     res_df <- as.data.frame(res) -->
+<!--     sig_df <- res_df %>% dplyr::filter(padj < 0.05) -->
+
+<!--     # Map to plotting-friendly names -->
+<!--     readable_name <- case_when( -->
+<!--       contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T- P+ vs. A- T- P-", -->
+<!--       contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A- T+ P+ vs. A- T- P-",  -->
+<!--       contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T+ P+ vs. A- T- P-", -->
+<!--       TRUE ~ contrast_name -->
+<!--     ) -->
+<!--     summary_data[[contrast_name]] <- data.frame( -->
+<!--       Contrast = readable_name, -->
+<!--       Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE), -->
+<!--       Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE), -->
+<!--       Total_Significant = nrow(sig_df), -->
+<!--       stringsAsFactors = FALSE -->
+<!--     ) -->
+<!--   } -->
+
+<!--   summary_df <- bind_rows(summary_data) -->
+<!--   # Set PlotName to the readable Contrast names and order them as desired -->
+<!--   summary_df$PlotName <- factor(summary_df$Contrast, levels = c( -->
+<!--     "A+ T- P+ vs. A- T- P+", -->
+<!--     "A- T+ P+ vs. A- T- P+", -->
+<!--     "A+ T+ P+ vs. A- T- P+" -->
+<!--   )) -->
+
+<!--   # Create long format for plotting -->
+<!--   summary_long <- summary_df %>% -->
+<!--     tidyr::pivot_longer(cols = c(Upregulated, Downregulated), -->
+<!--                        names_to = "Direction", -->
+<!--                        values_to = "Count") -->
+<!--   summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated")) -->
+<!--   summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName)) -->
+
+<!--   # Create bar plot -->
+<!--   p3 <- ggplot(summary_long, aes(x = PlotName, y = Count, fill = Direction)) + -->
+<!--     geom_bar(stat = "identity", position = "dodge", width = 0.7) + -->
+<!--     geom_text(aes(label = Count),  -->
+<!--               position = position_dodge(width = 0.7), -->
+<!--               vjust = -0.5, -->
+<!--               color = "black", -->
+<!--               size = 6, -->
+<!--               fontface = "bold") + -->
+<!--     theme_bw() + -->
+<!--     theme(axis.text.x = element_text(angle = 0, hjust = .5, size = 10), -->
+<!--           axis.text.y = element_text(size = 10), -->
+<!--           axis.title = element_text(size = 12, face = "bold"), -->
+<!--           plot.title = element_text(size = 14, face = "bold"), -->
+<!--           legend.position = "bottom", -->
+<!--           legend.title = element_text(size = 11, face = "bold"), -->
+<!--           legend.text = element_text(size = 10)) + -->
+<!--     labs(title = "Historical Contingency Effects on Parasite Response", -->
+<!--          subtitle = "Prior stressors vs baseline parasite response (padj < 0.05)", -->
+<!--          x = "Treatment Combination", -->
+<!--          y = "Number of Genes", -->
+<!--          fill = "Regulation Direction") + -->
+<!--     scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"), -->
+<!--                      labels = c("Upregulated", "Downregulated")) + -->
+<!--     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) -->
+
+<!--   print(p3) -->
+
+<!--   # Create summary table -->
+<!--   summary_table <- summary_df %>% -->
+<!--     dplyr::select(!(PlotName)) %>% -->
+<!--     gt::gt() %>% -->
+<!--     gt::tab_header( -->
+<!--       title = "Historical Contingency Summary", -->
+<!--       subtitle = "Effect of prior stressors on parasite response" -->
+<!--     ) %>% -->
+<!--     gt::cols_label( -->
+<!--       Contrast = "Treatment Comparison", -->
+<!--       Upregulated = "Upregulated Genes", -->
+<!--       Downregulated = "Downregulated Genes", -->
+<!--       Total_Significant = "Total Significant" -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_text(weight = "bold"), -->
+<!--       locations = cells_column_labels() -->
+<!--     ) %>% -->
+<!--     gt::fmt_number( -->
+<!--       columns = c(Upregulated, Downregulated, Total_Significant), -->
+<!--       decimals = 0 -->
+<!--     ) -->
+
+<!--   # print(summary_table) -->
+
+<!-- } else { -->
+<!--   cat("No Historical_Contingency results available for summary plots.") -->
+<!-- } -->
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- summary_table -->
+<!-- ``` -->
+
+<!-- ### Recovery Analysis -->
+
+<!-- ```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE} -->
+
+<!-- # Create bar plots for Recovery analysis -->
+<!-- if (!is.null(all_results[["Recovery_Analysis"]])) { -->
+
+<!--   # Collect summary data -->
+<!--   summary_data <- list() -->
+<!--   for (contrast_name in names(all_results[["Recovery_Analysis"]])) { -->
+<!--     res <- all_results[["Recovery_Analysis"]][[contrast_name]] -->
+<!--     res_df <- as.data.frame(res) -->
+<!--     sig_df <- res_df %>% dplyr::filter(padj < 0.05) -->
+
+<!--     # Map to plotting-friendly names -->
+<!--     readable_name <- case_when( -->
+<!--       contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P- vs. A- T- P-", -->
+<!--       contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs. A- T- P-", -->
+<!--       contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs. A- T- P-", -->
+<!--       TRUE ~ contrast_name -->
+<!--     ) -->
+<!--     summary_data[[contrast_name]] <- data.frame( -->
+<!--       Contrast = readable_name, -->
+<!--       Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE), -->
+<!--       Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE), -->
+<!--       Total_Significant = nrow(sig_df), -->
+<!--       stringsAsFactors = FALSE -->
+<!--     ) -->
+<!--   } -->
+
+<!--   summary_df <- bind_rows(summary_data) -->
+<!--   # Set PlotName to the readable Contrast names and order them as desired -->
+<!--   summary_df$PlotName <- factor(summary_df$Contrast, levels = c( -->
+<!--     "A+ T- P- vs. A- T- P-", -->
+<!--     "A- T+ P- vs. A- T- P-", -->
+<!--     "A+ T+ P- vs. A- T- P-" -->
+<!--   )) -->
+
+<!--   # Create long format for plotting -->
+<!--   summary_long <- summary_df %>% -->
+<!--     tidyr::pivot_longer(cols = c(Upregulated, Downregulated), -->
+<!--                        names_to = "Direction", -->
+<!--                        values_to = "Count") -->
+<!--   summary_long$Direction <- factor(summary_long$Direction, levels = c("Upregulated", "Downregulated")) -->
+<!--   summary_long$PlotName <- factor(summary_long$PlotName, levels = levels(summary_df$PlotName)) -->
+
+<!--   # Create bar plot -->
+<!--   p4 <- ggplot(summary_long, aes(x = PlotName, y = Count, fill = Direction)) + -->
+<!--     geom_bar(stat = "identity", position = "dodge", width = 0.7) + -->
+<!--     geom_text(aes(label = Count),  -->
+<!--               position = position_dodge(width = 0.7), -->
+<!--               vjust = -0.5, -->
+<!--               color = "black", -->
+<!--               size = 6, -->
+<!--               fontface = "bold") + -->
+<!--     theme_bw() + -->
+<!--     theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = 10), -->
+<!--           axis.text.y = element_text(size = 10), -->
+<!--           axis.title = element_text(size = 12, face = "bold"), -->
+<!--           plot.title = element_text(size = 14, face = "bold"), -->
+<!--           legend.position = "bottom", -->
+<!--           legend.title = element_text(size = 11, face = "bold"), -->
+<!--           legend.text = element_text(size = 10)) + -->
+<!--     labs(title = "Recovery Analysis - Effect of Prior Stressors", -->
+<!--          subtitle = "Prior stressors vs control recovery (padj < 0.05)", -->
+<!--          x = "Treatment Combination", -->
+<!--          y = "Number of Genes", -->
+<!--          fill = "Regulation Direction") + -->
+<!--     scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"), -->
+<!--                      labels = c("Upregulated", "Downregulated")) + -->
+<!--     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) -->
+
+<!--   print(p4) -->
+
+<!--   # Create summary table -->
+<!--   summary_table <- summary_df %>% -->
+<!--       dplyr::select(!(PlotName)) %>% -->
+<!--     gt::gt() %>% -->
+<!--     gt::tab_header( -->
+<!--       title = "Recovery Analysis Summary", -->
+<!--       subtitle = "Effect of prior stressors on recovery" -->
+<!--     ) %>% -->
+<!--     gt::cols_label( -->
+<!--       Contrast = "Treatment Comparison", -->
+<!--       Upregulated = "Upregulated Genes", -->
+<!--       Downregulated = "Downregulated Genes", -->
+<!--       Total_Significant = "Total Significant" -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_text(weight = "bold"), -->
+<!--       locations = cells_column_labels() -->
+<!--     ) %>% -->
+<!--     gt::fmt_number( -->
+<!--       columns = c(Upregulated, Downregulated, Total_Significant), -->
+<!--       decimals = 0 -->
+<!--     ) -->
+
+<!--   # print(summary_table) -->
+
+<!-- } else { -->
+<!--   cat("No Recovery_Analysis results available for summary plots.") -->
+<!-- } -->
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- summary_table -->
+<!-- ``` -->
+
+
+<!-- ### Combined Summary Across All Analyses -->
+
+<!-- ```{r echo=FALSE, fig.height=10, fig.width=14, message=FALSE, warning=FALSE} -->
+
+<!-- # Create a combined summary plot across all analyses -->
+<!-- all_summary_data <- list() -->
+
+<!-- for (analysis_name in names(all_results)) { -->
+<!--   for (contrast_name in names(all_results[[analysis_name]])) { -->
+<!--     res <- all_results[[analysis_name]][[contrast_name]] -->
+<!--     res_df <- as.data.frame(res) -->
+<!--     sig_df <- res_df %>% dplyr::filter(padj < 0.05) -->
+
+<!--     # Create readable contrast names -->
+<!--     readable_name <- case_when( -->
+<!--       contrast_name == "A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T- P+ vs A- T- P-", -->
+<!--       contrast_name == "A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus" ~ "ABX vs A- T- P-", -->
+<!--       contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T- P+ vs A- T- P-", -->
+<!--       contrast_name == "A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P- vs A- T- P-", -->
+<!--       contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A- T+ P+ vs A- T- P-", -->
+<!--       contrast_name == "A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P- vs A- T- P-", -->
+<!--       contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus" ~ "A+ T+ P+ vs A- T- P-", -->
+<!--       contrast_name == "A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T- P+ vs A- T- P+", -->
+<!--       contrast_name == "A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A- T+ P+ vs A- T- P+", -->
+<!--       contrast_name == "A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus" ~ "A+ T+ P+ vs A- T- P+", -->
+<!--       TRUE ~ contrast_name -->
+<!--     ) -->
+
+<!--     all_summary_data[[paste(analysis_name, contrast_name, sep = "_")]] <- data.frame( -->
+<!--       Analysis = analysis_name, -->
+<!--       Contrast = readable_name, -->
+<!--       Upregulated = sum(sig_df$log2FoldChange > 0, na.rm = TRUE), -->
+<!--       Downregulated = sum(sig_df$log2FoldChange < 0, na.rm = TRUE), -->
+<!--       Total_Significant = nrow(sig_df), -->
+<!--       stringsAsFactors = FALSE -->
+<!--     ) -->
+<!--   } -->
+<!-- } -->
+
+<!-- if (length(all_summary_data) > 0) { -->
+<!--   combined_summary_df <- bind_rows(all_summary_data) -->
+
+<!--   # Create long format for plotting -->
+<!--   combined_summary_long <- combined_summary_df %>% -->
+<!--     tidyr::pivot_longer(cols = c(Upregulated, Downregulated), -->
+<!--                        names_to = "Direction", -->
+<!--                        values_to = "Count") -->
+<!--   combined_summary_long$Direction <- factor(combined_summary_long$Direction, levels = c("Upregulated", "Downregulated")) -->
+
+<!--   # Create combined bar plot -->
+<!--   p_combined <- ggplot(combined_summary_long, aes(x = Contrast, y = Count, fill = Direction)) + -->
+<!--     geom_bar(stat = "identity", position = "dodge", width = 0.7) + -->
+<!--     geom_text(aes(label = Count),  -->
+<!--               position = position_dodge(width = 0.7), -->
+<!--               vjust = -0.5, -->
+<!--               color = "black", -->
+<!--               size = 3.75, -->
+<!--               fontface = "bold") + -->
+<!--     facet_wrap(~Analysis, scales = "free", ncol = 2) + -->
+<!--     theme_bw() + -->
+<!--     theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 10), -->
+<!--           axis.text.y = element_text(size = 9), -->
+<!--           axis.title = element_text(size = 11, face = "bold"), -->
+<!--           plot.title = element_text(size = 14, face = "bold"), -->
+<!--           legend.position = "bottom", -->
+<!--           legend.title = element_text(size = 10, face = "bold"), -->
+<!--           legend.text = element_text(size = 9), -->
+<!--           strip.text = element_text(size = 10, face = "bold"), -->
+<!--           strip.background = element_rect(fill = "lightblue")) + -->
+<!--     labs(title = "Comprehensive Summary of Differential Gene Expression", -->
+<!--          subtitle = "All analyses combined (padj < 0.05)", -->
+<!--          x = "Treatment Combination", -->
+<!--          y = "Number of Genes", -->
+<!--          fill = "Regulation Direction") + -->
+<!--     scale_fill_manual(values = c("Upregulated" = "#E31A1C", "Downregulated" = "#1F78B4"), -->
+<!--                      labels = c("Upregulated", "Downregulated")) + -->
+<!--     scale_y_continuous(expand = expansion(mult = c(0, 0.1))) -->
+
+<!--   print(p_combined) -->
+
+<!--   # Create comprehensive summary table -->
+<!--   comprehensive_table <- combined_summary_df %>% -->
+<!--     gt::gt() %>% -->
+<!--     gt::tab_header( -->
+<!--       title = "Comprehensive Differential Gene Expression Summary", -->
+<!--       subtitle = "All analyses and comparisons" -->
+<!--     ) %>% -->
+<!--     gt::cols_label( -->
+<!--       Analysis = "Analysis Type", -->
+<!--       Contrast = "Treatment Combination", -->
+<!--       Upregulated = "Upregulated Genes", -->
+<!--       Downregulated = "Downregulated Genes", -->
+<!--       Total_Significant = "Total Significant" -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_text(weight = "bold"), -->
+<!--       locations = cells_column_labels() -->
+<!--     ) %>% -->
+<!--     gt::fmt_number( -->
+<!--       columns = c(Upregulated, Downregulated, Total_Significant), -->
+<!--       decimals = 0 -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_fill(color = "#F7F7F7"), -->
+<!--       locations = cells_body(rows = seq(1, nrow(combined_summary_df), 2)) -->
+<!--     ) %>% -->
+<!--     gt::tab_style( -->
+<!--       style = cell_fill(color = "#E8F4FD"), -->
+<!--       locations = cells_body(columns = Analysis) -->
+<!--     ) -->
+
+<!--   # print(comprehensive_table) -->
+
+<!-- } else { -->
+<!--   cat("No results available for combined summary.") -->
+<!-- } -->
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- comprehensive_table -->
+<!-- ``` -->
+
+## Enrichment Analysis {.tabset}
+
+### Setup and Run Enrichment Analysis
+
+```{r}
+
+# Set up parallel processing for enrichment analysis
+plan(multisession, workers = min(4, availableCores()))
+
+# Run enrichment analysis for all three analyses
+enrichment_results <- list()
+
+for (analysis_name in names(all_results)) {
+  cat("\n=== Processing enrichment for:", analysis_name, "===\n")
+  
+  # Check if we have results for this analysis
+  if (!is.null(all_results[[analysis_name]])) {
+    enrichment_results[[analysis_name]] <- run_enrichment_analysis(analysis_name, all_results[[analysis_name]])
+  } else {
+    cat("No results available for:", analysis_name, "\n")
+  }
+}
+
+# Clean up parallel processing
+plan(sequential)
+
+cat("\n=== Enrichment Analysis Complete ===\n")
+```
+
+### 01) Parasite Effect Analysis {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create enrichment plots for Parasite Effect analysis
+if (!is.null(enrichment_results[["Parasite_Effect"]])) {
+  
+  # Get results
+  go_results <- enrichment_results[["Parasite_Effect"]]$go_results
+  kegg_results <- enrichment_results[["Parasite_Effect"]]$kegg_results
+  
+  # Create GO enrichment heatmap
+  if (length(go_results) > 0) {
+    go_heatmap_data <- prepare_enrichment_heatmap(go_results, top_n = 15)
+    
+    if (nrow(go_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Term Enrichment - Parasite Effect Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create KEGG enrichment heatmap
+  if (length(kegg_results) > 0) {
+    kegg_heatmap_data <- prepare_enrichment_heatmap(kegg_results, top_n = 15)
+    
+    if (nrow(kegg_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathway Enrichment - Parasite Effect Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create regulation heatmaps
+  if (length(go_results) > 0) {
+    # Up-regulated GO terms
+    go_up_data <- prepare_regulation_heatmap(go_results, "up", top_n = 20)
+    if (go_up_data$valid && !is.null(go_up_data$heatmap_data) && nrow(go_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_up_data$heatmap_data,
+        color = go_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Up-regulated Genes",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated GO terms for heatmap visualization.\n")
+    }
+    
+    # Down-regulated GO terms
+    go_down_data <- prepare_regulation_heatmap(go_results, "down", top_n = 20)
+    if (go_down_data$valid && !is.null(go_down_data$heatmap_data) && nrow(go_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_down_data$heatmap_data,
+        color = go_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Down-regulated Genes",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated GO terms for heatmap visualization.\n")
+    }
+  }
+  
+  if (length(kegg_results) > 0) {
+    # Up-regulated KEGG pathways
+    kegg_up_data <- prepare_regulation_heatmap(kegg_results, "up", top_n = 20)
+    if (kegg_up_data$valid && !is.null(kegg_up_data$heatmap_data) && nrow(kegg_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_up_data$heatmap_data,
+        color = kegg_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Up-regulated Genes",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated KEGG pathways for heatmap visualization.\n")
+    }
+    
+    # Down-regulated KEGG pathways
+    kegg_down_data <- prepare_regulation_heatmap(kegg_results, "down", top_n = 20)
+    if (kegg_down_data$valid && !is.null(kegg_down_data$heatmap_data) && nrow(kegg_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_down_data$heatmap_data,
+        color = kegg_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Down-regulated Genes",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated KEGG pathways for heatmap visualization.\n")
+    }
+  }
+  
+} else {
+  cat("No enrichment results available for Parasite Effect analysis.")
+}
+```
+
+### 02) Historical Contingency Analysis {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create enrichment plots for Historical Contingency analysis
+if (!is.null(enrichment_results[["Historical_Contingency"]])) {
+  
+  # Get results
+  go_results <- enrichment_results[["Historical_Contingency"]]$go_results
+  kegg_results <- enrichment_results[["Historical_Contingency"]]$kegg_results
+  
+  # Create GO enrichment heatmap
+  if (length(go_results) > 0) {
+    go_heatmap_data <- prepare_enrichment_heatmap(go_results, top_n = 15)
+    
+    if (nrow(go_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Term Enrichment - Historical Contingency Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create KEGG enrichment heatmap
+  if (length(kegg_results) > 0) {
+    kegg_heatmap_data <- prepare_enrichment_heatmap(kegg_results, top_n = 15)
+    
+    if (nrow(kegg_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathway Enrichment - Historical Contingency Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create regulation heatmaps
+  if (length(go_results) > 0) {
+    # Up-regulated GO terms
+    go_up_data <- prepare_regulation_heatmap(go_results, "up", top_n = 20)
+    if (go_up_data$valid && !is.null(go_up_data$heatmap_data) && nrow(go_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_up_data$heatmap_data,
+        color = go_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Up-regulated Genes (Historical Contingency)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated GO terms for heatmap visualization.\n")
+    }
+    
+    # Down-regulated GO terms
+    go_down_data <- prepare_regulation_heatmap(go_results, "down", top_n = 20)
+    if (go_down_data$valid && !is.null(go_down_data$heatmap_data) && nrow(go_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_down_data$heatmap_data,
+        color = go_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Down-regulated Genes (Historical Contingency)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated GO terms for heatmap visualization.\n")
+    }
+  }
+  
+  if (length(kegg_results) > 0) {
+    # Up-regulated KEGG pathways
+    kegg_up_data <- prepare_regulation_heatmap(kegg_results, "up", top_n = 20)
+    if (kegg_up_data$valid && !is.null(kegg_up_data$heatmap_data) && nrow(kegg_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_up_data$heatmap_data,
+        color = kegg_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Up-regulated Genes (Historical Contingency)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated KEGG pathways for heatmap visualization.\n")
+    }
+    
+    # Down-regulated KEGG pathways
+    kegg_down_data <- prepare_regulation_heatmap(kegg_results, "down", top_n = 20)
+    if (kegg_down_data$valid && !is.null(kegg_down_data$heatmap_data) && nrow(kegg_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_down_data$heatmap_data,
+        color = kegg_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Down-regulated Genes (Historical Contingency)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated KEGG pathways for heatmap visualization.\n")
+    }
+  }
+  
+} else {
+  cat("No enrichment results available for Historical Contingency analysis.")
+}
+```
+
+### 03) Recovery Analysis {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=8, fig.width=12, message=FALSE, warning=FALSE}
+
+# Create enrichment plots for Recovery analysis
+if (!is.null(enrichment_results[["Recovery_Analysis"]])) {
+  
+  # Get results
+  go_results <- enrichment_results[["Recovery_Analysis"]]$go_results
+  kegg_results <- enrichment_results[["Recovery_Analysis"]]$kegg_results
+  
+  # Create GO enrichment heatmap
+  if (length(go_results) > 0) {
+    go_heatmap_data <- prepare_enrichment_heatmap(go_results, top_n = 15)
+    
+    if (nrow(go_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Term Enrichment - Recovery Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create KEGG enrichment heatmap
+  if (length(kegg_results) > 0) {
+    kegg_heatmap_data <- prepare_enrichment_heatmap(kegg_results, top_n = 15)
+    
+    if (nrow(kegg_heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_heatmap_data,
+        color = colorRampPalette(c("white", "red"))(100),
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathway Enrichment - Recovery Analysis",
+        angle_col = 45
+      )
+    }
+  }
+  
+  # Create regulation heatmaps
+  if (length(go_results) > 0) {
+    # Up-regulated GO terms
+    go_up_data <- prepare_regulation_heatmap(go_results, "up", top_n = 20)
+    if (go_up_data$valid && !is.null(go_up_data$heatmap_data) && nrow(go_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_up_data$heatmap_data,
+        color = go_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Up-regulated Genes (Recovery)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated GO terms for heatmap visualization.\n")
+    }
+    
+    # Down-regulated GO terms
+    go_down_data <- prepare_regulation_heatmap(go_results, "down", top_n = 20)
+    if (go_down_data$valid && !is.null(go_down_data$heatmap_data) && nrow(go_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        go_down_data$heatmap_data,
+        color = go_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "GO Terms - Down-regulated Genes (Recovery)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated GO terms for heatmap visualization.\n")
+    }
+  }
+  
+  if (length(kegg_results) > 0) {
+    # Up-regulated KEGG pathways
+    kegg_up_data <- prepare_regulation_heatmap(kegg_results, "up", top_n = 20)
+    if (kegg_up_data$valid && !is.null(kegg_up_data$heatmap_data) && nrow(kegg_up_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_up_data$heatmap_data,
+        color = kegg_up_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Up-regulated Genes (Recovery)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid up-regulated KEGG pathways for heatmap visualization.\n")
+    }
+    
+    # Down-regulated KEGG pathways
+    kegg_down_data <- prepare_regulation_heatmap(kegg_results, "down", top_n = 20)
+    if (kegg_down_data$valid && !is.null(kegg_down_data$heatmap_data) && nrow(kegg_down_data$heatmap_data) > 0) {
+      pheatmap::pheatmap(
+        kegg_down_data$heatmap_data,
+        color = kegg_down_data$color_scheme,
+        cluster_rows = TRUE,
+        cluster_cols = FALSE,
+        display_numbers = TRUE,
+        number_format = "%.2f",
+        fontsize_row = 10,
+        fontsize_col = 12,
+        main = "KEGG Pathways - Down-regulated Genes (Recovery)",
+        angle_col = 45
+      )
+    } else {
+      cat("No valid down-regulated KEGG pathways for heatmap visualization.\n")
+    }
+  }
+  
+} else {
+  cat("No enrichment results available for Recovery analysis.")
+}
+```
+
+### Summary Tables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary tables for enrichment results
+if (length(enrichment_results) > 0) {
+  
+  # Function to create summary table for enrichment results
+  create_enrichment_summary <- function(enrichment_list, analysis_name) {
+    if (is.null(enrichment_list)) return(NULL)
+    
+    # GO summary
+    go_summary <- purrr::map_dfr(enrichment_list$go_results, ~ 
+      dplyr::slice_max(.x, order_by = log_padj, n = 5), 
+      .id = "contrast"
+    ) %>%
+      dplyr::select(contrast, Description, log_padj, Count, mean_log2FC) %>%
+      dplyr::arrange(contrast, desc(log_padj))
+    
+    # KEGG summary
+    kegg_summary <- purrr::map_dfr(enrichment_list$kegg_results, ~ 
+      dplyr::slice_max(.x, order_by = log_padj, n = 5), 
+      .id = "contrast"
+    ) %>%
+      dplyr::select(contrast, Description, log_padj, Count, mean_log2FC) %>%
+      dplyr::arrange(contrast, desc(log_padj))
+    
+    return(list(go = go_summary, kegg = kegg_summary))
+  }
+  
+  # Create summaries for each analysis
+  for (analysis_name in names(enrichment_results)) {
+    cat("\n###", analysis_name, "Enrichment Summary\n")
+    
+    summary_data <- create_enrichment_summary(enrichment_results[[analysis_name]], analysis_name)
+    
+    if (!is.null(summary_data)) {
+      if (nrow(summary_data$go) > 0) {
+        cat("\n**Top GO Terms:**\n")
+        go_table <- summary_data$go %>%
+          gt::gt() %>%
+          gt::tab_header(
+            title = paste("Top GO Terms -", analysis_name)
+          ) %>%
+          gt::cols_label(
+            contrast = "Contrast",
+            Description = "GO Term",
+            log_padj = "-log10(adj p-value)",
+            Count = "Gene Count",
+            mean_log2FC = "Mean log2FC"
+          ) %>%
+          gt::fmt_number(
+            columns = c(log_padj, mean_log2FC),
+            decimals = 3
+          ) %>%
+          gt::fmt_number(
+            columns = Count,
+            decimals = 0
+          )
+        
+        # print(go_table)
+      }
+      
+      if (nrow(summary_data$kegg) > 0) {
+        cat("\n**Top KEGG Pathways:**\n")
+        kegg_table <- summary_data$kegg %>%
+          gt::gt() %>%
+          gt::tab_header(
+            title = paste("Top KEGG Pathways -", analysis_name)
+          ) %>%
+          gt::cols_label(
+            contrast = "Contrast",
+            Description = "KEGG Pathway",
+            log_padj = "-log10(adj p-value)",
+            Count = "Gene Count",
+            mean_log2FC = "Mean log2FC"
+          ) %>%
+          gt::fmt_number(
+            columns = c(log_padj, mean_log2FC),
+            decimals = 3
+          ) %>%
+          gt::fmt_number(
+            columns = Count,
+            decimals = 0
+          )
+        
+        # print(kegg_table)
+      }
+    }
+  }
+  
+} else {
+  cat("No enrichment results available for summary tables.")
+}
+```
+
+
+
+
+
+## Export Results
+
+```{r eval=FALSE, include=FALSE}
+
+# Save results for each analysis
+for (analysis_name in names(all_results)) {
+  save_analysis_results(analysis_name, all_results[[analysis_name]])
+}
+
+# Save enrichment results
+if (exists("enrichment_results") && length(enrichment_results) > 0) {
+  cat("\n=== Saving Enrichment Results ===\n")
+  for (analysis_name in names(enrichment_results)) {
+    save_enrichment_results(enrichment_results[[analysis_name]], analysis_name)
+  }
+}
+
+# Save normalized counts
+normalized_counts_filename <- file.path(output_dir, "normalized_counts.tsv")
+write_tsv(as.data.frame(normalized_counts) %>% rownames_to_column("gene"), normalized_counts_filename)
+
+# Save metadata
+metadata_filename <- file.path(output_dir, "sample_metadata.tsv")
+write_tsv(as.data.frame(colData(se_filtered)) %>% rownames_to_column("sample"), metadata_filename)
+
+cat("\nAll results saved to:", output_dir, "\n")
+```
+
+
+### Export Significant Genes in Long Format (DESeq2-style)
+
+```{r eval=FALSE, include=FALSE}
+cat("\n=== Exporting Significant Genes in Long Format (DESeq2-style) ===\n")
+
+differential_expression_export_dir <- "/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results"
+dir.create(differential_expression_export_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Helper to get readable group from contrast vector
+get_group_from_contrast <- function(contrast_vec) {
+  group_map <- c(
+    "A_minus_T_minus_P_minus" = "A- T- P-",
+    "A_minus_T_minus_P_plus" = "A- T- P+",
+    "A_plus_T_minus_P_minus" = "A+ T- P-",
+    "A_plus_T_minus_P_plus" = "A+ T- P+",
+    "A_minus_T_plus_P_minus" = "A- T+ P-",
+    "A_minus_T_plus_P_plus" = "A- T+ P+",
+    "A_plus_T_plus_P_minus" = "A+ T+ P-",
+    "A_plus_T_plus_P_plus" = "A+ T+ P+"
+  )
+  if (length(contrast_vec) >= 3 && contrast_vec[2] %in% names(group_map)) {
+    return(group_map[[contrast_vec[2]]])
+  } else {
+    return(contrast_vec[2])
+  }
+}
+
+for (analysis_name in names(all_results)) {
+  cat("\n--- Processing", analysis_name, "---\n")
+  analysis_results <- all_results[[analysis_name]]
+  export_rows <- list()
+  
+  for (contrast_name in names(analysis_results)) {
+    res <- analysis_results[[contrast_name]]
+    res_df <- as.data.frame(res)
+    res_df$gene <- rownames(res_df)
+    
+    # Get the contrast vector from your comparisons list
+    contrast_vec <- comparisons[[analysis_name]]$contrasts[[contrast_name]]
+    group_value <- get_group_from_contrast(contrast_vec)
+    
+    # Only significant genes
+    sig_df <- res_df %>% dplyr::filter(padj < 0.05)
+    if (nrow(sig_df) == 0) next
+    
+    for (i in seq_len(nrow(sig_df))) {
+      gene <- sig_df$gene[i]
+      export_rows[[length(export_rows)+1]] <- tibble::tibble(
+        gene = gene,
+        log2FoldChange = sig_df$log2FoldChange[i],
+        padj = sig_df$padj[i],
+        baseMean = sig_df$baseMean[i],
+        pvalue = sig_df$pvalue[i],
+        stat = sig_df$stat[i],
+        metadata = "Treatment",
+        value = group_value
+      )
+    }
+  }
+  if (length(export_rows) > 0) {
+    export_df <- dplyr::bind_rows(export_rows)
+    out_file <- file.path(differential_expression_export_dir, paste0(analysis_name, "__significant_results.tsv"))
+    readr::write_tsv(export_df, out_file)
+    cat("  ✓", out_file, "-", nrow(export_df), "rows\n")
+  } else {
+    cat("  ⚠ No significant genes for", analysis_name, "\n")
+  }
+}
+cat("\n=== DESeq2-style export complete ===\n")
+cat("Files saved to:", differential_expression_export_dir, "\n")
+```
+
+## Session Info
+
+```{r}
+
+sessionInfo()
+``` 

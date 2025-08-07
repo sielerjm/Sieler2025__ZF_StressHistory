@@ -1,0 +1,1380 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Differentially Abundant Taxa Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(Maaslin2)
+library(tidyverse)
+library(RColorBrewer)  # For color palettes in heatmaps
+library(pheatmap)      # For heatmap visualization
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+# sourceFolder(here::here("Code", "R", "Functions", "AnalysisScripts"), T)
+
+
+# Maaslin2
+
+# Define a modified version of run_maaslin2
+run_maaslin2_modified <- function(tmp.PS, 
+                         tmp.sample.names = "Sample",
+                         tmp.rank = "Genus",
+                         tmp.fixed,
+                         tmp.reference,
+                         tmp.output,
+                         tmp.plot.scatter = T,
+                         tmp.plot.heatmap = T,
+                         tr = 'LOG', 
+                         norm = 'TSS'){
+  
+  tmp.input.otu = tmp.PS %>% microViz::tax_agg(rank = "Genus") %>% otu_get() %>% as.data.frame() %>%
+      setNames(gsub(" ", "_", names(.)))
+  
+  tmp.input.meta = microViz::samdat_tbl(tmp.PS) %>% as.data.frame()
+  row.names(tmp.input.meta) <- tmp.input.meta[[tmp.sample.names]]
+  
+  # Create output directory if it doesn't exist
+  dir.create(tmp.output, recursive = TRUE, showWarnings = FALSE)
+  
+  obj <- Maaslin2::Maaslin2(input_data = tmp.input.otu,
+                            input_metadata = tmp.input.meta,
+                            output = tmp.output, 
+                            min_prevalence = 0,
+                            normalization = norm, 
+                            transform = tr,
+                            fixed_effects = tmp.fixed, 
+                            reference = tmp.reference,
+                            standardize = F,
+                            plot_heatmap = tmp.plot.heatmap, 
+                            plot_scatter = tmp.plot.scatter,
+                            cores = 8)
+  
+  # Process results with corrected column selection
+  res <- obj$results %>%
+    filter(metadata == 'group' & value == 'case') %>%
+    mutate(df = N - length(tmp.fixed) - 1,
+           method = paste0('MaAsLin2 (', tr, ', ', norm, ')')) %>%
+    dplyr::select(feature, coef, stderr, df, pval, method) %>%
+    rename(taxon = feature,
+           est = coef,
+           se = stderr,
+           p = pval)
+  
+  return(res)
+}
+
+#### GT TABLE STYLES
+
+apply_GT_tabStyles <- function(gt_table, columns, coef_columns) {
+  for (i in seq_along(columns)) {
+    column <- columns[i]
+    coef_column <- coef_columns[i]
+    
+    coef_vals <- gt_table$`_data`[[coef_column]]
+    colors <- gradient_palette(coef_vals)
+    
+    for (j in seq_along(colors)) {
+      cell_color <- ifelse(is.na(coef_vals[j]), "grey95", colors[j])
+      cell_text <- "black" # ifelse(is.na(coef_vals[j]), "black", "white")
+      cell_size <- "medium"
+      bold_text <- ifelse(gt_table$`_data`[[column]][j] %in% c("+", "-"), "bold", "normal")
+      
+      gt_table <- gt_table %>%
+        tab_style(
+          style = list(cell_fill(color = cell_color),
+                       cell_text(color = cell_text,
+                                 weight = bold_text,
+                                 align = "center",
+                                 size = cell_size
+                       )
+          ),
+          locations = cells_body(
+            columns = !!sym(column),
+            rows = j
+          )
+        )
+    }
+  }
+  gt_table
+}
+
+# Function to create treatment-specific heatmap from MaAsLin2 results
+create_treatment_heatmap <- function(maaslin_results, top_n = 50, title = "Treatment-specific Taxa Abundance Changes") {
+  
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  # Filter for significant results and get top taxa
+  heatmap_data <- maaslin_results %>%
+    dplyr::filter(qval < 0.05) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::slice_head(n = top_n) %>%
+    dplyr::select(Taxon, value, coef, Phylum) %>%
+    dplyr::distinct(Taxon, value, .keep_all = TRUE)  # Remove duplicates if any
+  
+  # Pivot to wide format with treatments as columns
+  heatmap_matrix <- heatmap_data %>%
+    tidyr::pivot_wider(
+      id_cols = c(Taxon, Phylum),
+      names_from = value,
+      values_from = coef,
+      values_fill = 0
+    ) %>%
+    dplyr::arrange(Phylum, Taxon) %>%
+    tibble::column_to_rownames("Taxon")
+  
+  # Extract phylum information for row annotations
+  phylum_info <- heatmap_matrix$Phylum
+  heatmap_matrix <- heatmap_matrix %>%
+    dplyr::select(-Phylum) %>%
+    as.matrix()
+  
+  # Order columns according to treatment_order (only include treatments that exist in the data)
+  existing_treatments <- colnames(heatmap_matrix)
+  ordered_treatments <- treatment_order[treatment_order %in% existing_treatments]
+  heatmap_matrix <- heatmap_matrix[, ordered_treatments, drop = FALSE]
+  
+  # Create row annotation data frame
+  annotation_row <- data.frame(
+    Phylum = phylum_info,
+    row.names = rownames(heatmap_matrix)
+  )
+  
+  # Create color palette for phyla
+  phylum_colors <- setNames(
+    RColorBrewer::brewer.pal(length(unique(phylum_info)), "Set3"),
+    unique(phylum_info)
+  )
+  
+  # Define annotation colors
+  ann_colors <- list(
+    Phylum = phylum_colors
+  )
+  
+  # Create color palette for heatmap
+  # Use a diverging color palette centered at 0
+  max_abs_coef <- max(abs(heatmap_matrix), na.rm = TRUE)
+  heatmap_colors <- colorRampPalette(c("blue", "white", "red"))(100)
+  
+  # Create the heatmap
+  pheatmap::pheatmap(
+    heatmap_matrix,
+    color = heatmap_colors,
+    breaks = seq(-max_abs_coef, max_abs_coef, length.out = 101),
+    annotation_row = annotation_row,
+    annotation_colors = ann_colors,
+    cluster_rows = TRUE,
+    cluster_cols = FALSE,  # Keep treatment order as is
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    fontsize_row = 8,
+    fontsize_col = 10,
+    angle_col = 45,
+    main = title,
+    treeheight_row = 20,
+    treeheight_col = 0
+  )
+}
+
+# Function to create comparison tables for differentially abundant taxa
+create_taxa_comparison_tables <- function(maaslin_results, section_title = "Taxa Comparison") {
+  
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  if (is.null(maaslin_results) || nrow(maaslin_results) == 0) {
+    return(list(
+      summary_table = NULL,
+      overlap_table = NULL,
+      direction_table = NULL,
+      top10_table = NULL
+    ))
+  }
+  
+  # Filter for significant results only
+  sig_results <- maaslin_results %>%
+    dplyr::filter(qval < 0.05) %>%
+    dplyr::select(Taxon, value, coef, Phylum, qval)
+  
+  if (nrow(sig_results) == 0) {
+    return(list(
+      summary_table = NULL,
+      overlap_table = NULL,
+      direction_table = NULL,
+      top10_table = NULL
+    ))
+  }
+  
+  # 1. Summary table - Number of significant taxa per treatment
+  summary_table <- sig_results %>%
+    dplyr::group_by(value) %>%
+    dplyr::summarise(
+      Total_Significant = dplyr::n(),
+      Positive_Effect = sum(coef > 0),
+      Negative_Effect = sum(coef < 0),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(factor(value, levels = treatment_order)) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = paste("Summary of Significant Taxa by Treatment"),
+      subtitle = section_title
+    ) %>%
+    gt::cols_label(
+      value = "Treatment",
+      Total_Significant = "Total Significant",
+      Positive_Effect = "Positive Effect",
+      Negative_Effect = "Negative Effect"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Total_Significant, Positive_Effect, Negative_Effect),
+      decimals = 0
+    )
+  
+  # Color the Treatment column rows by treatment color
+  for (i in seq_along(treatment_order)) {
+    trt <- treatment_order[i]
+    if (trt %in% unique(sig_results$value)) {
+      trt_color <- treatment_color_scale[trt]
+      summary_table <- summary_table %>%
+        gt::tab_style(
+          style = cell_fill(color = trt_color),
+          locations = cells_body(
+            columns = "value",
+            rows = value == trt
+          )
+        ) %>%
+        gt::tab_style(
+          style = cell_text(color = "white", weight = "bold"),
+          locations = cells_body(
+            columns = "value",
+            rows = value == trt
+          )
+        )
+    }
+  }
+  
+  # 2. Top 10 taxa table - Most significant taxa by treatment
+  top10_data <- sig_results %>%
+    dplyr::group_by(value) %>%
+    dplyr::arrange(qval, .by_group = TRUE) %>%
+    dplyr::slice_head(n = 10) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(Taxon, value, coef, Phylum, qval) %>%
+    dplyr::arrange(factor(value, levels = treatment_order), qval)
+  
+  if (nrow(top10_data) > 0) {
+    top10_table <- top10_data %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "Top 10 Most Significant Taxa by Treatment",
+        subtitle = paste(section_title, "- Ranked by q-value")
+      ) %>%
+      gt::cols_label(
+        value = "Treatment",
+        coef = "Coefficient",
+        qval = "q-value"
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+      ) %>%
+      gt::fmt_scientific(
+        columns = qval,
+        decimals = 3
+      ) %>%
+      gt::fmt_number(
+        columns = coef,
+        decimals = 3
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(columns = "Taxon")
+      )
+    
+    # Color treatment rows by treatment color
+    for (i in seq_along(treatment_order)) {
+      trt <- treatment_order[i]
+      if (trt %in% unique(top10_data$value)) {
+        trt_color <- treatment_color_scale[trt]
+        top10_table <- top10_table %>%
+          gt::tab_style(
+            style = cell_fill(color = trt_color),
+            locations = cells_body(
+              columns = "value",
+              rows = value == trt
+            )
+          ) %>%
+          gt::tab_style(
+            style = cell_text(color = "white", weight = "bold"),
+            locations = cells_body(
+              columns = "value",
+              rows = value == trt
+            )
+          )
+      }
+    }
+  } else {
+    top10_table <- NULL
+  }
+  
+  # 3. Overlap table - Compare taxa between treatments
+  treatments <- unique(sig_results$value)
+  if (length(treatments) > 1) {
+    # Create list of taxa for each treatment
+    treatment_taxa <- list()
+    for (trt in treatments) {
+      treatment_taxa[[trt]] <- sig_results %>%
+        dplyr::filter(value == trt) %>%
+        dplyr::pull(Taxon)
+    }
+    
+    # Create overlap matrix
+    overlap_matrix <- matrix(0, nrow = length(treatments), ncol = length(treatments))
+    rownames(overlap_matrix) <- treatments
+    colnames(overlap_matrix) <- treatments
+    
+    for (i in seq_along(treatments)) {
+      for (j in seq_along(treatments)) {
+        if (i == j) {
+          overlap_matrix[i, j] <- length(treatment_taxa[[treatments[i]]])
+        } else {
+          overlap_matrix[i, j] <- length(intersect(treatment_taxa[[treatments[i]]], 
+                                                  treatment_taxa[[treatments[j]]]))
+        }
+      }
+    }
+    
+    # Convert to data frame for GT table
+    overlap_df <- as.data.frame(overlap_matrix) %>%
+      tibble::rownames_to_column("Treatment") %>%
+      dplyr::arrange(factor(Treatment, levels = treatment_order))
+    
+    overlap_table <- overlap_df %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "Taxa Overlap Between Treatments",
+        subtitle = paste(section_title, "- Number of shared significant taxa")
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+      ) %>%
+      gt::fmt_number(
+        columns = -Treatment,
+        decimals = 0
+      ) 
+    
+    # Apply treatment colors to column headers and row headers
+    for (i in seq_along(treatments)) {
+      trt <- treatments[i]
+      if (trt %in% names(treatment_color_scale)) {
+        trt_color <- treatment_color_scale[trt]
+        
+        # Color column header
+        overlap_table <- overlap_table %>%
+          gt::tab_style(
+            style = cell_fill(color = trt_color),
+            locations = cells_column_labels(columns = trt)
+          ) %>%
+          gt::tab_style(
+            style = cell_text(color = "white", weight = "bold"),
+            locations = cells_column_labels(columns = trt)
+          )
+        
+        # Color row header (first column) for matching treatment
+        overlap_table <- overlap_table %>%
+          gt::tab_style(
+            style = cell_fill(color = trt_color),
+            locations = cells_body(
+              columns = "Treatment",
+              rows = Treatment == trt
+            )
+          ) %>%
+          gt::tab_style(
+            style = cell_text(color = "white", weight = "bold"),
+            locations = cells_body(
+              columns = "Treatment",
+              rows = Treatment == trt
+            )
+          )
+      }
+    }
+  } else {
+    overlap_table <- NULL
+  }
+  
+  # 4. Direction comparison table - Compare positive/negative effects
+  if (length(treatments) > 1) {
+    direction_data <- sig_results %>%
+      dplyr::group_by(value) %>%
+      dplyr::summarise(
+        Positive_Taxa = list(Taxon[coef > 0]),
+        Negative_Taxa = list(Taxon[coef < 0]),
+        .groups = "drop"
+      )
+    
+    # Create direction comparison matrix
+    direction_matrix <- matrix("", nrow = length(treatments), ncol = length(treatments))
+    rownames(direction_matrix) <- treatments
+    colnames(direction_matrix) <- treatments
+    
+    for (i in seq_along(treatments)) {
+      for (j in seq_along(treatments)) {
+        if (i == j) {
+          # For diagonal cells, show total positive and negative counts for that treatment
+          # Find the correct treatment data
+          trt_name <- treatments[i]
+          trt_data <- direction_data[direction_data$value == trt_name, ]
+          
+          if (nrow(trt_data) > 0) {
+            pos_count <- length(trt_data$Positive_Taxa[[1]])
+            neg_count <- length(trt_data$Negative_Taxa[[1]])
+            direction_matrix[i, j] <- paste0(
+              "Pos: ", pos_count, 
+              " | Neg: ", neg_count
+            )
+          } else {
+            direction_matrix[i, j] <- "Pos: 0 | Neg: 0"
+          }
+        } else {
+          # Count taxa with same direction between two different treatments
+          pos_i <- direction_data$Positive_Taxa[[i]]
+          neg_i <- direction_data$Negative_Taxa[[i]]
+          pos_j <- direction_data$Positive_Taxa[[j]]
+          neg_j <- direction_data$Negative_Taxa[[j]]
+          
+          # Find taxa that are positive in both treatments
+          same_pos <- length(intersect(pos_i, pos_j))
+          # Find taxa that are negative in both treatments  
+          same_neg <- length(intersect(neg_i, neg_j))
+          
+          direction_matrix[i, j] <- paste0(
+            "Same Pos: ", same_pos, 
+            " | Same Neg: ", same_neg
+          )
+        }
+      }
+    }
+    
+    direction_df <- as.data.frame(direction_matrix) %>%
+      tibble::rownames_to_column("Treatment") %>%
+      dplyr::arrange(factor(Treatment, levels = treatment_order))
+    
+    direction_table <- direction_df %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "Direction of Effect Comparison",
+        subtitle = paste(section_title, "- Shared taxa with same direction of effect")
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+      )
+    
+    # Apply treatment colors to column headers and row headers
+    for (i in seq_along(treatments)) {
+      trt <- treatments[i]
+      if (trt %in% names(treatment_color_scale)) {
+        trt_color <- treatment_color_scale[trt]
+        
+        # Color column header
+        direction_table <- direction_table %>%
+          gt::tab_style(
+            style = cell_fill(color = trt_color),
+            locations = cells_column_labels(columns = trt)
+          ) %>%
+          gt::tab_style(
+            style = cell_text(color = "white", weight = "bold"),
+            locations = cells_column_labels(columns = trt)
+          )
+        
+        # Color row header (first column) for matching treatment
+        direction_table <- direction_table %>%
+          gt::tab_style(
+            style = cell_fill(color = trt_color),
+            locations = cells_body(
+              columns = "Treatment",
+              rows = Treatment == trt
+            )
+          ) %>%
+          gt::tab_style(
+            style = cell_text(color = "white", weight = "bold"),
+            locations = cells_body(
+              columns = "Treatment",
+              rows = Treatment == trt
+            )
+          )
+      }
+    }
+  } else {
+    direction_table <- NULL
+  }
+  
+  return(list(
+    summary_table = summary_table,
+    top10_table = top10_table,
+    overlap_table = overlap_table,
+    direction_table = direction_table
+  ))
+}
+
+```
+
+### Import Data
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+# ps.cleaned %>% microViz::samdat_tbl()
+
+```
+
+### Variables
+
+```{r}
+## Diversity Methods
+
+diversity.method <- list()
+diversity.method[["alpha"]] <- c("shannon", 
+                                 "inverse_simpson", 
+                                 "observed")
+diversity.method[["beta"]] <- c("bray", "canberra")
+
+## Stats/Plotting Variables
+
+alpha.stats <- list() # save all stat results here
+alpha.plots <- list() # save plots here
+
+beta.stats <- list() # save all stat results here
+beta.plots <- list() # save plots here
+
+diffAbnd.stats <- list() # save all stat results here
+diffAbnd.plots <- list() # save plots here
+```
+
+
+## 00) All {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+
+### MaAsLin2 {.tabset}
+
+
+```{r eval=FALSE, include=FALSE}
+# Set the subsection for this analysis
+
+# Define output directory
+tmp.output = paste0('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__', tmp.output.path.diffAbund)
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = ps.cleaned %>%
+                                     microViz::ps_filter(Time == 60),
+                                tmp.sample.names = ".sample_name",
+                                tmp.fixed = c("Treatment"),
+                                tmp.reference = c("Treatment,A- T- P-"),
+                                tmp.output = tmp.output)
+
+
+```
+
+#### 60 DPE {.tabset}
+
+```{r include=FALSE}
+tmp.resSubSection <- "All_60DPE"
+tmp.output.path.diffAbund <- paste0("All_60DPE__TREATMENT")
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+# Use here library to construct the file path
+tmp.file.path.diffAbund <- here::here("Code", "Analysis", "DiffAbund", paste0("MaAsLin2__", tmp.output.path.diffAbund), "significant_results.tsv")
+
+# Check if the file exists before trying to read it
+if (file.exists(tmp.file.path.diffAbund)) {
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <-
+    readr::read_delim(tmp.file.path.diffAbund,
+                      delim = "\t", escape_double = FALSE,
+                      trim_ws = TRUE) %>%
+    dplyr::left_join(ps.cleaned %>%
+                       microViz::ps_melt() %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, " ", ".")) %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, "-", ".")) %>%
+                       dplyr::select(Kingdom:Genus) %>%
+                       dplyr::distinct(Genus, .keep_all = T), by = c("feature" = "Genus")) %>%
+    dplyr::rename(Taxon = "feature")  %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", " ")) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::ungroup()
+} else {
+  warning("MaAsLin2 results file not found at: ", tmp.file.path.diffAbund)
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <- NULL
+}
+
+# Derive minimum and maximum coef scores for color scale
+global_min <- min(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+global_max <- max(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+gradient_palette <- scales::col_numeric(palette = c("blue", "white", "red"), domain = c(-6.1, 6.1)) # (GLobal Min and max, but I just set this manually.
+
+
+# Create column names
+columns <- c("Treatment")
+
+coef_columns <- c("coef_Treatment")
+
+```
+
+##### Heatmap {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, fig.height=12, fig.width=10, message=FALSE, warning=FALSE}
+
+# Create treatment-specific heatmap for all treatments
+if (!is.null(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]])) {
+  create_treatment_heatmap(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    top_n = 50,
+    title = "Top 50 Treatment-specific Taxa Abundance Changes\nAll Treatments at 60 DPE"
+  )
+} else {
+  cat("No MaAsLin2 results available for heatmap visualization.")
+}
+
+```
+
+##### Tables {.tabset .tabset-fade .tabset-pills}
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables <- create_taxa_comparison_tables(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    section_title = "All Treatments at 60 DPE"
+  )
+
+```
+
+###### Summary {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$summary_table
+
+```
+
+###### Top 10 {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$top10_table
+
+```
+
+###### Overlap {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$overlap_table
+
+```
+
+###### Direction {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$direction_table
+
+```
+
+## 01) What is the host-microbiome response to parasite exposure?  {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+
+### MaAsLin2 {.tabset}
+
+
+
+```{r eval=FALSE, include=FALSE}
+# Set the subsection for this analysis
+
+# Define output directory
+tmp.output = paste0('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__', tmp.output.path.diffAbund)
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = ps.cleaned %>%
+                                     microViz::ps_filter(Time == 60) %>%
+                                     microViz::ps_filter(Treatment  %in% c(
+                                                                  "A- T- P-",
+                                                                  "A- T- P+"#,
+                                                                  # "A+ T- P-",
+                                                                  # "A+ T- P+",
+                                                                  # "A- T+ P-",
+                                                                  # "A- T+ P+",
+                                                                  # "A+ T+ P-",
+                                                                  # "A+ T+ P+"
+                                                                  )),
+                                tmp.sample.names = ".sample_name",
+                                tmp.fixed = c("Treatment"),
+                                tmp.reference = c("Treatment,A- T- P-"),
+                                tmp.output = tmp.output)
+
+
+```
+
+#### 60 DPE {.tabset}
+
+```{r include=FALSE}
+
+tmp.output.path.diffAbund <- paste0("ParasiteExp_60DPE__TREATMENT")
+tmp.resSubSection <- "ParasiteExp_60DPE"
+
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+
+# Use here library to construct the file path
+tmp.file.path.diffAbund <- here::here("Code", "Analysis", "DiffAbund", paste0("MaAsLin2__", tmp.output.path.diffAbund), "significant_results.tsv")
+
+# Check if the file exists before trying to read it
+if (file.exists(tmp.file.path.diffAbund)) {
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <- 
+    readr::read_delim(tmp.file.path.diffAbund, 
+                      delim = "\t", escape_double = FALSE, 
+                      trim_ws = TRUE) %>%
+    dplyr::left_join(ps.cleaned %>% 
+                       microViz::ps_melt() %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, " ", ".")) %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, "-", ".")) %>%
+                       dplyr::select(Kingdom:Genus) %>%
+                       dplyr::distinct(Genus, .keep_all = T), by = c("feature" = "Genus")) %>%
+    dplyr::rename(Taxon = "feature")  %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", " ")) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::ungroup()
+} else {
+  warning("MaAsLin2 results file not found at: ", tmp.file.path.diffAbund)
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <- NULL
+}
+
+# Derive minimum and maximum coef scores for color scale
+global_min <- min(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+global_max <- max(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+gradient_palette <- scales::col_numeric(palette = c("blue", "white", "red"), domain = c(-4, 4)) # (GLobal Min and max, but I just set this manually.
+
+
+# Create column names
+columns <- c("Treatment")
+
+coef_columns <- c("coef_Treatment")
+
+```
+
+
+##### Heatmap {.tabset .tabset-fade .tabset-pills}
+
+```{r fig.width=8, fig.height=10, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create treatment-specific heatmap for parasite exposure only
+if (!is.null(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]])) {
+  create_treatment_heatmap(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    top_n = 50,
+    title = "Top 50 Treatment-specific Taxa Abundance Changes\nParasite Exposure Only at 60 DPE"
+  )
+} else {
+  cat("No MaAsLin2 results available for heatmap visualization.")
+}
+
+```
+
+
+##### Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+comparison_tables <- create_taxa_comparison_tables(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    section_title = "Parasite exposure only at 60 DPE"
+  )
+
+```
+
+
+###### Summary {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$summary_table
+
+```
+
+###### Top 10 {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$top10_table
+
+```
+
+###### Overlap {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$overlap_table
+
+```
+
+###### Direction {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$direction_table
+
+```
+
+
+## 02) Is the host-microbiome response to parasite exposure historically contingent? {.tabset}
+
+
+```{r eval=FALSE, include=FALSE}
+# Set the subsection for this analysis
+
+# Define output directory
+tmp.output = paste0('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__', tmp.output.path.diffAbund)
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = ps.cleaned %>%
+                                     microViz::ps_filter(Time == 60) %>%
+                                     microViz::ps_filter(Treatment  %in% c(
+                                                                  # "A- T- P-",
+                                                                  "A- T- P+",
+                                                                  # "A+ T- P-",
+                                                                  "A+ T- P+",
+                                                                  # "A- T+ P-",
+                                                                  "A- T+ P+",
+                                                                  # "A+ T+ P-",
+                                                                  "A+ T+ P+"
+                                                                  )),
+                                tmp.sample.names = ".sample_name",
+                                tmp.fixed = c("Treatment"),
+                                tmp.reference = c("Treatment,A- T- P+"),
+                                tmp.output = tmp.output)
+
+
+```
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+
+### MaAsLin2 {.tabset}
+
+#### 60 DPE {.tabset}
+
+```{r include=FALSE}
+
+tmp.output.path.diffAbund <- paste0("PriorStressParaExp_60DPE__TREATMENT")
+tmp.resSubSection <- "PriorStressParaExp_60DPE"
+
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+# Use here library to construct the file path
+tmp.file.path.diffAbund <- here::here("Code", "Analysis", "DiffAbund", paste0("MaAsLin2__", tmp.output.path.diffAbund), "significant_results.tsv")
+
+# Check if the file exists before trying to read it
+if (file.exists(tmp.file.path.diffAbund)) {
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <-
+    readr::read_delim(tmp.file.path.diffAbund,
+                      delim = "\t", escape_double = FALSE,
+                      trim_ws = TRUE) %>%
+    dplyr::left_join(ps.cleaned %>%
+                       microViz::ps_melt() %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, " ", ".")) %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, "-", ".")) %>%
+                       dplyr::select(Kingdom:Genus) %>%
+                       dplyr::distinct(Genus, .keep_all = T), by = c("feature" = "Genus")) %>%
+    dplyr::rename(Taxon = "feature")  %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", " ")) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::ungroup()
+} else {
+  warning("MaAsLin2 results file not found at: ", tmp.file.path.diffAbund)
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <- NULL
+}
+
+# Derive minimum and maximum coef scores for color scale
+global_min <- min(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+global_max <- max(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+gradient_palette <- scales::col_numeric(palette = c("blue", "white", "red"), domain = c(-6.1, 6.1)) # (GLobal Min and max, but I just set this manually.
+
+
+# Create column names
+columns <- c("Treatment")
+
+coef_columns <- c("coef_Treatment")
+
+```
+
+##### Heatmap {.tabset .tabset-fade .tabset-pills}
+
+```{r fig.width=8, fig.height=10, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create treatment-specific heatmap for parasite exposure with prior stressors
+if (!is.null(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]])) {
+  create_treatment_heatmap(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    top_n = 50,
+    title = "Top 50 Treatment-specific Taxa Abundance Changes\nParasite Exposure with Prior Stressors at 60 DPE"
+  )
+} else {
+  cat("No MaAsLin2 results available for heatmap visualization.")
+}
+
+```
+
+
+##### Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+comparison_tables <- create_taxa_comparison_tables(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    section_title = "Parasite Exposure with Prior Stressors at 60 DPE"
+  )
+
+```
+
+
+###### Summary {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$summary_table
+
+```
+
+###### Top 10 {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$top10_table
+
+```
+
+###### Overlap {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$overlap_table
+
+```
+
+###### Direction {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$direction_table
+
+```
+
+
+
+## 03) Is host-microbiome recovery historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+### MaAsLin2 {.tabset}
+
+
+```{r eval=FALSE, include=FALSE}
+# Set the subsection for this analysis
+
+# Define output directory
+tmp.output = paste0('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__', tmp.output.path.diffAbund)
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = ps.cleaned %>%
+                                     microViz::ps_filter(Time == 60) %>%
+                                     microViz::ps_filter(Treatment  %in% c(
+                                                                  "A- T- P-",
+                                                                  # "A- T- P+",
+                                                                  "A+ T- P-",
+                                                                  # "A+ T- P+",
+                                                                  "A- T+ P-",
+                                                                  # "A- T+ P+",
+                                                                  "A+ T+ P-"#,
+                                                                  # "A+ T+ P+"
+                                                                  )),
+                                tmp.sample.names = ".sample_name",
+                                tmp.fixed = c("Treatment"),
+                                tmp.reference = c("Treatment,A- T- P-"),
+                                tmp.output = tmp.output)
+
+
+```
+
+#### 60 DPE {.tabset}
+
+```{r include=FALSE}
+tmp.resSubSection <- "PriorStressNoParaExp_60DPE"
+tmp.output.path.diffAbund <- paste0("PriorStressNoParaExp_60DPE__TREATMENT")
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+# Use here library to construct the file path
+tmp.file.path.diffAbund <- here::here("Code", "Analysis", "DiffAbund", paste0("MaAsLin2__", tmp.output.path.diffAbund), "significant_results.tsv")
+
+# Check if the file exists before trying to read it
+if (file.exists(tmp.file.path.diffAbund)) {
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <-
+    readr::read_delim(tmp.file.path.diffAbund,
+                      delim = "\t", escape_double = FALSE,
+                      trim_ws = TRUE) %>%
+    dplyr::left_join(ps.cleaned %>%
+                       microViz::ps_melt() %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, " ", ".")) %>%
+                       dplyr::mutate(Genus = stringr::str_replace_all(Genus, "-", ".")) %>%
+                       dplyr::select(Kingdom:Genus) %>%
+                       dplyr::distinct(Genus, .keep_all = T), by = c("feature" = "Genus")) %>%
+    dplyr::rename(Taxon = "feature")  %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", " ")) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::ungroup()
+} else {
+  warning("MaAsLin2 results file not found at: ", tmp.file.path.diffAbund)
+  diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]] <- NULL
+}
+
+# Derive minimum and maximum coef scores for color scale
+global_min <- min(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+global_max <- max(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]][["coef"]], na.rm = TRUE)
+
+gradient_palette <- scales::col_numeric(palette = c("blue", "white", "red"), domain = c(-6.1, 6.1)) # (GLobal Min and max, but I just set this manually.
+
+
+# Create column names
+columns <- c("Treatment")
+
+coef_columns <- c("coef_Treatment")
+
+```
+
+##### Heatmap 
+
+```{r fig.width=8, fig.height=10, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create treatment-specific heatmap for parasite exposure with prior stressors
+if (!is.null(diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]])) {
+  create_treatment_heatmap(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    top_n = 50,
+    title = "Top 50 Treatment-specific Taxa Abundance Changes\n No Parasite Exposure with Prior Stressors at 60 DPE"
+  )
+} else {
+  cat("No MaAsLin2 results available for heatmap visualization.")
+}
+
+```
+
+
+##### Tables {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+comparison_tables <- create_taxa_comparison_tables(
+    maaslin_results = diffAbnd.stats[[tmp.resSubSection]][[tmp.output.path.diffAbund]][["Maaslin2"]][["output"]],
+    section_title = "No Parasite Exposure with Prior Stressors at 60 DPE"
+  )
+
+```
+
+
+
+###### Summary {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$summary_table
+
+```
+
+###### Top 10 {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$top10_table
+
+```
+
+###### Overlap {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$overlap_table
+
+```
+
+###### Direction {.tabset .tabset-fade .tabset-pills}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+comparison_tables$direction_table
+
+```
+
+## Export
+
+```{r eval=FALSE, include=FALSE}
+
+```
+

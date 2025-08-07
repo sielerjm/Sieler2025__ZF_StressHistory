@@ -1,0 +1,21 @@
+=== ENRICHMENT ANALYSIS REPORT ===
+Analysis: Parasite_Effect
+Date: 2025-07-10 19:12:42
+
+GO ENRICHMENT SUMMARY:
+  Total terms analyzed: 230
+  Significant terms (padj < 0.05): 216
+  Contrasts analyzed: 1
+
+KEGG ENRICHMENT SUMMARY:
+  Total pathways analyzed: 54
+  Significant pathways (padj < 0.05): 46
+  Contrasts analyzed: 1
+
+FILES SAVED:
+  - Individual contrast files (ALL and TOP20)
+  - Combined summary files (ALL and TOP50)
+  - Significant results only (padj < 0.05)
+  - Comprehensive report (RDS format)
+  - This text summary
+

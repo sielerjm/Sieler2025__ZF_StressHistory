@@ -1,0 +1,32 @@
+taxonomy_id	name	rank	TS047_RoL_RNA_477_TS047_RoL_RNA_477_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_655_TS047_RoL_RNA_655_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_20_TS047_RoL_RNA_20_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_328_TS047_RoL_RNA_328_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_46_TS047_RoL_RNA_46_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_710_TS047_RoL_RNA_710_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_16_TS047_RoL_RNA_16_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_355_TS047_RoL_RNA_355_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_177_TS047_RoL_RNA_177_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_291_TS047_RoL_RNA_291_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_532_TS047_RoL_RNA_532_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_498_TS047_RoL_RNA_498_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_708_TS047_RoL_RNA_708_kraken2_custom_k2.kraken2.kraken2.report	TS047_RoL_RNA_526_TS047_RoL_RNA_526_kraken2_custom_k2.kraken2.kraken2.report
+0			556036	411602	460645	821418	166331	574480	392529	1481679	427324	573082	450929	777264	692427	461835
+1	root	no rank	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+131567	cellular organisms	cellular root	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+2759	Eukaryota	domain	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+33154	Opisthokonta	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+33208	Metazoa	kingdom	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+6072	Eumetazoa	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+33213	Bilateria	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+33511	Deuterostomia	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7711	Chordata	phylum	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+89593	Craniata	subphylum	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7742	Vertebrata	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7776	Gnathostomata	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+117570	Teleostomi	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+117571	Euteleostomi	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7898	Actinopterygii	superclass	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+186623	Actinopteri	class	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+41665	Neopterygii	subclass	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+32443	Teleostei	infraclass	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+1489341	Osteoglossocephalai	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+186625	Clupeocephala	no rank	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+186634	Otomorpha	cohort	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+32519	Ostariophysi	subcohort	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+186626	Otophysi	clade	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+186627	Cypriniphysae	superorder	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7952	Cypriniformes	order	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+30727	Cyprinoidei	suborder	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+2743709	Danionidae	family	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+2743711	Danioninae	subfamily	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7954	Danio	genus	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+7955	Danio rerio	species	12753331	14664101	12604174	13366104	15182217	11597542	9880833	7060304	11186304	11263428	12227183	12280502	15798185	19421896

@@ -1,0 +1,31 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	actomyosin structure organization	0.04125057541383792	4	1.3845699889974097	-1.0322457716366826	1	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	regulation of reactive oxygen species metabolic process	0.04125057541383792	2	1.3845699889974097	2.697010623341024	2	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	acrosome reaction	0.060977622065435604	1	1.214829515752794	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	apoptotic signaling pathway	0.060977622065435604	2	1.214829515752794	-2.2228346497031835	0	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cell-cell adhesion via plasma-membrane adhesion molecules	0.060977622065435604	2	1.214829515752794	-3.566569123520375	0	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	egg coat formation	0.060977622065435604	1	1.214829515752794	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	homophilic cell adhesion via plasma membrane adhesion molecules	0.060977622065435604	2	1.214829515752794	-3.566569123520375	0	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	positive regulation of acrosome reaction	0.060977622065435604	1	1.214829515752794	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	regulation of acrosome reaction	0.060977622065435604	1	1.214829515752794	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	binding of sperm to zona pellucida	0.06708116034746098	1	1.1733994337203804	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cellular modified amino acid biosynthetic process	0.06708116034746098	1	1.1733994337203804	-4.54000823889258	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	heterophilic cell-cell adhesion via plasma membrane cell adhesion molecules	0.06708116034746098	1	1.1733994337203804	-3.9925532522702887	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	sperm-egg recognition	0.06708116034746098	1	1.1733994337203804	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cell-cell recognition	0.06759465591818932	1	1.1700876383332903	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	positive regulation of reproductive process	0.06759465591818932	1	1.1700876383332903	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cell-cell adhesion	0.08170866906618207	2	1.087731863567036	-3.566569123520375	0	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	single fertilization	0.08661311491444355	1	1.0624163423506783	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	axoneme assembly	0.08830338223394167	1	1.0540226615707204	-2.0218184029319133	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cell migration involved in gastrulation	0.08830338223394167	1	1.0540226615707204	-3.1405849947704616	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cell recognition	0.08830338223394167	1	1.0540226615707204	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	cellular modified amino acid metabolic process	0.08830338223394167	1	1.0540226615707204	-4.54000823889258	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	defense response to symbiont	0.08830338223394167	1	1.0540226615707204	-2.9216091508002866	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	defense response to virus	0.08830338223394167	1	1.0540226615707204	-2.9216091508002866	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	female gamete generation	0.08830338223394167	1	1.0540226615707204	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	fertilization	0.08830338223394167	1	1.0540226615707204	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	microtubule bundle formation	0.08830338223394167	1	1.0540226615707204	-2.0218184029319133	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	oogenesis	0.08830338223394167	1	1.0540226615707204	3.215648243168136	1	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	regulation of reproductive process	0.08830338223394167	1	1.0540226615707204	3.215648243168136	1	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	one-carbon compound transport	0.0950842017473607	2	1.0218916351540606	1.214654166568672	1	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	response to virus	0.09820489055808633	1	1.0078668840103644	-2.9216091508002866	0	1		

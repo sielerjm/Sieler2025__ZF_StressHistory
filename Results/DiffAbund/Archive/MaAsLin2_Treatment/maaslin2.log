@@ -1,0 +1,32 @@
+2025-05-11 14:11:00.889645 INFO::Writing function arguments to log file
+2025-05-11 14:11:00.90179 DEBUG::Function arguments
+2025-05-11 14:11:00.911096 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment
+2025-05-11 14:11:00.911466 DEBUG::Min Abundance: 0.000000
+2025-05-11 14:11:00.911769 DEBUG::Min Prevalence: 0.000000
+2025-05-11 14:11:00.912064 DEBUG::Normalization: TSS
+2025-05-11 14:11:00.912339 DEBUG::Transform: LOG
+2025-05-11 14:11:00.912603 DEBUG::Analysis method: LM
+2025-05-11 14:11:00.912883 DEBUG::Max significance: 0.250000
+2025-05-11 14:11:00.91315 DEBUG::Random effects:
+2025-05-11 14:11:00.913412 DEBUG::Fixed effects: Treatment
+2025-05-11 14:11:00.913678 DEBUG::Correction method: BH
+2025-05-11 14:11:00.913948 DEBUG::Standardize: FALSE
+2025-05-11 14:11:00.914199 DEBUG::Cores: 8
+2025-05-11 14:11:00.91446 INFO::Verifying options selected are valid
+2025-05-11 14:11:00.986623 INFO::Determining format of input files
+2025-05-11 14:11:00.988084 INFO::Input format is data samples as rows and metadata samples as rows
+2025-05-11 14:11:00.991163 DEBUG::A total of 594 samples were found in both the data and metadata
+2025-05-11 14:11:00.991478 DEBUG::Reordering data/metadata to use same sample ordering
+2025-05-11 14:11:00.997359 INFO::Formula for fixed effects: expr ~  Treatment
+2025-05-11 14:11:00.999287 INFO::Filter data based on min abundance and min prevalence
+2025-05-11 14:11:01.000428 INFO::Total samples in data: 594
+2025-05-11 14:11:01.001627 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-05-11 14:11:01.016168 INFO::Total filtered features: 0
+2025-05-11 14:11:01.017695 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-05-11 14:11:01.113868 INFO::Total filtered features with variance filtering: 0
+2025-05-11 14:11:01.11672 INFO::Filtered feature names from variance filtering:
+2025-05-11 14:11:01.118073 INFO::Running selected normalization method: TSS
+2025-05-11 14:11:01.141609 INFO::Bypass z-score application to metadata
+2025-05-11 14:11:01.143016 INFO::Running selected transform method: LOG
+2025-05-11 14:11:01.188359 INFO::Running selected analysis method: LM
+2025-05-11 14:11:01.192329 INFO::Creating cluster of 8 R processes

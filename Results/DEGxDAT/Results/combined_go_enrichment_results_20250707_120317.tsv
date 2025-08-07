@@ -1,0 +1,26 @@
+ID	Description	p.adjust	Count	geneID	log_padj	analysis_group
+GO:0006997	nucleus organization	0.008214582947620544	7	wrap53/chmp2a/bend3/nsfl1c/bmb/coil/lmnl3	2.0854144806945047	00_All_Treatments
+GO:0019941	modification-dependent protein catabolic process	0.013747863509325574	22	uchl5/psmd4a/psmd6/lonp1/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.8617647882485882	00_All_Treatments
+GO:0043632	modification-dependent macromolecule catabolic process	0.013747863509325574	22	uchl5/psmd4a/psmd6/lonp1/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.8617647882485882	00_All_Treatments
+GO:0006511	ubiquitin-dependent protein catabolic process	0.017068892330289312	21	uchl5/psmd4a/psmd6/erlec1/ufl1/ube2h/rnf111/prkn/ube2d2/ube2d2l/nsfl1c/psmd11b/psmc3/uba7/uba1/herc56.2/psma6a/usp11/psmc1a/psmc2/usp38	1.7677946611026998	00_All_Treatments
+GO:0006998	nuclear envelope organization	0.09685480615825985	4	chmp2a/nsfl1c/bmb/lmnl3	1.013878823719031	00_All_Treatments
+GO:0019941	modification-dependent protein catabolic process	8.746324795260377e-4	10	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/lonp1/psmd3	3.058174399141834	01_Parasite_Exposure_Response
+GO:0043632	modification-dependent macromolecule catabolic process	8.746324795260377e-4	10	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/lonp1/psmd3	3.058174399141834	01_Parasite_Exposure_Response
+GO:0006511	ubiquitin-dependent protein catabolic process	0.003082109008082881	9	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/psmd3	2.511152005211474	01_Parasite_Exposure_Response
+GO:0022613	ribonucleoprotein complex biogenesis	0.016685767099521527	7	mtrex/prpf31/srpk1b/denr/imp4/nom1/mcts1	1.7776538226063583	01_Parasite_Exposure_Response
+GO:0043161	proteasome-mediated ubiquitin-dependent protein catabolic process	0.025492260763051312	6	spsb1/psmc4/nsfl1c/psmd4a/psmd6/psmd1	1.593591647724925	01_Parasite_Exposure_Response
+GO:0010498	proteasomal protein catabolic process	0.040536790463273985	6	spsb1/psmc4/nsfl1c/psmd4a/psmd6/psmd1	1.3921506399367725	01_Parasite_Exposure_Response
+GO:0006002	fructose 6-phosphate metabolic process	0.040536790463273985	2	gfpt1/pfkpa	1.3921506399367725	01_Parasite_Exposure_Response
+GO:0022618	protein-RNA complex assembly	0.060810728186260044	4	prpf31/srpk1b/denr/mcts1	1.2160197960383887	01_Parasite_Exposure_Response
+GO:0071826	protein-RNA complex organization	0.06221532648651334	4	prpf31/srpk1b/denr/mcts1	1.206102615492658	01_Parasite_Exposure_Response
+GO:0033617	mitochondrial cytochrome c oxidase assembly	0.063006847550935	2	uqcc6/sco2	1.2006122490863969	01_Parasite_Exposure_Response
+GO:0006260	DNA replication	0.063006847550935	4	rfc3/recql4/rmi1/ssbp1	1.2006122490863969	01_Parasite_Exposure_Response
+GO:0008535	respiratory chain complex IV assembly	0.06473201231393824	2	uqcc6/sco2	1.1888808919276106	01_Parasite_Exposure_Response
+GO:0007005	mitochondrion organization	0.07649747297378347	5	bbc3/uqcc6/sco2/ssbp1/lonp1	1.1163529111427	01_Parasite_Exposure_Response
+GO:0042742	defense response to bacterium	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0009617	response to bacterium	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0098542	defense response to other organism	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0043207	response to external biotic stimulus	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0051707	response to other organism	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0009607	response to biotic stimulus	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response
+GO:0006952	defense response	0.051785821792645015	1	zranb2	1.2857891275146147	02_Historical_Contingency_Parasite_Response

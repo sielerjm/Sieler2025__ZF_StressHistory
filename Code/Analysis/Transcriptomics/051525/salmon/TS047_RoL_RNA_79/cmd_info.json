@@ -1,0 +1,11 @@
+{
+    "salmon_version": "1.10.3",
+    "geneMap": "GCF_049306965.1_GRCz12tu_genomic.filtered.gtf",
+    "threads": "6",
+    "libType": "ISR",
+    "index": "salmon",
+    "mates1": "TS047_RoL_RNA_79_trimmed_1_val_1.fq.gz",
+    "mates2": "TS047_RoL_RNA_79_trimmed_2_val_2.fq.gz",
+    "output": "TS047_RoL_RNA_79",
+    "auxDir": "aux_info"
+}

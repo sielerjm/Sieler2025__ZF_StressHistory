@@ -1,0 +1,1837 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Taxa-Mortality Correlation Analysis"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+    
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE,
+	cache.comments = FALSE,
+	cache.lazy = TRUE,
+	cache.rebuild = FALSE,
+	include = FALSE
+)
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+```
+
+## Configuration
+
+```{r config, include=FALSE}
+# Configuration options for analysis
+# Set to TRUE to load existing results, FALSE to recompute
+LOAD_EXISTING_RESULTS <- TRUE
+
+# Analysis parameters
+top_n_taxa <- 10  # Number of top taxa to display in correlation summaries
+
+# Directory to save/load results
+RESULTS_DIR <- "/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DEGxDAT/Results"
+
+# Create results directory if it doesn't exist
+if (!dir.exists(RESULTS_DIR)) {
+  dir.create(RESULTS_DIR, recursive = TRUE)
+  cat("Created results directory:", RESULTS_DIR, "\n")
+}
+
+# Function to save results with timestamp
+save_results <- function(results, filename, results_dir = RESULTS_DIR) {
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  full_filename <- file.path(results_dir, paste0(filename, "_", timestamp, ".rds"))
+  saveRDS(results, full_filename)
+  cat("Saved results to:", full_filename, "\n")
+  return(full_filename)
+}
+
+# Function to load most recent results file
+load_latest_results <- function(filename_pattern, results_dir = RESULTS_DIR) {
+  files <- list.files(results_dir, pattern = filename_pattern, full.names = TRUE)
+  if (length(files) == 0) {
+    cat("No existing results found for pattern:", filename_pattern, "\n")
+    return(NULL)
+  }
+  latest_file <- files[order(file.info(files)$mtime, decreasing = TRUE)[1]]
+  cat("Loading results from:", latest_file, "\n")
+  return(readRDS(latest_file))
+}
+
+# Display configuration
+cat("=== ANALYSIS CONFIGURATION ===\n")
+cat("Load existing results:", LOAD_EXISTING_RESULTS, "\n")
+cat("Results directory:", RESULTS_DIR, "\n")
+cat("Top N taxa for correlation:", top_n_taxa, "\n")
+cat("================================\n\n")
+```
+
+## Overview
+
+This script performs integrated analysis of differentially abundant taxa (DAT) correlation with mortality across four research questions:
+
+1. **All Treatments**: Correlation between top differentially abundant taxa and mortality across all treatments
+2. **Parasite Exposure Response**: Correlation between taxa and mortality in parasite-exposed vs unexposed groups (A- T- P- vs A- T- P+)
+3. **Historical Contingency of Parasite Response**: Correlation between taxa and mortality in parasite-exposed groups with different prior stressors (A- T- P+ vs A+ T- P+, A- T+ P+, A+ T+ P+)
+4. **Historical Contingency of Recovery**: Correlation between taxa and mortality in parasite-unexposed groups with different prior stressors (A- T- P- vs A+ T- P-, A- T+ P-, A+ T+ P-)
+
+```{r eval=FALSE, include=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(gt)
+library(pheatmap)
+library(ggrepel)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(DESeq2)
+library(phyloseq)
+library(microViz)
+library(vegan)
+library(RColorBrewer)
+library(clusterProfiler)
+library(ggpubr)
+library(org.Dr.eg.db)
+library(ppcor)
+library(GO.db)
+library(AnnotationDbi)
+library(KEGGREST)
+library(nptest)
+library(parallel)
+library(tidyverse)
+library(corrr)
+library(Hmisc)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+
+# Function to normalize taxa counts
+normalize_taxa_counts <- function(ps) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  ps_normalized <- ps %>%
+    microViz::tax_fix() %>%
+    microViz::tax_transform("compositional", rank = "Genus") %>%
+    microViz::tax_transform("log2", zero_replace = "halfmin", chain = TRUE)
+  
+  return(ps_normalized)
+}
+
+# Function to extract top differentially abundant taxa
+extract_top_taxa <- function(maaslin_results, taxa_by_tank, top_n = 10) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  if (is.null(maaslin_results) || nrow(maaslin_results) == 0) {
+    return(character(0))
+  }
+  
+  # Get available taxa columns from taxa_by_tank
+  available_taxa <- names(taxa_by_tank)[!names(taxa_by_tank) %in% c("Treatment", "Tank.ID")]
+  
+  # Get top taxa from MaAsLin2 results
+  top_taxa <- maaslin_results %>%
+    dplyr::filter(qval < 0.05) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::slice_head(n = top_n) %>%
+    dplyr::pull(Taxon) %>%
+    unique()
+  
+  # Filter to only include taxa that are available in taxa_by_tank
+  available_top_taxa <- top_taxa[top_taxa %in% available_taxa]
+  
+  # If we don't have enough available taxa, add more from the results
+  if (length(available_top_taxa) < top_n && length(top_taxa) > length(available_top_taxa)) {
+    remaining_taxa <- top_taxa[!top_taxa %in% available_top_taxa]
+    additional_needed <- top_n - length(available_top_taxa)
+    additional_taxa <- remaining_taxa[1:min(additional_needed, length(remaining_taxa))]
+    available_top_taxa <- c(available_top_taxa, additional_taxa)
+  }
+  
+  # Print information about matching
+  cat("Found", length(top_taxa), "significant taxa in MaAsLin2 results\n")
+  cat("Available in taxa_by_tank:", length(available_top_taxa), "taxa\n")
+  if (length(top_taxa) > length(available_top_taxa)) {
+    missing_taxa <- top_taxa[!top_taxa %in% available_top_taxa]
+    cat("Missing taxa:", paste(missing_taxa[1:min(5, length(missing_taxa))], collapse = ", "))
+    if (length(missing_taxa) > 5) cat(" ... and", length(missing_taxa) - 5, "more")
+    cat("\n")
+  }
+  
+  return(available_top_taxa)
+}
+
+# Function to calculate correlation between taxa and mortality
+calculate_taxa_mortality_correlation <- function(taxa_data, mortality_data, method = "pearson") {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  # Join taxa and mortality data
+  combined_data <- dplyr::left_join(taxa_data, mortality_data, by = c("Treatment", "Tank.ID"))
+  
+  # Calculate correlations for each taxon
+  correlation_results <- list()
+  
+  # Define columns to exclude (non-taxa columns)
+  exclude_cols <- c(
+    "percent_mortality", "n_fish", "n_infected", "mean_worm_burden", "percent_infected",
+    "Tank.ID", "total_per_group", "dead", "n", "Survived", "percent_survived"
+  )
+  
+  # Get numeric columns (taxa abundances only)
+  taxa_cols <- names(combined_data)[sapply(combined_data, is.numeric)]
+  taxa_cols <- taxa_cols[!taxa_cols %in% exclude_cols]
+  
+  # Additional check: only include columns that are likely taxa (not metadata)
+  # Taxa columns should not contain common metadata patterns
+  taxa_cols <- taxa_cols[!grepl("^(Treatment|Tank|ID|total|dead|n_|percent_|mean_)", taxa_cols)]
+  
+  for (taxon in taxa_cols) {
+    # Calculate correlation
+    cor_result <- stats::cor.test(
+      combined_data[[taxon]], 
+      combined_data$percent_mortality, 
+      method = method,
+      use = "complete.obs"
+    )
+    
+    correlation_results[[taxon]] <- data.frame(
+      Taxon = taxon,
+      Correlation = cor_result$estimate,
+      P_value = cor_result$p.value,
+      Method = method,
+      N = sum(!is.na(combined_data[[taxon]]) & !is.na(combined_data$percent_mortality)),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  # Combine results
+  results_df <- dplyr::bind_rows(correlation_results) %>%
+    dplyr::arrange(P_value) %>%
+    dplyr::mutate(
+      Significant = P_value < 0.05,
+      Direction = ifelse(Correlation > 0, "Positive", "Negative")
+    )
+  
+  return(results_df)
+}
+
+# Function to create correlation heatmap
+create_correlation_heatmap <- function(correlation_results, title = "Taxa-Mortality Correlations") {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  if (nrow(correlation_results) == 0) {
+    cat("No correlation results available for heatmap visualization.\n")
+    return(NULL)
+  }
+  
+  # Filter for significant correlations only (p < 0.05)
+  significant_results <- correlation_results %>%
+    dplyr::filter(P_value < 0.05)
+  
+  if (nrow(significant_results) == 0) {
+    cat("No significant correlations found for heatmap visualization.\n")
+    return(NULL)
+  }
+  
+  # Prepare data for heatmap (significant correlations only)
+  heatmap_data <- significant_results %>%
+    dplyr::select(Taxon, Correlation, P_value) %>%
+    dplyr::mutate(
+      Significance = ifelse(P_value < 0.001, "***",
+                           ifelse(P_value < 0.01, "**",
+                                  ifelse(P_value < 0.05, "*", ""))),
+      Label = paste0(round(Correlation, 3), Significance)
+    ) %>%
+    dplyr::arrange(P_value)
+  
+  # Create correlation matrix for heatmap
+  cor_matrix <- matrix(heatmap_data$Correlation, ncol = 1)
+  rownames(cor_matrix) <- heatmap_data$Taxon
+  colnames(cor_matrix) <- "Mortality"
+  
+  # Create annotation for significance with white to black gradient
+  annotation_row <- data.frame(
+    P_value = heatmap_data$P_value,
+    row.names = heatmap_data$Taxon
+  )
+  
+  # Create annotation colors (white to black gradient)
+  annotation_colors <- list(
+    P_value = colorRampPalette(c("black", "white"))(100)
+  )
+  
+  # Create color palette
+  max_abs_cor <- max(abs(cor_matrix), na.rm = TRUE)
+  heatmap_colors <- colorRampPalette(c("blue", "white", "red"))(100)
+  
+      if (nrow(cor_matrix) < 2) {
+      cluster_rows <- FALSE
+    } else {
+      cluster_rows <- TRUE
+    }
+  
+  # Create the heatmap
+  pheatmap::pheatmap(
+    cor_matrix,
+    color = heatmap_colors,
+    breaks = seq(-max_abs_cor, max_abs_cor, length.out = 101),
+    annotation_row = annotation_row,
+    annotation_colors = annotation_colors,
+    cluster_rows = cluster_rows,
+    cluster_cols = FALSE,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    fontsize_row = 8,
+    fontsize_col = 10,
+    main = paste0(title, "\n(Significant correlations only, p < 0.05)"),
+    treeheight_row = 20,
+    treeheight_col = 0,
+    cellwidth = 30,  # Make cells narrower
+    cellheight = 20  # Make cells shorter
+  )
+}
+
+# Function to create correlation summary table
+create_correlation_table <- function(correlation_results, title = "Taxa-Mortality Correlation Results") {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  if (nrow(correlation_results) == 0) {
+    return(NULL)
+  }
+  
+  # Create summary table
+  summary_table <- correlation_results %>%
+    dplyr::mutate(
+      Correlation = round(Correlation, 3),
+      P_value = format.pval(P_value, digits = 3)
+    ) %>%
+    dplyr::select(Taxon, Correlation, P_value, Significant, Direction, N) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = title,
+      subtitle = "Correlation between differentially abundant taxa and mortality"
+    ) %>%
+    gt::cols_label(
+      Taxon = "Taxon",
+      Correlation = "Correlation",
+      P_value = "P-value",
+      Significant = "Significant",
+      Direction = "Direction",
+      N = "Sample Size"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Correlation),
+      decimals = 3
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_body(columns = "Taxon")
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "lightgreen"),
+      locations = cells_body(
+        columns = "Significant",
+        rows = Significant == TRUE
+      )
+    )
+  
+  return(summary_table)
+}
+
+
+# Redefine the function to ensure it's available
+extract_top_taxa <- function(maaslin_results, taxa_by_tank, top_n = 10) {
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  if (is.null(maaslin_results) || nrow(maaslin_results) == 0) {
+    return(character(0))
+  }
+  
+  # Get available taxa columns from taxa_by_tank
+  available_taxa <- names(taxa_by_tank)[!names(taxa_by_tank) %in% c("Treatment", "Tank.ID")]
+  
+  # Get top taxa from MaAsLin2 results
+  top_taxa <- maaslin_results %>%
+    dplyr::filter(qval < 0.05) %>%
+    dplyr::arrange(qval) %>%
+    dplyr::slice_head(n = top_n) %>%
+    dplyr::pull(Taxon) %>%
+    unique()
+  
+  # Filter to only include taxa that are available in taxa_by_tank
+  available_top_taxa <- top_taxa[top_taxa %in% available_taxa]
+  
+  # If we don't have enough available taxa, add more from the results
+  if (length(available_top_taxa) < top_n && length(top_taxa) > length(available_top_taxa)) {
+    remaining_taxa <- top_taxa[!top_taxa %in% available_top_taxa]
+    additional_needed <- top_n - length(available_top_taxa)
+    additional_taxa <- remaining_taxa[1:min(additional_needed, length(remaining_taxa))]
+    available_top_taxa <- c(available_top_taxa, additional_taxa)
+  }
+  
+  # Print information about matching
+  cat("Found", length(top_taxa), "significant taxa in MaAsLin2 results\n")
+  cat("Available in taxa_by_tank:", length(available_top_taxa), "taxa\n")
+  if (length(top_taxa) > length(available_top_taxa)) {
+    missing_taxa <- top_taxa[!top_taxa %in% available_top_taxa]
+    cat("Missing taxa:", paste(missing_taxa[1:min(5, length(missing_taxa))], collapse = ", "))
+    if (length(missing_taxa) > 5) cat(" ... and", length(missing_taxa) - 5, "more")
+    cat("\n")
+  }
+  
+  return(available_top_taxa)
+}
+
+
+create_taxa_mortality_plots <- function(correlation_results,
+                                        taxa_data,
+                                        mortality_data,
+                                        title_prefix = "") {
+
+  #––– 1. keep only significant taxa –––#
+  sig_taxa <- correlation_results %>%
+    dplyr::filter(P_value < 0.05) %>%
+    dplyr::pull(Taxon)
+
+  if (length(sig_taxa) == 0L) {
+    cli::cli_alert_warning("No significant correlations for plotting.")
+    return(NULL)
+  }
+
+  plot_list <- vector("list", length(sig_taxa))
+  names(plot_list) <- sig_taxa
+  set.seed(42)
+
+  for (taxon in sig_taxa) {
+
+    #––– 2. prep abundance data –––#
+    plot_data <- taxa_data %>%
+      dplyr::select(Treatment, Tank.ID, !!taxon) %>%
+      dplyr::rename(log2_abund = !!taxon) %>%
+      dplyr::mutate(
+        Taxon_Abund_pct = 2 ^ log2_abund * 100          # convert log2-abundance to %
+      )
+
+    max_abund <- max(plot_data$Taxon_Abund_pct, na.rm = TRUE)
+
+    #––– 3. scale mortality to primary y-axis –––#
+    # mort_scaled <- mortality_data %>%
+    #   dplyr::mutate(
+    #     Mort_scaled = percent_mortality / 50 * max_abund,     # bar height
+    #     label_y     = Mort_scaled + 0.02 * max_abund,          # text just above bar
+    #     label_txt   = paste0(round(percent_mortality, 0), "%")       # one decimal place
+    #   )
+    
+    mort_scaled <- mortality_data %>%
+        dplyr::mutate(
+                Mort_scaled = if_else(percent_mortality / 50 * max_abund <= 0, 1e-4, percent_mortality / 100 * max_abund),  # percent_mortality / 50 * max_abund ,     # bar height
+                label_y     = Mort_scaled * 1.05, #Mort_scaled + 0.02 * max_abund,          # text just above bar
+                label_txt   = paste0(round(percent_mortality, 0), "%")       # one decimal place
+        )
+
+    #––– 4. plotting –––#
+    dodge  <- ggplot2::position_dodge(width = 0.8)
+    jitdod <- ggplot2::position_jitterdodge(dodge.width = 0.8,
+                                            jitter.width = 0.15,
+                                            jitter.height = 0)
+
+    ymax <- max(c(max_abund, mort_scaled$label_y), na.rm = TRUE) * 1.05
+
+    p <- ggplot2::ggplot() +
+
+      ## 4a. mortality bars
+      ggplot2::geom_col(
+        data    = mort_scaled,
+        ggplot2::aes(x = Treatment,
+                     y = Mort_scaled,
+                     group = Tank.ID),
+        position = dodge,
+        fill     = "red",
+        alpha    = 0.25,
+        width    = 0.7
+      ) +
+
+      ## 4b. mortality labels
+      ggplot2::geom_text(
+        data    = mort_scaled,
+        ggplot2::aes(x = Treatment,
+                     y = label_y,
+                     group = Tank.ID,
+                     label = label_txt),
+        position = dodge,
+        size     = 4,
+        vjust    = 3
+      ) +
+
+      ## 4d. individual points
+      ggplot2::geom_point(
+        data    = plot_data,
+        ggplot2::aes(x     = Treatment,
+                     y     = Taxon_Abund_pct,
+                     group = Tank.ID,
+                     color = Treatment,
+                     fill = Treatment),
+        position = jitdod,
+        size     = 5,
+        shape = 21,
+        alpha = .5
+      ) +
+        ggplot2::geom_point(
+        data    = plot_data,
+        ggplot2::aes(x     = Treatment,
+                     y     = Taxon_Abund_pct,
+                     group = Tank.ID,
+                     color = Treatment),
+        position = jitdod,
+        size     = 5,
+        shape = 21
+      ) +
+
+      ## 4e. scales & themes
+      ggplot2::scale_fill_manual(values = treatment_color_scale) +
+      ggplot2::scale_color_manual(values = treatment_color_scale) +
+        
+      # ggplot2::scale_y_continuous(
+      #   name   = glue::glue("Relative Abundance of {taxon} (%)"),
+      #   limits = c(0, ymax),
+      #   breaks = scales::pretty_breaks(8)
+      # ) +
+        
+        # ggplot2::scale_y_continuous(
+        #       trans  = "log2",
+        #       breaks = log2(1 / 2^(0:18)),
+        #       labels = function(x) paste0(100 * round(2^x, 5), "%")
+        #     )
+
+        # facet_wrap(.~stringr::str_detect(as.character(Treatment), "P\\+"), scales = "free_x") +
+      ggplot2::labs(
+        title    = glue::glue("{title_prefix} : {taxon}"),
+        subtitle = glue::glue(
+          "Correlation with mortality: r = {round(correlation_results$Correlation[correlation_results$Taxon == taxon], 2)}, ",
+          "p = {scales::pvalue(correlation_results$P_value[correlation_results$Taxon == taxon], accuracy = .001)}"
+        ),
+        x = "Treatment",
+        y = glue::glue("Relative Abundance of {taxon} (%)"),
+        caption = "Bars = Percent Mortality; Dots = average relative abundance (TSS) of taxon."
+      ) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        axis.text.x     = NULL, #ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+      ) 
+
+    plot_list[[taxon]] <- p
+  }
+
+  plot_list
+}
+
+```
+
+### Import Data
+
+```{r}
+
+ps.unclean <- readRDS('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds')
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+
+# Create a dataframe for mortality using the "unclean" phyloseq object
+# The unclean phyloseq object is prior to removing samples during post-DADA2 processing (e.g., insufficient reads/sample)
+
+data.mortality <-
+    ps.unclean %>%
+
+    ## Update Metadata
+    ps_rename(Time = Timepoint) %>%
+    microViz::ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+    microViz::ps_filter(Treatment != "Unknown") %>%
+    microViz::ps_mutate(
+        History = case_when(
+            Antibiotics + Temperature == 0 ~ 0,
+            Antibiotics + Temperature == 1 ~ 1,
+            Antibiotics + Temperature == 2 ~ 2,
+        ), .after = "Treatment"
+    ) %>%
+    
+    ## Additional metadata updates, factorizing metadata
+    microViz::ps_mutate(
+    # Create treatment code
+        treatment_code = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+        ),
+        # Create treatment group factor
+        treatment_group = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+          TRUE ~ "Control"
+        ),
+        # Convert to factor with appropriate levels
+        treatment_group = factor(treatment_group, 
+                               levels = c("Control", "Parasite", 
+                                          "Antibiotics", "Antibiotics_Parasite",
+                                          "Temperature", "Temperature_Parasite",
+                                        "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                               ),
+        treatment_code = factor(treatment_code, levels = treatment_order),
+        # Create time point factor
+        time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+        # Create pathogen status factor
+        pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                               levels = c("Unexposed", "Exposed")),
+        # Create sex factor
+        sex = factor(Sex, levels = c("M", "F"))
+        ) %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+    microViz::samdat_tbl() 
+
+# Create mortality data by treatment and tank
+mortality_by_tank <- data.mortality %>%
+    dplyr::group_by(Treatment, Tank.ID) %>%
+    dplyr::summarise(
+        n_fish = n(),
+        n_infected = sum(Total.Worm.Count > 0, na.rm = TRUE),
+        mean_worm_burden = mean(Total.Worm.Count, na.rm = TRUE),
+        percent_infected = round((n_infected / n_fish) * 100, 1),
+        .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+        # Calculate mortality (assuming 90 fish per tank initially)
+        total_per_group = 30,
+        dead = total_per_group - n_fish,
+        percent_mortality = round((dead / total_per_group) * 100, 1),
+        # Convert Treatment to factor with specific order
+        Treatment = factor(Treatment, levels = treatment_order)
+    )
+
+# Normalize taxa counts
+ps.normalized <- normalize_taxa_counts(ps.cleaned)
+
+# Extract taxa abundance data by treatment and tank
+taxa_by_tank <- ps.normalized %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_melt() %>%
+    dplyr::group_by(Treatment, Tank.ID, Genus) %>%
+    dplyr::summarise(
+        mean_abundance = mean(Abundance, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    tidyr::pivot_wider(
+        id_cols = c(Treatment, Tank.ID),
+        names_from = Genus,
+        values_from = mean_abundance,
+        values_fill = 0
+    )
+
+```
+
+### Load MaAsLin2 Results
+
+```{r}
+
+# Load MaAsLin2 results for different analyses
+maaslin_results <- list()
+
+# Question 0: All treatments
+all_file <- '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/All_60DPE__TREATMENT__significant_results.tsv'
+if (file.exists(all_file)) {
+  maaslin_results[["All"]] <- readr::read_tsv(all_file) %>%
+    dplyr::rename(Taxon = feature) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", "-")) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "_", " ")) %>%
+    dplyr::arrange(qval)
+  cat("Loaded All treatments results with", nrow(maaslin_results[["All"]]), "significant taxa\n")
+} else {
+  warning("MaAsLin2 results file not found for All treatments: ", all_file)
+  maaslin_results[["All"]] <- NULL
+}
+
+# Question 1: Parasite Exposure Response
+parasite_file <- '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/ParasiteExp_60DPE__TREATMENT__significant_results.tsv'
+if (file.exists(parasite_file)) {
+  maaslin_results[["Parasite"]] <- readr::read_tsv(parasite_file) %>%
+    dplyr::rename(Taxon = feature) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", "-")) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "_", " ")) %>%
+    dplyr::arrange(qval)
+  cat("Loaded Parasite exposure results with", nrow(maaslin_results[["Parasite"]]), "significant taxa\n")
+} else {
+  warning("MaAsLin2 results file not found for Parasite exposure: ", parasite_file)
+  maaslin_results[["Parasite"]] <- NULL
+}
+
+# Question 2: Historical Contingency of Parasite Response
+hist_parasite_file <- '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/PriorStressParaExp_60DPE__TREATMENT__significant_results.tsv'
+if (file.exists(hist_parasite_file)) {
+  maaslin_results[["Historical_Parasite"]] <- readr::read_tsv(hist_parasite_file) %>%
+    dplyr::rename(Taxon = feature) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", "-")) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "_", " ")) %>%
+    dplyr::arrange(qval)
+  cat("Loaded Historical contingency of parasite response results with", nrow(maaslin_results[["Historical_Parasite"]]), "significant taxa\n")
+} else {
+  warning("MaAsLin2 results file not found for Historical contingency of parasite response: ", hist_parasite_file)
+  maaslin_results[["Historical_Parasite"]] <- NULL
+}
+
+# Question 3: Historical Contingency of Recovery
+hist_recovery_file <- '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/PriorStressNoParaExp_60DPE__TREATMENT__significant_results.tsv'
+if (file.exists(hist_recovery_file)) {
+  maaslin_results[["Historical_Recovery"]] <- readr::read_tsv(hist_recovery_file) %>%
+    dplyr::rename(Taxon = feature) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "\\.", "-")) %>%
+    dplyr::mutate(Taxon = stringr::str_replace_all(Taxon, "_", " ")) %>%
+    dplyr::arrange(qval)
+  cat("Loaded Historical contingency of recovery results with", nrow(maaslin_results[["Historical_Recovery"]]), "significant taxa\n")
+} else {
+  warning("MaAsLin2 results file not found for Historical contingency of recovery: ", hist_recovery_file)
+  maaslin_results[["Historical_Recovery"]] <- NULL
+}
+
+# Summary of loaded results
+cat("\n=== MaAsLin2 Results Summary ===\n")
+for (analysis_name in names(maaslin_results)) {
+  if (!is.null(maaslin_results[[analysis_name]])) {
+    cat(analysis_name, ": ", nrow(maaslin_results[[analysis_name]]), " significant taxa\n")
+  } else {
+    cat(analysis_name, ": No data loaded\n")
+  }
+}
+cat("===============================\n\n")
+
+```
+
+## 00) All Treatments {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### Extract Top Taxa
+
+```{r}
+
+
+# Extract top differentially abundant taxa for All treatments analysis
+top_taxa_all <- extract_top_taxa(maaslin_results[["All"]], taxa_by_tank, top_n = top_n_taxa)
+
+cat("Top", length(top_taxa_all), "differentially abundant taxa for All treatments analysis:\n")
+print(top_taxa_all)
+
+```
+
+### Correlation Analysis
+
+```{r}
+
+# Filter taxa data to include only top taxa
+taxa_data_all <- taxa_by_tank %>%
+    dplyr::select(Treatment, Tank.ID, any_of(top_taxa_all))
+
+# Calculate correlations
+correlation_results_all <- calculate_taxa_mortality_correlation(
+    taxa_data = taxa_data_all,
+    mortality_data = mortality_by_tank,
+    method = "pearson"
+)
+
+# Display results
+cat("Correlation analysis results for All treatments:\n")
+correlation_results_all %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Taxa-Mortality Correlation Results - All Treatments",
+    subtitle = "Correlation between differentially abundant taxa and mortality across all treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Correlation),
+    decimals = 3
+  ) %>%
+  gt::fmt_number(
+    columns = c(P_value),
+    decimals = 4
+  ) %>%
+  gt::fmt_number(
+    columns = c(N),
+    decimals = 0
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == TRUE
+    )
+  )
+
+```
+
+### Results Visualization
+
+#### Correlation Heatmap
+
+```{r fig.height=6, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation heatmap
+if (nrow(correlation_results_all) > 0) {
+  create_correlation_heatmap(
+    correlation_results = correlation_results_all,
+    title = "Top Taxa-Mortality Correlations\nAll Treatments"
+  )
+} else {
+  cat("No significant correlations found for All treatments analysis.")
+}
+
+```
+
+#### Correlation Table
+
+
+```{r test, eval=FALSE, include=FALSE}
+# Extract taxa abundance data by treatment and tank
+# taxa_by_tank <- 
+    ps.normalized %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::tax_filter("Culicoidibacter", names_only = T)
+    microViz::ps_melt() %>%
+    dplyr::group_by(Treatment, Tank.ID, Genus) %>%
+    dplyr::summarise(
+        mean_abundance = mean(Abundance, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    tidyr::pivot_wider(
+        id_cols = c(Treatment, Tank.ID),
+        names_from = Genus,
+        values_from = mean_abundance,
+        values_fill = 0
+    )
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation summary table
+correlation_table_all <- create_correlation_table(
+    correlation_results = correlation_results_all,
+    title = "Taxa-Mortality Correlation Results - All Treatments"
+)
+
+if (!is.null(correlation_table_all)) {
+  correlation_table_all
+} else {
+  cat("No significant correlations found for All treatments analysis.")
+}
+
+```
+
+#### Plots
+
+```{r echo=FALSE, warning=FALSE}
+
+create_taxa_mortality_plots(correlation_results_all,
+                                        taxa_data_all,
+                                        mortality_by_tank,
+                                        title_prefix = "All Treatments"
+  ) 
+
+p <- create_taxa_mortality_plots(correlation_results_all,
+                                        taxa_data_all,
+                                        mortality_by_tank,
+                                        title_prefix = "All Treatments"
+  ) 
+
+p$Culicoidibacter + facet_wrap(.~Treatment, scales = "free", ncol = 4)
+```
+
+
+
+```{r echo=FALSE}
+tmp.taxa <- "Culicoidibacter"
+
+ps.cleaned %>%
+    # ps_filter(Pathogen == 1) %>%
+    # ps_filter(Treatment %in% c("A- T- P-", "A- T- P+", "A+ T+ P+", "A+ T+ P-")) %>%
+    ps_filter(Time == 60) %>%
+  tax_fix() %>%
+  tax_transform("compositional", rank = "Genus") %>%
+  tax_transform("log2", zero_replace = "halfmin", chain = TRUE) %>%
+  ps_get() %>%
+  ps_otu2samdat(tmp.taxa) %>% # adds Parabacteroides as sample data!
+  samdat_tbl() %>%
+    ggplot(aes(x = Treatment, y = !!sym(tmp.taxa), fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  geom_violin(width = 0.5, scale = "width", alpha = .5) +
+  ggbeeswarm::geom_quasirandom(
+      ggplot2::aes(color = Treatment),
+      alpha = 1,
+      size = 1.5,
+      width = .05,
+      varwidth = T,
+      dodge.width = .5
+    ) +
+    facet_wrap(.~Time, scales = "free_x") +
+  scale_y_continuous(
+    breaks = log2(1 / 2^(0:18)),
+    labels = function(x) paste0(100 * round(2^x, digits = 5), "%")#,
+    # limits = c(log2(0.00005), log2(0.025))
+  ) +
+        ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(title = paste0(tmp.taxa, " log2 abundance at final time point")) +
+  theme_bw()
+```
+
+
+
+
+```{r echo=FALSE, warning=FALSE}
+# Step 1: Get relative abundance table (compositional transformation)
+rel_abund_tbl <- ps.cleaned %>%
+    microViz::tax_transform("compositional", rank = "Genus") %>%
+    microViz::tax_filter(
+      prev_detection_threshold = 0.0005,     # 0.05% relative abundance
+      min_prevalence = 0.1,                  # at least 10% of samples
+      use_counts = FALSE,                    # use relative abundance, not raw counts
+      verbose = TRUE
+    ) %>%
+  microViz::ps_melt() 
+
+# Step 1: Compute prevalence and volatility per treatment × OTU
+taxa_summary_by_treatment <- rel_abund_tbl %>%
+  dplyr::group_by(Treatment, OTU) %>%
+  dplyr::summarise(
+    prevalence = mean(Abundance > 0.0005),
+    sd_abundance = stats::sd(Abundance),
+    mean_abundance = mean(Abundance),
+    .groups = "drop"
+  )
+
+# Step 2: Rank within each treatment (for Most Prevalent + Least Volatile)
+taxa_ranked <- taxa_summary_by_treatment %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::mutate(
+    prevalence_rank = dplyr::min_rank(dplyr::desc(prevalence)),
+    volatility_rank = dplyr::min_rank(sd_abundance),  # switch to `desc()` for most volatile
+    combined_rank = prevalence_rank + volatility_rank
+  ) %>%
+  dplyr::ungroup()
+
+# Step 3: Average across treatments to match your ranking logic
+overall_ranked_taxa <- taxa_ranked %>%
+  dplyr::group_by(OTU) %>%
+  dplyr::summarise(
+    n_treatments_present = dplyr::n(),
+    prevalence = mean(prevalence),
+    sd_abundance = mean(sd_abundance),
+    mean_abundance = mean(mean_abundance),
+    mean_combined_rank = mean(combined_rank),
+    .groups = "drop"
+  ) %>%
+  dplyr::arrange(mean_combined_rank)
+
+# Step 4: Filter to only show taxa significantly correlated with mortality
+# Get significant taxa from the All Treatments correlation analysis
+significant_taxa_all <- correlation_results_all %>%
+  dplyr::filter(Significant == TRUE) %>%
+  dplyr::pull(Taxon)
+
+# Filter the taxa data to only include significant taxa
+taxa_labeled_significant <- overall_ranked_taxa %>%
+  dplyr::filter(OTU %in% significant_taxa_all) %>%
+  dplyr::mutate(
+    # Add correlation information
+    correlation_info = purrr::map_chr(OTU, function(taxon) {
+      if (taxon %in% correlation_results_all$Taxon) {
+        cor_val <- correlation_results_all$Correlation[correlation_results_all$Taxon == taxon]
+        p_val <- correlation_results_all$P_value[correlation_results_all$Taxon == taxon]
+        direction <- ifelse(cor_val > 0, "Positive", "Negative")
+        return(paste0("r = ", round(cor_val, 3), " (", direction, ")"))
+      } else {
+        return("")
+      }
+    }),
+    # Create label with correlation info
+    label = paste0(OTU, "\n", correlation_info)
+  )
+
+# Step 5: Make the plot with only significant taxa
+if (nrow(taxa_labeled_significant) > 0) {
+  ggplot2::ggplot(taxa_labeled_significant, ggplot2::aes(x = prevalence, y = sd_abundance, color = mean_abundance)) +
+    ggplot2::geom_smooth(method = "loess", se = FALSE, color = "lightblue") +
+    ggplot2::geom_point(alpha = 0.7, size = 3) +  # Increased point size for better visibility
+    ggrepel::geom_label_repel(
+      ggplot2::aes(label = label),
+      color = "black",
+      size = 3,
+      box.padding = 0.5,
+      max.overlaps = Inf,
+      na.rm = TRUE
+    ) +
+    ggplot2::labs(
+      title = "Volatility vs. Prevalence of Taxa Significantly Correlated with Mortality",
+      subtitle = "All Treatments Analysis",
+      x = "Mean Prevalence Across Treatments",
+      y = "Mean log10 Volatility (SD Across Treatments)",
+      color = "Mean Abundance",
+      caption = paste0("Showing ", nrow(taxa_labeled_significant), " taxa with significant mortality correlation (p < 0.05)")
+    ) +
+    ggplot2::scale_y_log10() +
+    ggplot2::scale_color_viridis_c() +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 14, face = "bold"),
+      plot.subtitle = ggplot2::element_text(size = 12),
+      legend.position = "bottom"
+    )
+} else {
+  cat("No taxa significantly correlated with mortality found for All Treatments analysis.\n")
+}
+```
+
+
+
+## 01) Parasite Exposure {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+### Extract Top Taxa
+
+```{r}
+
+# Extract top differentially abundant taxa for Parasite exposure analysis
+top_taxa_parasite <- extract_top_taxa(maaslin_results[["Parasite"]], taxa_by_tank, top_n = top_n_taxa)
+
+cat("Top", length(top_taxa_parasite), "differentially abundant taxa for Parasite exposure analysis:\n")
+print(top_taxa_parasite)
+
+```
+
+### Correlation Analysis
+
+```{r}
+
+# Filter taxa data to include only top taxa and parasite-exposed treatments
+taxa_data_parasite <- taxa_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    dplyr::select(Treatment, Tank.ID, any_of(top_taxa_parasite))
+
+# Filter mortality data for parasite-exposed treatments
+mortality_data_parasite <- mortality_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+"))
+
+# Calculate correlations
+correlation_results_parasite <- calculate_taxa_mortality_correlation(
+    taxa_data = taxa_data_parasite,
+    mortality_data = mortality_data_parasite,
+    method = "pearson"
+)
+
+# Display results
+cat("Correlation analysis results for Parasite exposure:\n")
+correlation_results_parasite %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Taxa-Mortality Correlation Results - Parasite Exposure",
+    subtitle = "Correlation between differentially abundant taxa and mortality (A- T- P- vs A- T- P+)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Correlation),
+    decimals = 3
+  ) %>%
+  gt::fmt_number(
+    columns = c(P_value),
+    decimals = 4
+  ) %>%
+  gt::fmt_number(
+    columns = c(N),
+    decimals = 0
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == TRUE
+    )
+  )
+
+```
+
+### Results Visualization
+
+#### Correlation Heatmap
+
+```{r fig.height=10, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation heatmap
+if (nrow(correlation_results_parasite) > 0) {
+  create_correlation_heatmap(
+    correlation_results = correlation_results_parasite,
+    title = "Top Taxa-Mortality Correlations\nParasite Exposure (A- T- P- vs A- T- P+)"
+  )
+} else {
+  cat("No significant correlations found for Parasite exposure analysis.")
+}
+
+```
+
+#### Plots
+
+```{r echo=FALSE, warning=FALSE}
+
+# Create plots for Parasite Exposure analysis
+if (nrow(correlation_results_parasite) > 0) {
+  parasite_plots <- create_taxa_mortality_plots(correlation_results_parasite,
+                                        taxa_data_parasite,
+                                        mortality_data_parasite,
+                                        title_prefix = "Parasite Exposure"
+  ) 
+  
+  # Display plots
+  if (!is.null(parasite_plots)) {
+    for (i in seq_along(parasite_plots)) {
+      print(parasite_plots[[i]])
+      cat("\n")
+    }
+  }
+} else {
+  cat("No significant correlations found for Parasite Exposure analysis.\n")
+}
+
+```
+
+
+
+#### Correlation Table
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation summary table
+correlation_table_parasite <- create_correlation_table(
+    correlation_results = correlation_results_parasite,
+    title = "Taxa-Mortality Correlation Results - Parasite Exposure"
+)
+
+if (!is.null(correlation_table_parasite)) {
+  correlation_table_parasite
+} else {
+  cat("No significant correlations found for Parasite exposure analysis.")
+}
+
+```
+
+## 02) Historical Contingency of Parasite Response {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+### Extract Top Taxa
+
+```{r}
+
+# Extract top differentially abundant taxa for Historical contingency of parasite exposure analysis
+top_taxa_hist_parasite <- extract_top_taxa(maaslin_results[["Historical_Parasite"]], taxa_by_tank, top_n = top_n_taxa)
+
+cat("Top", length(top_taxa_hist_parasite), "differentially abundant taxa for Historical contingency of parasite exposure analysis:\n")
+print(top_taxa_hist_parasite)
+
+```
+
+### Correlation Analysis
+
+```{r}
+
+# Filter taxa data to include only top taxa and parasite-exposed treatments with prior stressors
+taxa_data_hist_parasite <- taxa_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+    dplyr::select(Treatment, Tank.ID, any_of(top_taxa_hist_parasite))
+
+# Filter mortality data for parasite-exposed treatments with prior stressors
+mortality_data_hist_parasite <- mortality_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+"))
+
+# Calculate correlations
+correlation_results_hist_parasite <- calculate_taxa_mortality_correlation(
+    taxa_data = taxa_data_hist_parasite,
+    mortality_data = mortality_data_hist_parasite,
+    method = "pearson"
+)
+
+# Display results
+cat("Correlation analysis results for Historical contingency of parasite exposure:\n")
+correlation_results_hist_parasite %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Taxa-Mortality Correlation Results - Historical Contingency of Parasite Response",
+    subtitle = "Correlation between differentially abundant taxa and mortality in parasite-exposed groups with prior stressors"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Correlation),
+    decimals = 3
+  ) %>%
+  gt::fmt_number(
+    columns = c(P_value),
+    decimals = 4
+  ) %>%
+  gt::fmt_number(
+    columns = c(N),
+    decimals = 0
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == TRUE
+    )
+  )
+
+```
+
+### Results Visualization
+
+#### Correlation Heatmap
+
+```{r fig.height=10, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation heatmap
+if (nrow(correlation_results_hist_parasite) > 0) {
+  create_correlation_heatmap(
+    correlation_results = correlation_results_hist_parasite,
+    title = "Top Taxa-Mortality Correlations\nHistorical Contingency of Parasite Response"
+  )
+} else {
+  cat("No significant correlations found for Historical contingency of parasite exposure analysis.")
+}
+
+```
+
+#### Plots
+
+```{r echo=FALSE}
+
+# Create plots for Historical Contingency of Parasite Response analysis
+if (nrow(correlation_results_hist_parasite) > 0) {
+  hist_parasite_plots <- create_taxa_mortality_plots(
+    correlation_results = correlation_results_hist_parasite,
+    taxa_data = taxa_data_hist_parasite,
+    mortality_data = mortality_data_hist_parasite,
+    title_prefix = "Historical Contingency of Parasite Response"
+  )
+  
+  # Display plots
+  if (!is.null(hist_parasite_plots)) {
+    for (i in seq_along(hist_parasite_plots)) {
+      print(hist_parasite_plots[[i]])
+      cat("\n")
+    }
+  }
+} else {
+  cat("No significant correlations found for Historical Contingency of Parasite Response analysis.\n")
+}
+
+```
+
+#### Correlation Table
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation summary table
+correlation_table_hist_parasite <- create_correlation_table(
+    correlation_results = correlation_results_hist_parasite,
+    title = "Taxa-Mortality Correlation Results - Historical Contingency of Parasite Response"
+)
+
+if (!is.null(correlation_table_hist_parasite)) {
+  correlation_table_hist_parasite
+} else {
+  cat("No significant correlations found for Historical contingency of parasite exposure analysis.")
+}
+
+```
+
+## 03) Historical Contingency of Recovery {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+### Extract Top Taxa
+
+```{r}
+
+# Extract top differentially abundant taxa for Historical contingency of recovery analysis
+top_taxa_hist_recovery <- extract_top_taxa(maaslin_results[["Historical_Recovery"]], taxa_by_tank, top_n = top_n_taxa)
+
+cat("Top", length(top_taxa_hist_recovery), "differentially abundant taxa for Historical contingency of recovery analysis:\n")
+print(top_taxa_hist_recovery)
+
+```
+
+### Correlation Analysis
+
+```{r}
+
+# Filter taxa data to include only top taxa and parasite-unexposed treatments with prior stressors
+taxa_data_hist_recovery <- taxa_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+    dplyr::select(Treatment, Tank.ID, any_of(top_taxa_hist_recovery))
+
+# Filter mortality data for parasite-unexposed treatments with prior stressors
+mortality_data_hist_recovery <- mortality_by_tank %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-"))
+
+# Calculate correlations
+correlation_results_hist_recovery <- calculate_taxa_mortality_correlation(
+    taxa_data = taxa_data_hist_recovery,
+    mortality_data = mortality_data_hist_recovery,
+    method = "pearson"
+)
+
+# Display results
+cat("Correlation analysis results for Historical contingency of recovery:\n")
+correlation_results_hist_recovery %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Taxa-Mortality Correlation Results - Historical Contingency of Recovery",
+    subtitle = "Correlation between differentially abundant taxa and mortality in parasite-unexposed groups with prior stressors"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Correlation),
+    decimals = 3
+  ) %>%
+  gt::fmt_number(
+    columns = c(P_value),
+    decimals = 4
+  ) %>%
+  gt::fmt_number(
+    columns = c(N),
+    decimals = 0
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == TRUE
+    )
+  )
+
+```
+
+### Results Visualization
+
+#### Correlation Heatmap
+
+```{r fig.height=10, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation heatmap
+if (nrow(correlation_results_hist_recovery) > 0) {
+  create_correlation_heatmap(
+    correlation_results = correlation_results_hist_recovery,
+    title = "Top Taxa-Mortality Correlations\nHistorical Contingency of Recovery"
+  )
+} else {
+  cat("No significant correlations found for Historical contingency of recovery analysis.")
+}
+
+```
+
+#### Plots
+
+```{r echo=FALSE}
+
+# Create plots for Historical Contingency of Recovery analysis
+if (nrow(correlation_results_hist_recovery) > 0) {
+  hist_recovery_plots <- create_taxa_mortality_plots(correlation_results_hist_recovery,
+                                        taxa_data_hist_recovery,
+                                        mortality_data_hist_recovery,
+                                        title_prefix = "Historical Contingency of Recovery"
+  ) 
+  
+  # Display plots
+  if (!is.null(hist_recovery_plots)) {
+    for (i in seq_along(hist_recovery_plots)) {
+      print(hist_recovery_plots[[i]])
+      cat("\n")
+    }
+  }
+} else {
+  cat("No significant correlations found for Historical Contingency of Recovery analysis.\n")
+}
+
+```
+
+#### Correlation Table
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create correlation summary table
+correlation_table_hist_recovery <- create_correlation_table(
+    correlation_results = correlation_results_hist_recovery,
+    title = "Taxa-Mortality Correlation Results - Historical Contingency of Recovery"
+)
+
+if (!is.null(correlation_table_hist_recovery)) {
+  correlation_table_hist_recovery
+} else {
+  cat("No significant correlations found for Historical contingency of recovery analysis.")
+}
+
+```
+
+## Summary and Integration
+
+### Comparison Across Analyses
+
+```{r}
+
+# Create summary of significant correlations across all analyses
+summary_comparison <- list()
+
+# Function to extract significant correlations
+extract_significant_correlations <- function(correlation_results, analysis_name) {
+  if (nrow(correlation_results) == 0) {
+    return(data.frame(
+      Analysis = analysis_name,
+      Total_Taxa = 0,
+      Significant_Taxa = 0,
+      Positive_Correlations = 0,
+      Negative_Correlations = 0,
+      stringsAsFactors = FALSE
+    ))
+  }
+  
+  significant_results <- correlation_results %>%
+    dplyr::filter(Significant == TRUE)
+  
+  data.frame(
+    Analysis = analysis_name,
+    Total_Taxa = nrow(correlation_results),
+    Significant_Taxa = nrow(significant_results),
+    Positive_Correlations = sum(significant_results$Direction == "Positive"),
+    Negative_Correlations = sum(significant_results$Direction == "Negative"),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Create summary for each analysis
+summary_comparison[["All"]] <- extract_significant_correlations(correlation_results_all, "All Treatments")
+summary_comparison[["Parasite"]] <- extract_significant_correlations(correlation_results_parasite, "Parasite Exposure")
+summary_comparison[["Historical_Parasite"]] <- extract_significant_correlations(correlation_results_hist_parasite, "Historical Contingency of Parasite Response")
+summary_comparison[["Historical_Recovery"]] <- extract_significant_correlations(correlation_results_hist_recovery, "Historical Contingency of Recovery")
+
+# Combine summaries
+summary_df <- dplyr::bind_rows(summary_comparison)
+
+# Display summary table
+summary_table <- summary_df %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Summary of Taxa-Mortality Correlations Across Analyses",
+    subtitle = "Comparison of significant correlations by research question"
+  ) %>%
+  gt::cols_label(
+    Analysis = "Analysis",
+    Total_Taxa = "Total Taxa",
+    Significant_Taxa = "Significant Taxa",
+    Positive_Correlations = "Positive Correlations",
+    Negative_Correlations = "Negative Correlations"
+  ) %>%
+  gt::tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Total_Taxa, Significant_Taxa, Positive_Correlations, Negative_Correlations),
+    decimals = 0
+  )
+
+summary_table
+
+```
+
+### Overlapping Significant Taxa
+
+```{r}
+
+# Function to find overlapping significant taxa
+find_overlapping_taxa <- function(correlation_results_list) {
+  # Extract significant taxa from each analysis
+  significant_taxa <- list()
+  
+  for (analysis_name in names(correlation_results_list)) {
+    if (nrow(correlation_results_list[[analysis_name]]) > 0) {
+      significant_taxa[[analysis_name]] <- correlation_results_list[[analysis_name]] %>%
+        dplyr::filter(Significant == TRUE) %>%
+        dplyr::pull(Taxon)
+    } else {
+      significant_taxa[[analysis_name]] <- character(0)
+    }
+  }
+  
+  # Find overlaps
+  all_taxa <- unique(unlist(significant_taxa))
+  overlap_matrix <- matrix(0, nrow = length(all_taxa), ncol = length(significant_taxa))
+  rownames(overlap_matrix) <- all_taxa
+  colnames(overlap_matrix) <- names(significant_taxa)
+  
+  for (taxon in all_taxa) {
+    for (analysis_name in names(significant_taxa)) {
+      overlap_matrix[taxon, analysis_name] <- ifelse(taxon %in% significant_taxa[[analysis_name]], 1, 0)
+    }
+  }
+  
+  # Convert to data frame
+  overlap_df <- as.data.frame(overlap_matrix) %>%
+    tibble::rownames_to_column("Taxon") %>%
+    dplyr::mutate(
+      Total_Analyses = rowSums(.[, -1]),
+      .before = 1
+    ) %>%
+    dplyr::arrange(desc(Total_Analyses), Taxon)
+  
+  return(overlap_df)
+}
+
+# Find overlapping taxa
+correlation_results_list <- list(
+  "All" = correlation_results_all,
+  "Parasite" = correlation_results_parasite,
+  "Historical_Parasite" = correlation_results_hist_parasite,
+  "Historical_Recovery" = correlation_results_hist_recovery
+)
+
+overlapping_taxa <- find_overlapping_taxa(correlation_results_list)
+
+# Display overlapping taxa table
+if (nrow(overlapping_taxa) > 0) {
+  gt_table <- overlapping_taxa %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Overlapping Significant Taxa Across Analyses",
+      subtitle = "Taxa that show significant correlation with mortality in multiple analyses"
+    ) %>%
+    gt::cols_label(
+      Total_Analyses = "Total Analyses",
+      Taxon = "Taxon",
+      All = "All Treatments",
+      Parasite = "Parasite Exposure",
+      Historical_Parasite = "Historical Contingency of Parasite Response",
+      Historical_Recovery = "Historical Contingency of Recovery"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::fmt_number(
+      columns = c(Total_Analyses),
+      decimals = 0
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "lightgreen"),
+      locations = cells_body(columns = "All", rows = All == 1)
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "lightgreen"),
+      locations = cells_body(columns = "Parasite", rows = Parasite == 1)
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "lightgreen"),
+      locations = cells_body(columns = "Historical_Parasite", rows = Historical_Parasite == 1)
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "lightgreen"),
+      locations = cells_body(columns = "Historical_Recovery", rows = Historical_Recovery == 1)
+    )
+  
+  gt_table
+} else {
+  # Print an empty table with the correct columns if no overlaps
+  empty_overlap <- tibble::tibble(
+    Total_Analyses = integer(0),
+    Taxon = character(0),
+    All = integer(0),
+    Parasite = integer(0),
+    Historical_Parasite = integer(0),
+    Historical_Recovery = integer(0)
+  )
+  empty_overlap %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Overlapping Significant Taxa Across Analyses",
+      subtitle = "No significant correlations found across any analyses."
+    )
+}
+
+```
+
+## Conclusion
+
+This integrated analysis examined the correlation between differentially abundant taxa and mortality across four key research questions:
+
+1. **All Treatments**: Identified taxa that correlate with mortality across all experimental conditions
+2. **Parasite Exposure**: Found taxa specifically associated with mortality in parasite-exposed vs unexposed groups
+3. **Historical Contingency of Parasite Response**: Discovered taxa that correlate with mortality in parasite-exposed groups with different prior stressor histories
+4. **Historical Contingency of Recovery**: Identified taxa associated with mortality in parasite-unexposed groups with different prior stressor histories
+
+The analysis revealed patterns of microbial taxa that may serve as biomarkers for mortality risk under different experimental conditions, providing insights into the role of the microbiome in host survival and the historical contingency of host-microbiome responses to perturbation.
+
+```{r echo=FALSE, include=FALSE}
+# Save results
+if (!LOAD_EXISTING_RESULTS) {
+  # Save correlation results
+  save_results(correlation_results_all, "correlation_results_all")
+  save_results(correlation_results_parasite, "correlation_results_parasite")
+  save_results(correlation_results_hist_parasite, "correlation_results_hist_parasite")
+  save_results(correlation_results_hist_recovery, "correlation_results_hist_recovery")
+  
+  # Save summary results
+  save_results(summary_df, "correlation_summary")
+  save_results(overlapping_taxa, "overlapping_taxa")
+  
+  cat("Results saved successfully.\n")
+}
+``` 

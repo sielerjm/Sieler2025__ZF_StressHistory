@@ -1,0 +1,6 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus	Drug metabolism - cytochrome P450	0.013472981482388685	2	1.8705362871226876	-2.293285332259175	0	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus	Drug metabolism - other enzymes	0.01801649678589317	2	1.744329651451444	-2.293285332259175	0	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_plus	Metabolism of xenobiotics by cytochrome P450	0.013472981482388685	2	1.8705362871226876	-2.293285332259175	0	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	Arginine and proline metabolism	0.011148086522462464	1	1.952799669301917	-4.54000823889258	0	1		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	Cytoskeleton in muscle cells	0.02753743760399341	1	1.560076473891001	-4.54000823889258	0	1		

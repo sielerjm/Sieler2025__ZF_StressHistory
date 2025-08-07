@@ -1,0 +1,15 @@
+Analysis	Contrast	Total_Significant	Upregulated	Downregulated
+All_Treatments	Antibiotics_Parasite_vs_Control	6411	3426	2985
+All_Treatments	Antibiotics_Temperature_Parasite_vs_Control	4930	2574	2356
+All_Treatments	Antibiotics_Temperature_vs_Control	123	22	101
+All_Treatments	Antibiotics_vs_Control	42	12	30
+All_Treatments	Parasite_vs_Control	3822	2012	1810
+All_Treatments	Temperature_Parasite_vs_Control	6144	3213	2931
+All_Treatments	Temperature_vs_Control	66	13	53
+Historical_Contingency	Antibiotics_Parasite_vs_Parasite	55	33	22
+Historical_Contingency	Antibiotics_Temperature_Parasite_vs_Parasite	22	6	16
+Historical_Contingency	Temperature_Parasite_vs_Parasite	132	95	37
+Parasite_Effect	Parasite_vs_Control	3822	2012	1810
+Recovery_Analysis	Antibiotics_Temperature_vs_Control	123	22	101
+Recovery_Analysis	Antibiotics_vs_Control	42	12	30
+Recovery_Analysis	Temperature_vs_Control	66	13	53

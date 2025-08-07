@@ -1,0 +1,54 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	1.405798739462108e-37	74	36.85207685043816	1.9827718498846347	73	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	6.756168780259623e-37	65	36.17029950957175	1.702886412682309	64	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	6.756168780259623e-37	96	36.17029950957175	1.900499806631723	94	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	6.54164652403775e-30	52	29.184312926552725	2.031170990757428	52	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4758909246296544e-29	76	28.83094573775815	1.8369528798708468	75	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	3.163169189865037e-28	61	27.4998775781571	1.945769504543333	60	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.259933620292949e-27	43	26.89965233512044	1.9776928055857448	43	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.590005426912705e-26	63	25.79860139336872	1.894670405778457	61	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	2.59700577747537e-26	43	25.585527084208632	1.7770143423840783	43	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	2.6913836990701514e-24	38	23.570024382314337	2.047006685997649	38	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	3.275829930123286e-22	91	21.484678653409254	1.7253184942184208	88	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.1447626334534245e-21	44	20.941284554955683	1.9683945132982226	43	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.2539783481398332e-21	77	20.901709962201135	1.791123878067274	76	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.5170086035831067e-17	56	16.81901195614269	1.9036728140108226	55	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.4304268622136061e-16	47	15.844534342786412	1.7807004544865745	47	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.4583453956132987e-16	34	15.836139605205927	1.7725035297491403	34	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	2.1017043947550302e-16	34	15.67742836763918	1.7725035297491403	34	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell division	4.496368463999835e-14	62	13.347138106841783	2.0374594264184815	62	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	4.557263218102454e-14	45	13.341295886741648	1.9239086049041438	44	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	1.217243073603607e-13	17	12.914622688011718	1.7792362497962775	17	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	3.097123659775209e-13	37	12.509041454092406	1.9510220599713999	37	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	spindle organization	4.773505812436471e-13	31	12.321162544282162	2.034800283509739	31	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	7.092843137614359e-13	39	12.149179644722427	1.806335556861633	39	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle process	2.615007706340124e-12	27	11.582527026943529	1.814880588968529	27	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle checkpoint signaling	2.615007706340124e-12	23	11.582527026943529	2.048161012298402	23	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle phase transition	9.15948145462139e-12	36	11.03812911233336	1.9261439740707562	35	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle checkpoint signaling	9.6915513935989e-12	26	11.013606696865692	2.049166679537735	26	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle DNA replication	1.3160738598886613e-11	14	10.880719736829995	1.8774427645254914	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle	1.9199226740615665e-11	75	10.716716262392612	1.5887363651070627	67	8		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic cell cycle phase transition	3.775981983674427e-11	28	10.422970086516301	1.9626111451715196	28	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	8.31625035202991e-11	29	10.08007244516205	1.7951142329953533	29	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle phase transition	1.80583480079825e-10	27	9.743321981809492	2.056530204952324	27	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle process	2.4183927732140535e-10	29	9.61647316361305	2.096581243161037	29	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via break-induced replication	3.4479725620978454e-10	11	9.462436198815107	1.9239553991578544	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic spindle organization	8.818482133931843e-10	22	9.054606160626266	2.041492943564905	22	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle phase transition	1.314014403104059e-9	20	8.881399874384813	2.119779198872208	20	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear DNA replication	1.3282627412701916e-9	12	8.876716009457903	1.773190252954391	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	centromere complex assembly	3.6536285789242506e-9	12	8.437275604307626	1.834263528479258	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of cell cycle	5.8120666483197314e-09	31	8.235669414189651	1.8334746653853444	29	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	negative regulation of mitotic cell cycle	7.98844922948088e-9	25	8.097537520616696	1.9332105981670566	24	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of chromosome segregation	1.491192909855232e-8	16	7.826466169916374	1.9152191896612771	16	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	microtubule cytoskeleton organization involved in mitosis	3.463078444187617e-8	24	7.460537670884276	2.0476384368477323	24	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of mitotic cell cycle	3.977082100474781e-8	13	7.40043544360916	1.9217162547406708	13	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA strand elongation involved in DNA replication	4.795374663037189e-8	10	7.31917745570228	1.7737075596370024	10	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of sister chromatid segregation	5.2040463469676864e-8	14	7.283658844289028	1.9099314305588981	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to biotic stimulus	5.2040463469676864e-8	67	7.283658844289028	1.3415127300698566	52	15		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of nuclear division	5.2886956789693384e-8	16	7.276651422345125	1.9497469921430617	15	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	metaphase/anaphase transition of cell cycle	6.708606007076612e-8	13	7.173367713263049	1.9217162547406708	13	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic nuclear division	7.535324318312897e-8	19	7.122898051030496	1.8720644013169983	19	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cellular response to estrogen stimulus	7.954953346276173e-8	14	7.099362363033645	-3.0585129049384294	0	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of mitotic nuclear division	7.954953346276173e-8	15	7.099362363033645	1.8590811133527474	14	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to external biotic stimulus	7.954953346276173e-8	66	7.099362363033645	1.3771084327579046	52	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	response to other organism	7.954953346276173e-8	66	7.099362363033645	1.3771084327579046	52	14		

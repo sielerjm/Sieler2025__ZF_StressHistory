@@ -1,0 +1,22 @@
+{
+    "read_files": "[ TS047_RoL_RNA_110_trimmed_1_val_1.fq.gz, TS047_RoL_RNA_110_trimmed_2_val_2.fq.gz]",
+    "expected_format": "ISR",
+    "compatible_fragment_ratio": 1.0,
+    "num_compatible_fragments": 24094564,
+    "num_assigned_fragments": 24094564,
+    "num_frags_with_concordant_consistent_mappings": 23626978,
+    "num_frags_with_inconsistent_or_orphan_mappings": 469579,
+    "strand_mapping_bias": 0.0,
+    "MSF": 0,
+    "OSF": 0,
+    "ISF": 0,
+    "MSR": 0,
+    "OSR": 0,
+    "ISR": 23626978,
+    "SF": 226443,
+    "SR": 243136,
+    "MU": 0,
+    "OU": 0,
+    "IU": 0,
+    "U": 0
+}

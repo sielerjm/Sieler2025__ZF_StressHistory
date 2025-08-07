@@ -1,0 +1,10 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	0.013288205964854544	2	1.8765336490164326	-1.8963261602158932	0	2		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	0.016733096183220345	2	1.7764236925775485	-1.8963261602158932	0	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Apoptosis	0.02979488127052714	3	1.525858340853648	-2.4305360905987676	0	3		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Cytokine-cytokine receptor interaction	0.02979488127052714	3	1.525858340853648	-1.4218954590994284	1	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	0.02979488127052714	2	1.525858340853648	-1.6991272070090457	0	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Herpes simplex virus 1 infection	1.6723065463225586e-4	5	3.7766841101663804	-7.2430874942709735	0	5		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	1.2177141003977238e-4	5	3.9144546650647443	-2.312679935727135	0	5		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	RIG-I-like receptor signaling pathway	1.2177141003977238e-4	4	3.9144546650647443	-2.3087362551379553	0	4		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Toll-like receptor signaling pathway	2.485478066325741e-4	4	3.60459006503986	-2.5354074916232188	0	4		

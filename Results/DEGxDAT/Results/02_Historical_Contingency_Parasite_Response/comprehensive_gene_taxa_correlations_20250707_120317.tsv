@@ -1,0 +1,3 @@
+analysis	gene_id	gene_description	taxa_id	correlation	p_value	fdr	abs_correlation	entrez_id	go_terms	kegg_pathways
+Historical_Contingency_Parasite_Response	lsm14b	LSM family member 14B	Polymorphobacter	-0.3765261696581867	0.00999000999000999	0.02997002997002997	0.3765261696581867	393140	NA	NA
+Historical_Contingency_Parasite_Response	zranb2	zinc finger, RAN-binding domain containing 2	Uliginosibacterium	0.6274041385118716	0.023976023976023976	0.023976023976023976	0.6274041385118716	406716	defense response to bacterium; response to bacterium; defense response to other organism; response to external biotic stimulus; response to other organism; response to biotic stimulus; defense response	NA

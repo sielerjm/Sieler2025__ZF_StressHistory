@@ -1,0 +1,11 @@
+[2m2025-05-15T18:55:23.610503Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m fq-lint start
+[2m2025-05-15T18:55:23.649260Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m validating paired end reads
+[2m2025-05-15T18:55:23.704058Z[0m [32m INFO[0m [2mfq::validators[0m[2m:[0m disabled validators: ["P001"]
+[2m2025-05-15T18:55:23.704077Z[0m [32m INFO[0m [2mfq::validators[0m[2m:[0m enabled single read validators: ["[S003] NameValidator", "[S004] CompleteValidator", "[S002] AlphabetValidator", "[S001] PlusLineValidator", "[S005] ConsistentSeqQualValidator", "[S006] QualityStringValidator"]
+[2m2025-05-15T18:55:23.704084Z[0m [32m INFO[0m [2mfq::validators[0m[2m:[0m enabled paired read validators: []
+[2m2025-05-15T18:55:23.704105Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m enabled special validators: ["[S007] DuplicateNameValidator"]
+[2m2025-05-15T18:55:23.704108Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m starting validation (pass 1)
+[2m2025-05-15T19:01:37.428603Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m read 24120243 * 2 records
+[2m2025-05-15T19:01:37.428617Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m starting validation (pass 2)
+[2m2025-05-15T19:01:53.643019Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m read 24120243 records
+[2m2025-05-15T19:01:53.670709Z[0m [32m INFO[0m [2mfq::commands::lint[0m[2m:[0m fq-lint end

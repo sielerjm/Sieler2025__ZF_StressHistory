@@ -1,0 +1,102 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list	analysis
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	2.0035971481236791e-29	34	28.69818959514734	1.9956754067483236	34	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	6.645599247063646e-28	75	27.177465851747726	2.3172922929531623	73	2			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	5.2875496132475456e-27	30	26.276745544598736	1.9925419885858424	30	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	7.32084694352164e-27	73	26.135438672818584	2.2697482101355	69	4			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	9.832412039157498e-27	63	26.007339930103	2.012092412232806	58	5			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	2.0243971758286361e-26	54	25.693704277233085	1.8482791774530605	52	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	2.0243971758286361e-26	54	25.693704277233085	1.8482791774530605	52	2			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	2.8577811226607695e-23	30	22.54397103686792	2.0154491751987185	30	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	1.3274717240568531e-21	24	20.876974720880668	1.6709443657408003	24	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	1.3274717240568531e-21	24	20.876974720880668	1.6709443657408003	24	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	4.850617101105963e-16	19	15.314203006437632	1.8819112203288784	19	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	4.0698542456588745e-15	25	14.390421143954029	2.161480629760605	25	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	4.971198470809866e-15	17	14.303538897682387	1.7484830299807415	17	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	7.108707516391987e-15	22	14.148209354196315	1.8889854895910185	22	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	2.309784694403265e-14	24	13.63642850079639	2.035585245895477	24	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	3.316121585242134e-14	18	13.47936955446926	2.0389899859718397	18	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	4.9126170038228796e-14	27	13.308687092899568	2.1803212950641626	27	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	1.2827966559370642e-13	26	12.891842180884206	1.6101060847349893	25	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	2.4756486641409945e-13	26	12.60631098891339	2.121209546197626	26	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	2.973493589708993e-13	36	12.526732993420636	-1.4028580760838159	3	33			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	4.422559085720407e-10	20	9.354326356172695	2.0777261815297625	20	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	1.4249235404011389e-9	12	8.84620843872407	1.7080100314367024	12	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	1.4249235404011389e-9	12	8.84620843872407	1.7080100314367024	12	0			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	3.1498562171450256e-9	26	8.50170927018681	-1.2684026775127755	3	23			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	4.706019863057946e-9	23	8.327346244096194	1.3046512941354738	23	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	1.0678057949629477e-8	32	7.97150772656333	-0.8786483053838936	8	24			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	2.1226498286301832e-8	29	7.673121645041244	-1.5272595118680616	2	27			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	3.1152047300556306e-8	20	7.506513406400732	1.781555699442022	20	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	3.81658410678353e-8	14	7.418325162547549	1.75638337621926	14	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	3.81658410678353e-8	14	7.418325162547549	1.75638337621926	14	0			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	8.81440162314515e-8	22	7.054807164996744	1.7583148167717455	21	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	1.2108934722838978e-7	15	6.916894062004971	1.9175174093510792	15	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	1.2108934722838978e-7	15	6.916894062004971	1.9175174093510792	15	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	1.5404010894292744e-7	24	6.812366182899894	-1.7234316366861628	1	23			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	6.14822658329067e-7	44	6.211250135632353	0.5432644828742438	29	15			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	6.14822658329067e-7	41	6.211250135632353	0.010029961772632354	16	25			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	7.732704176960667e-7	16	6.11166860391364	1.791668740653238	16	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Steroid biosynthesis	1.1289084435755565e-6	12	5.947341278679351	-1.740276684100363	1	11			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	1.1799840549095623e-6	33	5.928123861263009	-0.24999329874717302	9	24			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	1.3420129991009043e-6	26	5.872243277452831	-1.5110459618253482	1	25			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	2.003240306260777e-6	26	5.6982669501457135	-1.6441598968739934	0	26			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	2.3728638374607167e-6	17	5.624727182278273	1.7753273074914857	17	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	2.433158805389098e-6	20	5.6138295449724085	0.04404005933435531	8	12			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	2.8845231130615386e-6	25	5.539925976783887	0.871002411359247	16	9			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	3.249300500252835e-6	13	5.488210122583379	-1.614388149574592	1	12			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	3.932851868800352e-6	13	5.405292411020748	-0.18079235986751807	4	9			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	3.9472043036923725e-6	22	5.403710394336699	-1.4462674030251084	1	21			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	3.960966650838445e-6	34	5.402198814101087	0.47390018128108746	20	14			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	3.960966650838445e-6	21	5.402198814101087	0.4953632772655215	11	10			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Metabolism of xenobiotics by cytochrome P450	3.9770045401067085e-6	22	5.400443913227707	-1.7670591875008228	1	21			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	4.4210154404095275e-6	18	5.354477968316712	-1.483278253662729	1	17			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	4.4210154404095275e-6	18	5.354477968316712	-1.483278253662729	1	17			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	4.440785205187004e-6	38	5.352540232558818	-0.027733553831440178	15	23			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	4.440785205187004e-6	19	5.352540232558818	1.6624364793627782	18	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	4.440785205187004e-6	23	5.352540232558818	-1.4986766670645528	1	22			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	4.72632662971734e-6	13	5.32547626819199	-1.098350240096973	3	10			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	4.79096162792325e-6	29	5.3195773075071076	-1.081311631967452	5	24			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	5.1870270370198004e-6	24	5.2850814882705555	-0.7477054401938357	4	20			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	6.24739248341415e-6	17	5.204301209273019	-1.6087476249228172	1	16			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	7.066643742212158e-6	14	5.1507868026560395	1.5538890145550115	14	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	7.066643742212158e-6	14	5.1507868026560395	1.5538890145550115	14	0			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	7.352382101587284e-6	27	5.133571930852256	-0.6131095151901579	8	19			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of cofactors	1.0294574561266613e-5	40	4.987391596545911	-1.2180898337473816	6	34			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	1.1102679687451515e-5	18	4.954572189409664	-1.9532122537922332	0	18			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	1.190949234982962e-5	20	4.92410675021886	0.4409187841381803	11	9			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	1.2651836576177147e-5	12	4.897846426503617	-1.9629208377192169	0	12			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycolysis / Gluconeogenesis	1.6256320783853587e-5	22	4.788977739435364	-0.9209482081534864	5	17			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide metabolism	1.6903822727549185e-5	26	4.772015070431067	0.4203078139373486	14	12			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	1.8814260559772085e-5	14	4.7255128457002815	-0.8949897502917635	4	10			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	2.025053265512661e-5	27	4.693563548936233	-0.3931460103756451	7	20			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	2.3452825314354644e-5	15	4.629804831220852	1.3885306452931918	15	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleocytoplasmic transport	3.2757331995332245e-5	26	4.484691477695815	1.3691753812516514	26	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	3.5047500103343094e-5	19	4.455342954303401	-0.725752683392946	5	14			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA degradation	3.5047500103343094e-5	22	4.455342954303401	0.4904799351375124	15	7			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	4.004247947186964e-5	12	4.397479038395232	-1.34583006372731	1	11			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	4.129569069203102e-5	18	4.384095265687828	-0.8713152382099564	5	13			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	4.3354097047002825e-5	38	4.362969854570056	0.7622099262290226	25	13			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleocytoplasmic transport	4.712964131553249e-5	25	4.326705865465863	1.439691573586177	25	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	4.801572825409147e-5	17	4.318616479809978	-1.5633261574880941	0	17			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	4.8570269045011175e-5	24	4.313629490835382	-0.2884531771086665	7	17			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	4.8570269045011175e-5	24	4.313629490835382	-0.2884531771086665	7	17			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	5.4374030750527556e-5	16	4.264608471526027	0.4195707422257724	9	7			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	5.4374030750527556e-5	16	4.264608471526027	0.4195707422257724	9	7			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	5.5777500234162854e-5	10	4.253540953297579	-1.5858237411720906	0	10			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Lysosome	5.724652198996669e-5	35	4.242250893729544	-0.8328981473796554	5	30			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	5.9851682998497284e-5	17	4.222923632948735	-1.649280852639628	0	17			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Peroxisome	6.433167199125607e-5	24	4.1915751610644225	-1.0014818184493768	3	21			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cellular senescence	6.558028831454217e-5	38	4.183226678347662	1.105745836023985	26	12			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Sphingolipid metabolism	6.791721011439391e-5	20	4.168020162234202	-1.4739729599620823	0	20			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	1.2149291401818068e-4	16	3.9154490512224167	-1.8700149757671094	0	16			All_Treatments
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	1.2177141003977238e-4	5	3.9144546650647443	-2.312679935727135	0	5			All_Treatments
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	RIG-I-like receptor signaling pathway	1.2177141003977238e-4	4	3.9144546650647443	-2.3087362551379553	0	4			All_Treatments
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	1.2177141003977238e-4	5	3.9144546650647443	-2.312679935727135	0	5			Recovery_Analysis
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	RIG-I-like receptor signaling pathway	1.2177141003977238e-4	4	3.9144546650647443	-2.3087362551379553	0	4			Recovery_Analysis
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	1.2899109736036368e-4	19	3.8894402625743076	-0.7920378053158341	3	16			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	1.3742968755513357e-4	11	3.861919440866807	1.6116860146263483	11	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	1.3742968755513357e-4	11	3.861919440866807	1.6116860146263483	11	0			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	1.5112297497937315e-4	13	3.8206695055599638	1.2864341535871615	12	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	1.5112297497937315e-4	13	3.8206695055599638	1.2864341535871615	12	1			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	1.6322023048838814e-4	13	3.7872260131988442	0.8187510660794386	9	4			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	1.6322023048838814e-4	13	3.7872260131988442	0.8187510660794386	9	4			Parasite_Effect

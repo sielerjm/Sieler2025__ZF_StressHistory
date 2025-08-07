@@ -1,0 +1,4 @@
+Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+Drug metabolism - cytochrome P450	0.013472981482388685	2	1.8705362871226876	-2.293285332259175	0	2		
+Metabolism of xenobiotics by cytochrome P450	0.013472981482388685	2	1.8705362871226876	-2.293285332259175	0	2		
+Drug metabolism - other enzymes	0.01801649678589317	2	1.744329651451444	-2.293285332259175	0	2		

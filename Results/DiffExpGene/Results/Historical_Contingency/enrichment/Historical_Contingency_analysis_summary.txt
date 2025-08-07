@@ -1,0 +1,21 @@
+=== ENRICHMENT ANALYSIS REPORT ===
+Analysis: Historical_Contingency
+Date: 2025-07-10 19:12:42
+
+GO ENRICHMENT SUMMARY:
+  Total terms analyzed: 30
+  Significant terms (padj < 0.05): 2
+  Contrasts analyzed: 3
+
+KEGG ENRICHMENT SUMMARY:
+  Total pathways analyzed: 5
+  Significant pathways (padj < 0.05): 5
+  Contrasts analyzed: 3
+
+FILES SAVED:
+  - Individual contrast files (ALL and TOP20)
+  - Combined summary files (ALL and TOP50)
+  - Significant results only (padj < 0.05)
+  - Comprehensive report (RDS format)
+  - This text summary
+

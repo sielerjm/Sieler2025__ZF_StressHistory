@@ -1,0 +1,1246 @@
+---
+title: "nf-core_dada2_processing"
+author: "Michael Sieler"
+date: "2025-05-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+```{r load-libraries}
+# Load required libraries
+# library(dada2)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+library(broom)
+```
+
+## Create Phyloseq Object
+
+```{r}
+
+otu_df  <- read.table('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/16S/DADA2/ASV_table.ssu_renamed.tsv', sep="\t", header=TRUE, row.names=1)
+tax_df  <- read.table('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/16S/DADA2/ASV_tax_species.user.tsv', sep="\t", header=TRUE, row.names=1)
+otu_mat <- as.matrix(otu_df)
+tax_mat <- as.matrix(tax_df)
+
+OTU     <- otu_table(otu_mat, taxa_are_rows=TRUE)
+TAX     <- tax_table(tax_mat)
+phy_obj <- phyloseq(OTU, TAX)
+
+sam_df  <- readr::read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/16S/DADA2/cleaned_metadata__04232025__filtered_fixedIDs_complete.tsv')
+
+sam_df_2 <- sam_df %>%
+    column_to_rownames("Sample")
+
+SAM     <- sample_data(sam_df_2)
+phy_obj <- merge_phyloseq(phy_obj, SAM)
+
+
+```
+
+
+## Rename ASVs
+
+```{r}
+# Rename taxa to ASV#### format
+# Create a mapping of old names to new names
+set.seed(42)  # Set seed for reproducibility
+old_names <- taxa_names(phy_obj)
+new_names <- paste0("ASV", sprintf("%04d", seq_along(old_names)))
+
+# Create a named vector for mapping
+name_map <- setNames(new_names, old_names)
+
+# Rename the taxa in the phyloseq object
+taxa_names(phy_obj) <- name_map[taxa_names(phy_obj)]
+
+# Print first few new taxa names to verify
+head(taxa_names(phy_obj))
+```
+
+## Process Phy Obj
+
+```{r}
+
+pseq <- phy_obj
+pseq
+
+```
+
+### Export Phyloseq Object
+
+```{r}
+# Define output path
+path.objects
+
+# Save phyloseq object
+saveRDS(pseq, file = file.path(path.objects, "pseq_uncleaned_05052025.rds"))
+```
+
+
+### Fix phy obj
+
+```{r}
+tax_table(pseq)[40:54, 4:7]
+
+pseq %>%
+ tax_fix(
+  min_length = 1,
+  unknowns = c("Unknown"),
+  sep = "_", anon_unique = TRUE,
+  suffix_rank = "classified"
+ ) %>%
+    tax_agg(rank = "Genus", sort_by = "name")
+```
+
+```{r}
+pseq
+```
+
+### Filter
+
+```{r}
+pseq_filtered <- 
+    pseq %>%
+    # tax_fix(
+    #  min_length = 4,
+    #  unknowns = c(""),
+    #  sep = "_", anon_unique = TRUE,
+    #  suffix_rank = "classified"
+    # ) %>%
+    # Fix names for taxonomic ranks not identified
+    microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+    # Filter for any samples that contain more than 5000 reads
+    microViz::ps_filter(sample_sums(.) > 5000) %>%
+    # Any taxa not found in at least 3 samples are removed
+    microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+    # Remove any unwanted reads
+    microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+    microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) %>%
+    
+    ## Update Metadata
+    ps_rename(Time = Timepoint) %>%
+    ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    ps_filter(Treatment != "Unknown")
+```
+
+```{r}
+pseq_filtered %>%
+    samdat_tbl()
+```
+
+### Export Phyloseq Object
+```{r}
+# Define output path
+path.objects
+
+# Save phyloseq object
+saveRDS(pseq_filtered, file = file.path(path.objects, "pseq_cleaned_filtered_05052025.rds"))
+```
+
+
+
+### Filtered Samples
+
+```{r}
+# Compare samples between original and filtered phyloseq objects
+# Get sample names from both objects
+original_samples <- sample_names(pseq)
+filtered_samples <- sample_names(pseq_filtered)
+
+# Find removed samples
+removed_samples <- setdiff(original_samples, filtered_samples)
+
+# Print comparison results
+cat("Total samples in original dataset:", length(original_samples), "\n")
+cat("Total samples in filtered dataset:", length(filtered_samples), "\n")
+cat("Number of samples removed:", length(removed_samples), "\n\n")
+
+# Show metadata for removed samples
+pseq %>%
+    samdat_tbl() %>%
+    filter(
+.sample_name %in% removed_samples) %>%
+    filter(!is.na(Tank.ID))
+
+# Removed samples:
+#  [1] "KitBlank1" "f153"      "f483"      "PCRblank1" "KitBlank2" "PCRblank2" "KitBlank3" "PCRblank3" "KitBlank4" "PCRblank4" "KitBlank5" "PCRblank5" "KitBlank6" "f446"     
+# [15] "PCRblank6" "KitBlank7" "KitBlank8"
+```
+
+## Summary Analysis
+
+### Mortality
+```{r}
+pseq_filtered %>%
+    samdat_tbl() %>%
+    group_by(Treatment) %>%
+    count() %>%
+    summarize(Mortality = 90 - n) %>%
+    gt::gt()
+```
+
+
+
+```{r}
+pseq_mort <- pseq %>% 
+    ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    ps_filter(Treatment != "Unknown")
+```
+
+```{r}
+pseq_mort %>%
+  samdat_tbl() %>%
+  group_by(Treatment) %>%
+  count() %>% 
+  # Calculate number dead and percent mortality
+  mutate(total_per_group = 90,  # Change this if needed
+         dead = total_per_group - n,
+         percent_mortality = round((dead / total_per_group) * 100, 1),
+         Temperature = if_else(str_detect(Treatment, "T\\+"), "Elevated", "Ambient")) %>%
+  ggplot(aes(x = Treatment, y = percent_mortality, fill = Treatment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+    # geom_boxplot() +
+    # geom_point() +
+  geom_text(aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+            position = position_dodge(width = 0.9),
+            vjust = 1.5,
+            fontface = "bold",
+            color = "white") +
+  scale_fill_brewer(palette = "Dark2") +
+  # facet_grid(.~Temperature, scales = "free") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(title = "Percent Mortality by Treatment",
+       x = "Treatment",
+       y = "Percent Mortality",
+       caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)")
+```
+
+```{r}
+pseq_mort %>%
+  samdat_tbl() %>%
+  group_by(Tank.ID, Treatment) %>%
+  count() %>% 
+  # Calculate number dead and percent mortality
+  mutate(total_per_group = 30,  # Change this if needed
+         dead = total_per_group - n,
+         percent_mortality = round((dead / total_per_group) * 100, 1),
+         Temperature = if_else(str_detect(Treatment, "T\\+"), "Elevated", "Ambient")) %>%
+  ggplot(aes(x = Treatment, y = percent_mortality, fill = Treatment)) +
+  # geom_bar(stat = "identity", position = "dodge") +
+    geom_boxplot() +
+    geom_point() +
+  # geom_text(aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+  #           position = position_dodge(width = 0.9),
+  #           vjust = 1.5,
+  #           fontface = "bold",
+  #           color = "white") +
+  scale_fill_brewer(palette = "Dark2") +
+  # facet_grid(.~Temperature, scales = "free") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(title = "Percent Mortality by Treatment",
+       x = "Treatment",
+       y = "Percent Mortality",
+       caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)")
+```
+
+
+```{r fig.width = 6, fig.height=6}
+# Define treatment order and colors
+treatment_order <- c(
+  "A- T- P-",
+  "A- T- P+",
+  "A- T+ P-",
+  "A- T+ P+",
+  "A+ T- P-",
+  "A+ T- P+",
+  "A+ T+ P-",
+  "A+ T+ P+"
+)
+
+# Create a function to generate the mortality plots
+create_mortality_plot <- function(data, x_var, x_levels, title) {
+  data %>%
+    ggplot(aes(x = factor(.data[[x_var]], levels = x_levels), y = dead)) +
+    geom_boxplot(alpha = 0.5) +
+    geom_quasirandom(aes(color = Treatment), 
+                width = 0.2, 
+                height = 0,
+                size = 5,
+                alpha = 0.7) +
+    scale_color_brewer(palette = "Dark2", 
+                      limits = treatment_order) +  # Ensure consistent color order
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none") +
+    labs(title = title,
+         x = x_var,
+         y = "Number of Mortalities")
+}
+
+# Prepare the data once
+mortality_data <- pseq_mort %>%
+  samdat_tbl() %>%
+  group_by(Treatment) %>%
+  count() %>%
+  mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    Treatment = factor(Treatment, levels = treatment_order),
+    Antibiotics = if_else(str_detect(Treatment, "A\\+"), "Exposed", "Unexposed"),
+    Temperature = if_else(str_detect(Treatment, "T\\+"), "Elevated", "Ambient"),
+    Pathogen = if_else(str_detect(Treatment, "P\\+"), "Exposed", "Unexposed")
+  )
+
+# Create the three plots
+p1 <- create_mortality_plot(
+  mortality_data,
+  "Antibiotics",
+  c("Unexposed", "Exposed"),
+  "Mortality Counts by Treatment (Antibiotics)"
+)
+
+p2 <- create_mortality_plot(
+  mortality_data,
+  "Temperature",
+  c("Ambient", "Elevated"),
+  "Mortality Counts by Treatment (Temperature)"
+)
+
+p3 <- create_mortality_plot(
+  mortality_data,
+  "Pathogen",
+  c("Unexposed", "Exposed"),
+  "Mortality Counts by Treatment (Pathogen)"
+)
+
+# Display the plots
+p1
+p2
+p3
+```
+
+
+```{r}
+# Create mortality data frame for statistical analysis
+mortality_data <- pseq_mort %>%
+    samdat_tbl() %>%
+    group_by(Treatment) %>%
+    count() %>%
+    summarize(Mortality = 90 - n,
+              Survivors = n) %>%
+    mutate(Total = 90)  # Total number of fish per group
+
+# Perform overall chi-square test
+chi_test <- chisq.test(mortality_data$Mortality)
+print("Chi-square test of overall differences:")
+print(chi_test)
+
+# Perform pairwise chi-square tests with control
+control <- "A- T- P-"
+control_data <- mortality_data %>% filter(Treatment == control)
+
+pairwise_results <- mortality_data %>%
+    filter(Treatment != control) %>%
+    group_by(Treatment) %>%
+    summarize(
+        p_value = chisq.test(
+            matrix(c(
+                control_data$Mortality, control_data$Survivors,
+                Mortality, Survivors
+            ), nrow = 2, byrow = TRUE)
+        )$p.value,
+        control_mortality = control_data$Mortality,
+        treatment_mortality = Mortality,
+        control_survivors = control_data$Survivors,
+        treatment_survivors = Survivors
+    ) %>%
+    ungroup() %>%
+    mutate(p_adj = p.adjust(p_value, method = "BH"))  # Benjamini-Hochberg correction
+
+# Display results in a formatted table
+pairwise_results %>%
+    arrange(p_adj) %>%
+    mutate(across(where(is.numeric), ~round(., 4))) %>%
+    gt::gt() %>%
+    gt::tab_header(title = "Pairwise Chi-square Tests with Control (A- T- P-)") %>%
+    gt::fmt_number(columns = c("p_value", "p_adj"), decimals = 4) %>%
+    gt::fmt_number(columns = c("control_mortality", "treatment_mortality",
+                              "control_survivors", "treatment_survivors"), decimals = 0) %>%
+    gt::tab_style(
+        style = list(
+            gt::cell_fill(color = "lightgray"),
+            gt::cell_text(weight = "bold")
+        ),
+        locations = gt::cells_body(
+            columns = "p_adj",
+            rows = p_adj < 0.05
+        )
+    )
+```
+
+
+```{r}
+# Your summary data
+mortality_df <- tibble::tribble(
+  ~Treatment,      ~Deaths,
+  "A+ T+ P+",       20,
+  "A+ T+ P-",       30,
+  "A+ T- P+",       10,
+  "A+ T- P-",       14,
+  "A- T+ P+",       13,
+  "A- T+ P-",       19,
+  "A- T- P+",       8,
+  "A- T- P-",       9
+) %>%
+  mutate(
+    Survivors = 90 - Deaths,
+    A = if_else(str_detect(Treatment, "A\\+"), "A+", "A-"),
+    T = if_else(str_detect(Treatment, "T\\+"), "T+", "T-"),
+    P = if_else(str_detect(Treatment, "P\\+"), "P+", "P-")
+  )
+
+# Fit a binomial GLM using deaths and survivors
+glm_mod <- glm(
+  cbind(Deaths, Survivors) ~ A * T * P,
+  family = binomial,
+  data = mortality_df
+) # link function??
+
+summary(glm_mod)
+```
+
+## DO PAIRWISE
+
+```{r}
+# # Your summary data
+# mortality_df <- tibble::tribble(
+#   ~Treatment,      ~Deaths,
+#   "A+ T+ P+",       20,
+#   "A+ T+ P-",       30,
+#   "A+ T- P+",       10,
+#   "A+ T- P-",       14,
+#   "A- T+ P+",       13,
+#   "A- T+ P-",       19,
+#   "A- T- P+",       8,
+#   "A- T- P-",       9
+# ) %>%
+#   mutate(
+#     Survivors = 90 - Deaths,
+#     A = if_else(str_detect(Treatment, "A\\+"), "A+", "A-"),
+#     T = if_else(str_detect(Treatment, "T\\+"), "T+", "T-"),
+#     P = if_else(str_detect(Treatment, "P\\+"), "P+", "P-")
+#   )
+# 
+# # Fit a binomial GLM using deaths and survivors
+# glm_mod <- glm(
+#   cbind(Deaths, Survivors) ~ A * T * P,
+#   family = binomial,
+#   data = mortality_df
+# ) # link function??
+# 
+# summary(glm_mod)
+```
+
+```{r}
+
+emm <- emmeans::emmeans(glm_mod, ~ A * T * P, type = "response")
+pairs(emm)  # Compare all pairs
+```
+
+```{r}
+plot(emm, comparisons = TRUE)
+```
+
+
+```{r}
+mortality_df <- mortality_df %>%
+  mutate(
+    Recency = case_when(
+      T == "T+" & A == "A-" ~ "Recent_Temp",
+      T == "T-" & A == "A+" ~ "Early_ABX",
+      T == "T+" & A == "A+" ~ "Both_Recent_and_Early",
+      T == "T-" & A == "A-" ~ "No_Prior_Stress"
+    )
+  )
+
+mortality_df
+
+glm_mod_rec <- glm(cbind(Deaths, Survivors) ~ Recency * P, family = binomial, data = mortality_df)
+
+glm_mod_rec %>% 
+    broom::tidy() %>%
+    gt::gt()
+```
+
+```{r}
+mortality_df %>%
+  group_by(Recency, P) %>%
+  summarise(
+    total = sum(Deaths + Survivors),
+    mortality_rate = sum(Deaths) / total
+  ) %>%
+  ggplot(aes(x = Recency, y = mortality_rate, fill = P)) +
+  geom_col(position = "dodge") +
+  labs(title = "Mortality by Recency of Stressor and Parasite Exposure",
+       x = "Most Recent Stressor",
+       y = "Mortality Rate") +
+  theme_minimal()
+```
+
+
+
+
+### Rel Abund
+
+
+```{r, fig.width=13, fig.height=6}
+pseq_filtered %>%
+    microViz::ps_filter(Timepoint == 60) %>%
+  microViz::comp_barplot("Genus", n_taxa = 15, merge_other = FALSE, label = NULL) +
+  facet_wrap(Treatment ~ Timepoint, scales = "free", ncol = 4) + # scales = "free" is IMPORTANT!
+  theme(axis.ticks.y = element_blank(), strip.text = element_text(face = "bold"))
+```
+
+```{r, fig.width=13, fig.height=6}
+pseq_filtered %>%
+    microViz::ps_filter(Pathogen == 1) %>%
+    microViz::ps_filter(Timepoint == 60) %>%
+  microViz::comp_barplot("Genus", n_taxa = 15, merge_other = FALSE, label = NULL) +
+  facet_wrap((Total.Worm.Count > 0) + Treatment ~ ., scales = "free", ncol = 4) + # scales = "free" is IMPORTANT!
+  theme(axis.ticks.y = element_blank(), strip.text = element_text(face = "bold"))
+```
+
+### Alpha
+
+```{r, fig.width=13, fig.height=6}
+pseq_filtered %>%
+    # microViz::ps_filter(Timepoint== 60) %>%
+  # ps_filter(Treatment_days == "D13") %>%
+  ps_calc_diversity(rank = "Genus", index = "inverse_simpson") %>%
+  samdat_tbl() %>%
+  ggplot(aes(x = Time, y = inverse_simpson_Genus, color = Treatment)) +
+  # geom_boxplot() +
+  geom_point(position = position_jitter(height = 0.2), alpha = 0.5) +
+  geom_smooth(aes(color = Treatment), se = F) +
+  scale_color_manual(values = pal.Dark2) +
+    scale_x_continuous(breaks = c(0, 14, 18, 25, 29, 60 )) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+    labs(title = "Simpsons Diversity")
+```
+
+```{r, fig.width=13, fig.height=6}
+pseq_filtered %>%
+    microViz::ps_filter(Time== 60) %>%
+  # ps_filter(Treatment_days == "D13") %>%
+  ps_calc_diversity(rank = "Genus", index = "gini_simpson") %>%
+  samdat_tbl() %>%
+  ggplot(aes(x = Treatment, y = gini_simpson_Genus, color = Treatment, group = Tank.ID)) +
+    geom_violin(aes(fill = factor(Tank.ID)), scale = "width", alpha = .25) +
+  ggbeeswarm::geom_quasirandom(position = position_jitter(height = 0.2), alpha = 0.75, varwidth = T, dodge.width = .9) +
+  # geom_smooth(aes(color = Treatment), se = F) +
+  scale_color_manual(values = pal.Dark2) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+    labs(title = "Simpsons Diversity - Final Time Point")
+```
+
+
+
+
+
+
+```{r, fig.width=13, fig.height=6}
+pseq_filtered %>%
+    microViz::ps_filter(Timepoint== 60) %>%
+  # ps_filter(Treatment_days == "D13") %>%
+  ps_calc_diversity(rank = "Genus", index = "shannon") %>%
+  samdat_tbl() %>%
+  ggplot(aes(x = Treatment, y = shannon_Genus, color = Treatment, group = Tank.ID)) +
+    geom_violin(aes(fill = factor(Tank.ID)), scale = "width", alpha = .25) +
+  ggbeeswarm::geom_quasirandom(position = position_jitter(height = 0.2), alpha = 0.75, varwidth = T, dodge.width = .9) +
+  # geom_smooth(aes(color = Treatment), se = F) +
+  scale_color_manual(values = pal.Dark2) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+    labs(title = "Shannon Diversity - Final Time Point")
+```
+
+```{r}
+
+# 177
+# 291
+# 477
+# 526
+# 655
+
+
+pseq_filtered %>%
+    microViz::ps_filter(Timepoint== 60) %>%
+  # ps_filter(Treatment_days == "D13") %>%
+  ps_calc_diversity(rank = "Genus", index = "shannon") %>%
+  samdat_tbl() %>%
+    dplyr::select(c(Sample, Tank.ID, Treatment, Sex, Body.Size, Total.Worm.Count, shannon_Genus)) %>%
+    filter(Sample == "f177" |
+           Sample == "f291" |
+           Sample == "f477" |
+           Sample == "f526" |
+           Sample == "f655")  %>% 
+    gt::gt()
+```
+
+
+
+
+### Beta
+
+```{r, fig.width=13, fig.height=6}
+
+pseq_filtered %>%
+    microViz::ps_filter(Time == 60) %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "bray") %>%
+  ord_calc(method = "PCoA") %>%
+  ord_plot(alpha = 0.6, size = 2, color = "Treatment") +
+  theme_classic(12) +
+  # coord_fixed(0.7) +
+  stat_ellipse(aes(color = Treatment)) +
+  scale_color_brewer(palette = "Dark2") +
+  # facet_grid(.~Timepoint, scales = "free") +
+  theme(legend.position = "bottom") +
+    labs(title = "Bray-Curtis - Final Timepoint")
+```
+
+```{r, fig.width=7, fig.height=6}
+# First, let's find out which treatment groups our highlighted samples belong to
+highlighted_treatments <- pseq_filtered %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::samdat_tbl() %>%
+    filter(Sample %in% c("f177", "f291", "f477", "f526", "f655")) %>%
+    pull(Treatment) %>%
+    unique()
+
+# Create the ordination data
+pcoa_data <- pseq_filtered %>%
+    microViz::ps_filter(Time == 60) %>%
+    microViz::ps_filter(Treatment %in% highlighted_treatments) %>%
+    tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+    tax_agg(rank = "Genus") %>%
+    dist_calc(dist = "bray") %>%
+    ord_calc(method = "PCoA")
+
+# Get the coordinates for the filtered data
+label_data <- pcoa_data %>%
+    ord_get() %>%
+    .$Ybar %>%
+    as.data.frame() %>%
+    rownames_to_column("Sample") %>%
+    dplyr::select(Sample, Dim1, Dim2) %>%
+    filter(Sample %in% c("f177", "f291", "f477", "f526", "f655"))
+
+# Print coordinates for debugging
+print("Coordinates for target samples:")
+label_data %>% gt::gt()
+
+# Create focused PCoA plot
+pcoa_data %>%
+    ord_plot(alpha = 0.6, size = 2, color = "Treatment") +
+    theme_classic(12) +
+    stat_ellipse(aes(color = Treatment)) +
+    scale_color_brewer(palette = "Dark2") +
+    facet_grid(.~Time, scales = "free") +
+    theme(legend.position = "bottom") +
+    labs(title = "Bray-Curtis - Final Timepoint\nFocused on Treatment Groups with Highlighted Samples") +
+    # Add labels for specific samples
+    ggrepel::geom_text_repel(
+        data = label_data,
+        aes(x = Dim1, y = Dim2, label = Sample),
+        size = 3,
+        box.padding = 0.5,
+        max.overlaps = Inf,
+        color = "black",
+        fontface = "bold",
+        force = 2,  # Increase force to push labels away from points
+        nudge_x = 0.1,  # Add small nudge to x position
+        nudge_y = 0.1   # Add small nudge to y position
+    )
+```
+
+```{r}
+pcoa_data %>%
+            ord_get() %>%
+            .$Ybar %>%
+            as.data.frame() %>%
+            rownames_to_column("Sample") %>%
+            dplyr::select(Sample, Dim1, Dim2) %>%
+            filter(Sample %in% c("f177", "f291", "f477", "f526", "f655"))
+```
+
+
+
+```{r, fig.width=13, fig.height=6}
+
+pseq_filtered %>%
+    microViz::ps_filter(Timepoint == 60) %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "canberra") %>%
+  ord_calc(method = "PCoA") %>%
+  ord_plot(alpha = 0.6, size = 2, color = "Treatment") +
+  theme_classic(12) +
+  # coord_fixed(0.7) +
+  stat_ellipse(aes(color = Treatment)) +
+  scale_color_brewer(palette = "Dark2") +
+  facet_grid(.~Timepoint, scales = "free") +
+  theme(legend.position = "bottom") +
+    labs(title = "Canberra - Final Timepoint")
+```
+
+```{r}
+perm.res.BRAY <- pseq_filtered %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "bray") %>%
+  # dist_permanova(variables = c("Antibiotics", "Temperature", "Pathogen"), n_perms = 999, seed = 123, n_processes = 8) %>%
+dist_permanova(variables = c("Treatment"), n_perms = 999, seed = 123, n_processes = 8) %>%
+  perm_get() 
+
+perm.res.BRAY %>% tidy() %>% gt::gt()
+```
+
+```{r}
+perm.res.CAN <- pseq_filtered %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "canberra") %>%
+  # dist_permanova(variables = c("Antibiotics", "Temperature", "Pathogen"), n_perms = 999, seed = 123, n_processes = 8) %>%
+dist_permanova(variables = c("Treatment"), n_perms = 999, seed = 123, n_processes = 8) %>%
+  perm_get() 
+
+perm.res.CAN %>% tidy() %>% gt::gt()
+```
+
+```{r, fig.width=7, fig.height=6}
+# First, let's find out which treatment groups our highlighted samples belong to
+highlighted_treatments <- pseq_filtered %>%
+    microViz::ps_filter(Timepoint == 60) %>%
+    microViz::samdat_tbl() %>%
+    filter(Sample %in% c("f177", "f291", "f477", "f526", "f655")) %>%
+    pull(Treatment) %>%
+    unique()
+
+# Create focused PCoA plot
+pseq_filtered %>%
+    microViz::ps_filter(Timepoint == 60) %>%
+    microViz::ps_filter(Treatment %in% highlighted_treatments) %>%
+    tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+    tax_agg(rank = "Genus") %>%
+    dist_calc(dist = "canberra") %>%
+    ord_calc(method = "PCoA") %>%
+    ord_plot(alpha = 0.6, size = 2, color = "Treatment") +
+    theme_classic(12) +
+    stat_ellipse(aes(color = Treatment)) +
+    scale_color_brewer(palette = "Dark2") +
+    facet_grid(.~Timepoint, scales = "free") +
+    theme(legend.position = "bottom") +
+    labs(title = "Canberra - Final Timepoint\nFocused on Treatment Groups with Highlighted Samples") +
+    # Add labels for specific samples
+    ggrepel::geom_text_repel(
+        data = pcoa_data %>%
+            ord_get() %>%
+            .$Ybar %>%
+            as.data.frame() %>%
+            rownames_to_column("Sample") %>%
+            dplyr::select(Sample, Dim1, Dim2) %>%
+            filter(Sample %in% c("f177", "f291", "f477", "f526", "f655")),
+        aes(x = Dim1, y = Dim2, label = Sample),
+        size = 3,
+        box.padding = 0.5,
+        max.overlaps = Inf,
+        color = "black",
+        fontface = "bold"
+    )
+```
+
+
+#### HOD
+
+##### Bray
+
+```{r}
+
+hod.mod <-
+  pseq_filtered %>%
+  tax_agg("Genus") %>%
+  dist_calc("bray") %>%
+      microViz::dist_bdisp(variables = c("Treatment")) %>%
+      microViz::bdisp_get()
+
+hod.mod$Treatment$anova %>% tidy() %>% gt::gt()
+```
+
+```{r, fig.width=13, fig.height=6}
+
+tibble::tibble(Sample = (hod.mod$Treatment$model$vectors %>% rownames()),
+           Group = hod.mod$Treatment$model$group,
+           Distance = hod.mod$Treatment$model$distances) %>%
+      dplyr::full_join(., pseq_filtered %>% samdat_tbl(), by = c("Sample" = "Sample")) %>%
+      dplyr::filter(!is.na(Timepoint)) %>%
+        dplyr::filter(Timepoint == 60) %>%
+      ggplot(aes(x = Group, y = Distance, group = Group)) +
+      
+      ggnewscale::new_scale_fill() +
+      
+      ggbeeswarm::geom_quasirandom(aes(color = Group,
+                           fill = Group)) +
+      geom_violin(aes(color = Group,
+                      fill = Group),
+                  draw_quantiles = c(0.5),
+                  dodge.width = 1, varwidth = TRUE,
+                  alpha = .5,
+                  # adjust = .75,
+                  scale = "width") +
+      
+      facet_grid( . ~ factor(Timepoint), scales = "free_y") +
+      # scale_x_continuous(limits = c(-5, 47), breaks = seq(0, 42, by = 7)) +
+      scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = .25)) +
+        scale_fill_manual(values = pal.Dark2) +
+      scale_color_manual(values = pal.Dark2) +
+      theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
+    labs(title = "Bray-Curtis - Dispersion - Final Timepoint")
+```
+##### Canberra
+
+```{r}
+perm.res.CAN <- pseq_filtered %>%
+  tax_filter(min_prevalence = 2.5 / 100, verbose = FALSE) %>%
+  tax_agg(rank = "Genus") %>%
+  dist_calc(dist = "canberra") %>%
+  # dist_permanova(variables = c("Antibiotics", "Temperature", "Pathogen"), n_perms = 999, seed = 123, n_processes = 8) %>%
+dist_permanova(variables = c("Treatment"), n_perms = 999, seed = 123, n_processes = 8) %>%
+  perm_get() 
+
+perm.res.CAN %>% tidy() %>% gt::gt()
+
+```
+
+```{r, fig.width=13, fig.height=6}
+
+hod.mod <-
+  pseq_filtered %>%
+  tax_agg("Genus") %>%
+  dist_calc("canberra") %>%
+      microViz::dist_bdisp(variables = c("Treatment")) %>%
+      microViz::bdisp_get()
+
+hod.mod$Treatment$anova %>% tidy() %>% gt::gt()
+
+tibble::tibble(Sample = (hod.mod$Treatment$model$vectors %>% rownames()),
+           Group = hod.mod$Treatment$model$group,
+           Distance = hod.mod$Treatment$model$distances) %>%
+      dplyr::full_join(., pseq_filtered %>% samdat_tbl(), by = c("Sample" = "Sample")) %>%
+      dplyr::filter(!is.na(Timepoint)) %>%
+        dplyr::filter(Timepoint == 60) %>%
+      ggplot(aes(x = Group, y = Distance, group = Group)) +
+      
+      ggnewscale::new_scale_fill() +
+      
+      ggbeeswarm::geom_quasirandom(aes(color = Group,
+                           fill = Group)) +
+      geom_violin(aes(color = Group,
+                      fill = Group),
+                  draw_quantiles = c(0.5),
+                  dodge.width = 1, varwidth = TRUE,
+                  alpha = .5,
+                  size = 1,
+                  # adjust = .75,
+                  scale = "width") +
+      
+      facet_grid( . ~ factor(Timepoint), scales = "free_y") +
+      # scale_x_continuous(limits = c(-5, 47), breaks = seq(0, 42, by = 7)) +
+      scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = .25)) +
+        scale_fill_manual(values = pal.Dark2) +
+      scale_color_manual(values = pal.Dark2) +
+      theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
+    labs(title = "Canberra - Dispersion - Final Timepoint")
+```
+
+
+## Differential Abundance
+
+### Ancombc2
+
+#### Run ABC2
+
+```{r}
+# Load required library
+library(ANCOMBC)
+
+# Filter for final timepoint and prepare data
+pseq_final <- pseq_filtered %>%
+  microViz::ps_filter(Timepoint == 60)
+
+# Run ANCOM-BC2
+set.seed(42)
+ancombc2_out <- ancombc2(
+  data = pseq_final,
+  tax_level = "Genus",
+  fix_formula = "Treatment",
+  rand_formula = NULL,
+  p_adj_method = "BH",
+  pseudo = 0,
+  pseudo_sens = TRUE,
+  prv_cut = 0.10,  # Prevalence cutoff
+  lib_cut = 0,     # Library size cutoff
+  s0_perc = 0.05,  # S0 percentile cutoff
+  group = "Treatment",
+  struc_zero = TRUE,
+  neg_lb = TRUE,
+  alpha = 0.05,
+  n_cl = 8,        # Number of threads for parallel computing
+  verbose = TRUE
+)
+
+# Extract results
+res <- ancombc2_out$res
+```
+
+```{r}
+res
+```
+
+#### Viz
+
+```{r}
+# First, let's check the actual column names in the results
+print("Column names in res:")
+print(colnames(res))
+
+# Create a summary table of significant results
+sig_taxa <- res %>%
+  # Filter for any significant differences across treatments
+  filter(if_any(dplyr::starts_with("diff_Treatment"), ~.)) %>%
+  # Select relevant columns using dplyr::select
+  dplyr::select(taxon, 
+         dplyr::starts_with("lfc_Treatment"),
+         dplyr::starts_with("q_Treatment"),
+         dplyr::starts_with("diff_Treatment")) %>%
+  # Round numeric columns
+  mutate(across(where(is.numeric), ~round(., 3)))
+
+# Display results
+if(nrow(sig_taxa) > 0) {
+  # Create a gt table
+  gt_table <- sig_taxa %>%
+    gt::gt() %>%
+    gt::tab_header(title = "Significant Differential Abundance Results (ANCOM-BC2)") %>%
+    gt::fmt_number(columns = where(is.numeric), decimals = 3)
+  
+  # Add styling for each q-value column
+  q_cols <- grep("^q_", names(sig_taxa), value = TRUE)
+  for(col in q_cols) {
+    gt_table <- gt_table %>%
+      gt::tab_style(
+        style = list(
+          gt::cell_fill(color = "lightgray"),
+          gt::cell_text(weight = "bold")
+        ),
+        locations = gt::cells_body(
+          columns = col,
+          rows = sig_taxa[[col]] < 0.05
+        )
+      )
+  }
+  
+  # Display the table
+  gt_table
+} else {
+  cat("No significant differential abundance found.")
+}
+
+# Create a volcano plot for each treatment comparison
+treatment_comparisons <- c(
+  "A- T- P+",
+  "A- T+ P-",
+  "A- T+ P+",
+  "A+ T- P-",
+  "A+ T- P+",
+  "A+ T+ P-",
+  "A+ T+ P+"
+)
+
+for(comp in treatment_comparisons) {
+  lfc_col <- paste0("lfc_Treatment", comp)
+  q_col <- paste0("q_Treatment", comp)
+  diff_col <- paste0("diff_Treatment", comp)
+  
+  p <- res %>%
+    ggplot(aes(x = .data[[lfc_col]], y = -log10(.data[[q_col]]))) +
+    geom_point(aes(color = .data[[diff_col]]), alpha = 0.7) +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +
+    scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
+    theme_bw() +
+    labs(title = paste("Volcano Plot:", comp),
+         x = "Log Fold Change",
+         y = "-log10(adjusted p-value)",
+         color = "Significant") +
+    theme(legend.position = "bottom")
+  
+  print(p)
+}
+
+
+```
+
+```{r}
+# Create a heatmap of significant taxa
+if(nrow(sig_taxa) > 0) {
+  # Print debugging information
+  cat("Number of significant taxa:", nrow(sig_taxa), "\n")
+  cat("Significant taxa names:", paste(sig_taxa$taxon, collapse = ", "), "\n")
+  
+  # Get abundance data for significant taxa
+  melted_data <- pseq_final %>%
+    microViz::ps_melt()
+  
+  # Print structure of melted data
+  cat("\nMelted data columns:", paste(colnames(melted_data), collapse = ", "), "\n")
+  
+  sig_taxa_data <- melted_data %>%
+    filter(Genus %in% sig_taxa$taxon) %>%
+    group_by(Genus, Treatment) %>%
+    summarize(mean_abundance = mean(Abundance), .groups = "drop")
+  
+  # Print debugging information about the abundance data
+  cat("\nNumber of rows in abundance data:", nrow(sig_taxa_data), "\n")
+  cat("Unique genera in abundance data:", length(unique(sig_taxa_data$Genus)), "\n")
+  cat("Unique treatments in abundance data:", paste(unique(sig_taxa_data$Treatment), collapse = ", "), "\n")
+  
+  # Create heatmap with additional checks
+  if(nrow(sig_taxa_data) > 0) {
+    # Order genera to match sig_taxa order
+    sig_taxa_data$Genus <- factor(sig_taxa_data$Genus, levels = sig_taxa$taxon)
+    
+    p <- sig_taxa_data %>%
+      ggplot(aes(x = Treatment, y = Genus, fill = mean_abundance)) +
+      geom_tile() +
+      scale_fill_viridis_c(trans = "log10", na.value = "white") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            axis.text.y = element_text(size = 8)) +
+      labs(title = "Heatmap of Significant Taxa Abundance",
+           x = "Treatment",
+           y = "Genus",
+           fill = "Mean Abundance")
+    
+    print(p)
+  } else {
+    cat("\nNo abundance data available for significant taxa.\n")
+  }
+} else {
+  cat("No significant differential abundance found.\n")
+}
+```
+
+
+### Maaslin2
+
+```{r}
+library(Maaslin2)
+
+# Define a modified version of run_maaslin2
+run_maaslin2_modified <- function(tmp.PS, 
+                         tmp.sample.names = "Sample",
+                         tmp.rank = "Genus",
+                         tmp.fixed,
+                         tmp.reference,
+                         tmp.output,
+                         tmp.plot.scatter = T,
+                         tmp.plot.heatmap = T,
+                         tr = 'LOG', 
+                         norm = 'TSS'){
+  
+  tmp.input.otu = tmp.PS %>% microViz::tax_agg(rank = "Genus") %>% otu_get() %>% as.data.frame() %>%
+      setNames(gsub(" ", "_", names(.)))
+  
+  tmp.input.meta = microViz::samdat_tbl(tmp.PS) %>% as.data.frame()
+  row.names(tmp.input.meta) <- tmp.input.meta[[tmp.sample.names]]
+  
+  # Create output directory if it doesn't exist
+  dir.create(tmp.output, recursive = TRUE, showWarnings = FALSE)
+  
+  obj <- Maaslin2::Maaslin2(input_data = tmp.input.otu,
+                            input_metadata = tmp.input.meta,
+                            output = tmp.output, 
+                            min_prevalence = 0,
+                            normalization = norm, 
+                            transform = tr,
+                            fixed_effects = tmp.fixed, 
+                            reference = tmp.reference,
+                            standardize = F,
+                            plot_heatmap = tmp.plot.heatmap, 
+                            plot_scatter = tmp.plot.scatter,
+                            cores = 8)
+  
+  # Process results with corrected column selection
+  res <- obj$results %>%
+    filter(metadata == 'group' & value == 'case') %>%
+    mutate(df = N - length(tmp.fixed) - 1,
+           method = paste0('MaAsLin2 (', tr, ', ', norm, ')')) %>%
+    dplyr::select(feature, coef, stderr, df, pval, method) %>%
+    rename(taxon = feature,
+           est = coef,
+           se = stderr,
+           p = pval)
+  
+  return(res)
+}
+```
+
+
+```{r}
+# Define output directory
+tmp.output = '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment'
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = pseq_final,
+                                tmp.fixed = c("Treatment"),
+                                tmp.reference = c("Treatment,A- T- P-"),
+                                tmp.output = tmp.output)
+
+
+
+tmp.output = '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP'
+results <- run_maaslin2_modified(tmp.PS = pseq_final,
+                                tmp.fixed = c("Antibiotics", "Temperature", "Pathogen"),
+                                tmp.reference = c("Antibiotics,0", "Temperature,0", "Pathogen,0"),
+                                tmp.output = tmp.output)
+
+tmp.output = '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Treatment'
+results <- run_maaslin2_modified(tmp.PS = pseq_final,
+                                tmp.fixed = c("Antibiotics", "Temperature", "Pathogen", "Treatment"),
+                                tmp.reference = c("Antibiotics,0", "Temperature,0", "Pathogen,0", "Treatment,A- T- P-"),
+                                tmp.output = tmp.output)
+
+# Define output directory
+tmp.output = '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_Treatment-Time'
+
+# Run Maaslin2 with modified reference format
+results <- run_maaslin2_modified(tmp.PS = pseq_filtered,
+                                tmp.fixed = c("Treatment", "Timepoint"),
+                                tmp.reference = c("Treatment,A- T- P-", "Timepoint,0"),
+                                tmp.output = tmp.output)
+
+tmp.output = '/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2_ATP-Time'
+results <- run_maaslin2_modified(tmp.PS = pseq_filtered,
+                                tmp.fixed = c("Antibiotics", "Temperature", "Pathogen", "Timepoint"),
+                                tmp.reference = c("Antibiotics,0", "Temperature,0", "Pathogen,0", "Timepoint,0"),
+                                tmp.output = tmp.output)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

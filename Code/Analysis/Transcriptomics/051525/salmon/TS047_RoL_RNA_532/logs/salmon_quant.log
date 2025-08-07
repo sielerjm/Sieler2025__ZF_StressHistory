@@ -1,0 +1,81 @@
+[2025-05-16 00:49:38.519] [jointLog] [info] setting maxHashResizeThreads to 6
+[2025-05-16 00:49:38.519] [jointLog] [info] Fragment incompatibility prior below threshold.  Incompatible fragments will be ignored.
+[2025-05-16 00:49:38.519] [jointLog] [info] Usage of --validateMappings implies use of minScoreFraction. Since not explicitly specified, it is being set to 0.65
+[2025-05-16 00:49:38.519] [jointLog] [info] Setting consensusSlack to selective-alignment default of 0.35.
+[2025-05-16 00:49:38.519] [jointLog] [info] parsing read library format
+[2025-05-16 00:49:38.519] [jointLog] [info] There is 1 library.
+[2025-05-16 00:49:38.519] [jointLog] [info] Loading pufferfish index
+[2025-05-16 00:49:38.520] [jointLog] [info] Loading dense pufferfish index.
+[2025-05-16 00:50:00.192] [jointLog] [info] done
+[2025-05-16 00:50:00.214] [jointLog] [info] Index contained 121143 targets
+[2025-05-16 00:50:00.224] [jointLog] [info] Number of decoys : 26
+[2025-05-16 00:50:00.224] [jointLog] [info] First decoy index : 120752 
+[2025-05-16 00:54:56.742] [jointLog] [info] Thread saw mini-batch with a maximum of 0.88% zero probability fragments
+[2025-05-16 00:54:56.750] [jointLog] [info] Thread saw mini-batch with a maximum of 0.82% zero probability fragments
+[2025-05-16 00:54:56.845] [jointLog] [info] Thread saw mini-batch with a maximum of 1.04% zero probability fragments
+[2025-05-16 00:54:56.895] [jointLog] [info] Thread saw mini-batch with a maximum of 0.98% zero probability fragments
+[2025-05-16 00:54:56.911] [jointLog] [info] Thread saw mini-batch with a maximum of 0.86% zero probability fragments
+[2025-05-16 00:54:56.975] [jointLog] [info] Thread saw mini-batch with a maximum of 0.92% zero probability fragments
+[2025-05-16 00:54:57.057] [jointLog] [info] Computed 102571 rich equivalence classes for further processing
+[2025-05-16 00:54:57.057] [jointLog] [info] Counted 23283210 total reads in the equivalence classes 
+[2025-05-16 00:54:57.060] [jointLog] [warning] 0.000608753% of fragments were shorter than the k used to build the index.
+If this fraction is too large, consider re-building the index with a smaller k.
+The minimum read size found was 20.
+
+
+[2025-05-16 00:54:57.060] [jointLog] [info] Number of mappings discarded because of alignment score : 15540357
+[2025-05-16 00:54:57.060] [jointLog] [info] Number of fragments entirely discarded because of alignment score : 1441370
+[2025-05-16 00:54:57.060] [jointLog] [info] Number of fragments discarded because they are best-mapped to decoys : 1018777
+[2025-05-16 00:54:57.060] [jointLog] [info] Number of fragments discarded because they have only dovetail (discordant) mappings to valid targets : 148856
+[2025-05-16 00:54:57.060] [jointLog] [info] Mapping rate = 88.5857%
+
+[2025-05-16 00:54:57.060] [jointLog] [info] finished quantifyLibrary()
+[2025-05-16 00:54:57.062] [jointLog] [info] Starting optimizer
+[2025-05-16 00:54:57.100] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
+[2025-05-16 00:54:57.108] [jointLog] [info] iteration = 0 | max rel diff. = 9843.9
+[2025-05-16 00:54:57.057] [fileLog] [info] 
+At end of round 0
+==================
+Observed 26283248 total fragments (26283248 in most recent round)
+
+[2025-05-16 00:54:57.840] [jointLog] [info] iteration = 100 | max rel diff. = 18.2167
+[2025-05-16 00:54:58.555] [jointLog] [info] iteration = 200 | max rel diff. = 16.037
+[2025-05-16 00:54:59.270] [jointLog] [info] iteration = 300 | max rel diff. = 8.89689
+[2025-05-16 00:54:59.984] [jointLog] [info] iteration = 400 | max rel diff. = 2.57822
+[2025-05-16 00:55:00.698] [jointLog] [info] iteration = 500 | max rel diff. = 7.4325
+[2025-05-16 00:55:01.414] [jointLog] [info] iteration = 600 | max rel diff. = 8.21119
+[2025-05-16 00:55:02.128] [jointLog] [info] iteration = 700 | max rel diff. = 2.05917
+[2025-05-16 00:55:02.846] [jointLog] [info] iteration = 800 | max rel diff. = 0.710705
+[2025-05-16 00:55:03.570] [jointLog] [info] iteration = 900 | max rel diff. = 0.146449
+[2025-05-16 00:55:04.284] [jointLog] [info] iteration = 1000 | max rel diff. = 4.99998
+[2025-05-16 00:55:04.997] [jointLog] [info] iteration = 1100 | max rel diff. = 0.19731
+[2025-05-16 00:55:05.710] [jointLog] [info] iteration = 1200 | max rel diff. = 3.83552
+[2025-05-16 00:55:06.423] [jointLog] [info] iteration = 1300 | max rel diff. = 2.40493
+[2025-05-16 00:55:07.135] [jointLog] [info] iteration = 1400 | max rel diff. = 8.66349
+[2025-05-16 00:55:07.847] [jointLog] [info] iteration = 1500 | max rel diff. = 0.15987
+[2025-05-16 00:55:08.569] [jointLog] [info] iteration = 1600 | max rel diff. = 0.0692885
+[2025-05-16 00:55:09.281] [jointLog] [info] iteration = 1700 | max rel diff. = 0.106028
+[2025-05-16 00:55:09.993] [jointLog] [info] iteration = 1800 | max rel diff. = 0.189822
+[2025-05-16 00:55:10.707] [jointLog] [info] iteration = 1900 | max rel diff. = 0.0263776
+[2025-05-16 00:55:11.420] [jointLog] [info] iteration = 2000 | max rel diff. = 0.0174254
+[2025-05-16 00:55:12.133] [jointLog] [info] iteration = 2100 | max rel diff. = 0.0239139
+[2025-05-16 00:55:12.847] [jointLog] [info] iteration = 2200 | max rel diff. = 0.0229993
+[2025-05-16 00:55:13.572] [jointLog] [info] iteration = 2300 | max rel diff. = 0.0834984
+[2025-05-16 00:55:14.285] [jointLog] [info] iteration = 2400 | max rel diff. = 0.0242537
+[2025-05-16 00:55:15.038] [jointLog] [info] iteration = 2500 | max rel diff. = 0.0823497
+[2025-05-16 00:55:15.759] [jointLog] [info] iteration = 2600 | max rel diff. = 0.0131995
+[2025-05-16 00:55:16.471] [jointLog] [info] iteration = 2700 | max rel diff. = 0.0356145
+[2025-05-16 00:55:17.183] [jointLog] [info] iteration = 2800 | max rel diff. = 0.0462709
+[2025-05-16 00:55:17.895] [jointLog] [info] iteration = 2900 | max rel diff. = 0.0219259
+[2025-05-16 00:55:18.616] [jointLog] [info] iteration = 3000 | max rel diff. = 0.0244015
+[2025-05-16 00:55:19.328] [jointLog] [info] iteration = 3100 | max rel diff. = 0.0152701
+[2025-05-16 00:55:20.041] [jointLog] [info] iteration = 3200 | max rel diff. = 0.0477648
+[2025-05-16 00:55:20.183] [jointLog] [info] iteration = 3221 | max rel diff. = 0.00838279
+[2025-05-16 00:55:20.185] [jointLog] [info] Finished optimizer
+[2025-05-16 00:55:20.185] [jointLog] [info] writing output 
+
+[2025-05-16 00:55:20.350] [jointLog] [info] Computing gene-level abundance estimates
+[2025-05-16 00:55:36.605] [jointLog] [info] There were 131460 transcripts mapping to 49285 genes
+[2025-05-16 00:55:36.605] [jointLog] [info] NOTE: We recommend using tximport (https://bioconductor.org/packages/release/bioc/html/tximport.html) for aggregating transcript-level salmon abundance estimates to the gene level.  It is more versatile, exposes more features, and allows considering multi-sample information during aggregation.
+[2025-05-16 00:55:36.717] [jointLog] [info] Aggregating expressions to gene level
+[2025-05-16 00:55:36.789] [jointLog] [info] done

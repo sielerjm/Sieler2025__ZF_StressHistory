@@ -1,0 +1,295 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	0.002218363606431982	9	2.653967268229787	-0.5054910376726897	3	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Adipocytokine signaling pathway	0.04377659274479304	10	1.3587580438123985	-1.5431691543983663	0	10		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	1.9744023519957066e-4	24	3.704564340295683	0.49262987452135776	15	9		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	0.002731218837563696	10	2.563643500834734	-0.6802131229861971	3	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	0.04016870376343073	8	1.3961121826440392	-0.37701720447035336	2	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	0.05011549831313728	7	1.3000279469669709	-1.8192001770123805	0	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Autophagy - animal	0.04975777042310856	18	1.3031390880164848	-1.2801486063531755	2	16		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	1.3742968755513357e-4	11	3.861919440866807	1.6116860146263483	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of amino acids	0.06447113583234532	9	1.190634678456885	-0.2724729542261823	3	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of cofactors	0.0680060420668215	16	1.1674525002392224	-1.2445558309721763	2	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of unsaturated fatty acids	0.062214807522039305	5	1.2061062381425758	-0.5819102152611157	2	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	2.0243971758286361e-26	54	25.693704277233085	1.8482791774530605	52	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cellular senescence	0.0010413168552875047	22	2.9824171018393013	1.1270819646285413	17	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	1.5112297497937315e-4	13	3.8206695055599638	1.2864341535871615	12	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	D-Amino acid metabolism	0.04281658737762848	3	1.3683879503560747	-1.5569617171751466	0	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	1.3274717240568531e-21	24	20.876974720880668	1.6709443657408003	24	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	0.05889228782651905	8	1.2299415740360249	-1.436111025443239	1	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	0.0024670910206918886	14	2.607814827382979	-0.33899240631691957	6	8		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	1.2108934722838978e-7	15	6.916894062004971	1.9175174093510792	15	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	0.00255457216595421	7	2.592681824109923	-1.0346027605966328	1	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	4.8570269045011175e-5	24	4.313629490835382	-0.2884531771086665	7	17		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Galactose metabolism	0.018400358634035684	6	1.7351737122478086	-0.35717038017583747	2	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	0.026401250341716045	9	1.5783755048101251	-1.0541099253424444	1	8		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	0.0020964378702290707	15	2.6785180037667327	-1.078244414750128	2	13		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycolysis / Gluconeogenesis	0.04033455771125808	9	1.3943227009526564	0.2887071870325598	5	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Herpes simplex virus 1 infection	0.0010413168552875047	22	2.9824171018393013	1.0104421421320802	18	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	3.81658410678353e-8	14	7.418325162547549	1.75638337621926	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Insulin signaling pathway	0.01823436063826249	17	1.739109459997173	-0.8872400322117144	3	14		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	3.393763459017035e-4	8	3.469318430734779	-0.8081459156237141	2	6		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Metabolism of xenobiotics by cytochrome P450	0.06447113583234532	8	1.190634678456885	-1.348663111508876	1	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	1.4249235404011389e-9	12	8.84620843872407	1.7080100314367024	12	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Motor proteins	0.00790899930477764	23	2.1018784626345464	1.4623487186205075	20	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	0.0010413168552875047	20	2.9824171018393013	1.6646068337228226	16	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Necroptosis	0.013089825978658784	18	1.8830661270940565	0.9440407329380321	14	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	7.066643742212158e-6	14	5.1507868026560395	1.5538890145550115	14	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide metabolism	0.0010413168552875047	15	2.9824171018393013	0.7276619250013466	10	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	One carbon pool by folate	0.015539063094385719	7	1.8085751699112058	-0.5650021812050203	2	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Oocyte meiosis	0.01781421565169351	15	1.7492332945950497	1.699306743663986	14	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	4.4210154404095275e-6	18	5.354477968316712	-1.483278253662729	1	17		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pantothenate and CoA biosynthesis	0.06447113583234532	4	1.190634678456885	-1.4354382210032448	0	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	0.04891435370028471	7	1.3105636803833647	-1.7434317445668859	0	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Porphyrin metabolism	0.03715277805584257	9	1.4300087068236047	-0.9490439843745277	2	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	0.03228760376967096	5	1.4909641850300683	-1.5458081819397465	0	5		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Progesterone-mediated oocyte maturation	0.003791404677497104	14	2.4211998584582215	1.7451726957082165	13	1		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	4.179474790036126e-4	11	3.3788782900240744	1.2870637196495562	11	0		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	1.6322023048838814e-4	13	3.7872260131988442	0.8187510660794386	9	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	RNA degradation	0.049538658886551394	9	1.305055754836459	0.15607786458903317	5	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	0.03909966122609024	10	1.4078270054756679	-1.6902707538826283	0	10		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Sphingolipid metabolism	0.06628404929793678	8	1.1785909683572227	-0.9255695546114491	1	7		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Starch and sucrose metabolism	0.03228760376967096	6	1.4909641850300683	-0.2087273057948538	2	4		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	0.019291849749358967	10	1.7146261291510676	-1.7049918527844738	0	10		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ubiquitin mediated proteolysis	0.02547503713518653	15	1.5938851742461742	1.3080705985160803	13	2		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	alpha-Linolenic acid metabolism	0.014289396044144777	5	1.8449861267190533	-0.6277852387575835	2	3		
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	5.4374030750527556e-5	16	4.264608471526027	0.4195707422257724	9	7		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	0.05949424660640592	1	1.2255250307067964	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	0.05949424660640592	1	1.2255250307067964	2.7302732304770485	1	0		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Cysteine and methionine metabolism	0.05949424660640592	1	1.2255250307067964	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Ether lipid metabolism	0.05949424660640592	1	1.2255250307067964	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Glutathione metabolism	0.05949424660640592	1	1.2255250307067964	2.7302732304770485	1	0		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	0.0780176425425768	1	1.1078071768929612	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	0.05468890299208215	1	1.2621007880765152	-4.772208555468202	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	0.06726487629340855	1	1.172211652178152	-1.270455327310949	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Phenylalanine metabolism	0.05468890299208215	1	1.2621007880765152	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	0.05468890299208215	1	1.2621007880765152	-1.270455327310949	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	0.06449012835822013	1	1.1905067586618017	-1.270455327310949	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Tyrosine metabolism	0.05949424660640592	1	1.2255250307067964	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	Ubiquinone and other terpenoid-quinone biosynthesis	0.05468890299208215	1	1.2621007880765152	-4.870962604584245	0	1		
+A_plus_T_minus_P_minus_vs_A_minus_T_minus_P_minus	alpha-Linolenic acid metabolism	0.05468890299208215	1	1.2621007880765152	-4.772208555468202	0	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	0.0034783868485796926	12	2.4586221196131377	-0.9573597584520439	3	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Adipocytokine signaling pathway	0.053655209407850825	15	1.2703881058089246	-1.8278523215290023	0	15		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Alanine, aspartate and glutamate metabolism	0.053655209407850825	9	1.2703881058089246	-1.5309355097524382	2	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	4.3354097047002825e-5	38	4.362969854570056	0.7622099262290226	25	13		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	2.433158805389098e-6	20	5.6138295449724085	0.04404005933435531	8	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	0.0025064530457274735	15	2.600940426767051	-1.0921258281374415	2	13		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	1.1102679687451515e-5	18	4.954572189409664	-1.9532122537922332	0	18		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Autophagy - animal	0.009391225913942886	33	2.027277712003389	-1.2469073855023485	5	28		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	3.1152047300556306e-8	20	7.506513406400732	1.781555699442022	20	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of amino acids	0.0352633913726078	15	1.452675922791568	-0.9546224898214072	4	11		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of cofactors	1.0294574561266613e-5	40	4.987391596545911	-1.2180898337473816	6	34		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of unsaturated fatty acids	0.009229746662545422	9	2.0348102192957045	-1.2066501665023444	1	8		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Carbon metabolism	0.002735075729811679	24	2.563030644254133	-0.7422902609673494	6	18		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	7.32084694352164e-27	73	26.135438672818584	2.2697482101355	69	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cellular senescence	0.0016377990066037253	33	2.7857393966408557	1.5019510007840267	26	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cornified envelope formation	0.053655209407850825	25	1.2703881058089246	-0.5818054334453417	6	19		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	0.0012095597853457305	16	2.917372660742315	0.93210365034975	12	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	D-Amino acid metabolism	7.379211083819394e-4	6	3.1319900663962312	-1.7060025717098866	0	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	2.8577811226607695e-23	30	22.54397103686792	2.0154491751987185	30	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	1.5404010894292744e-7	24	6.812366182899894	-1.7234316366861628	1	23		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	1.0678057949629477e-8	32	7.97150772656333	-0.8786483053838936	8	24		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Efferocytosis	0.03602866089144673	30	1.4433518793779319	0.08289439034468811	15	15		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ether lipid metabolism	0.024961941509724295	11	1.602721638774552	0.563232968814422	5	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	2.4756486641409945e-13	26	12.60631098891339	2.121209546197626	26	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fatty acid degradation	0.024961941509724295	11	1.602721638774552	-1.6184926390567247	0	11		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Fatty acid metabolism	0.00984966876342763	15	2.006578374236846	-0.6429126741098976	3	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	4.004247947186964e-5	12	4.397479038395232	-1.34583006372731	1	11		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	4.440785205187004e-6	38	5.352540232558818	-0.027733553831440178	15	23		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Galactose metabolism	0.023980730063871962	8	1.6201375994738387	-1.312101340294142	1	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glutathione metabolism	0.0035947116943252687	15	2.4443359354854315	-0.7993479198148383	3	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	0.0025064530457274735	16	2.600940426767051	-0.5987823082825816	4	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	2.025053265512661e-5	27	4.693563548936233	-0.3931460103756451	7	20		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycine, serine and threonine metabolism	0.053655209407850825	9	1.2703881058089246	-1.3023849768224827	1	8		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glycolysis / Gluconeogenesis	9.307687014665555e-4	18	3.0311582289616967	-0.8148096806330198	4	14		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Glyoxylate and dicarboxylate metabolism	0.0419465882378573	8	1.3773033571172493	-1.504798268411031	1	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Herpes simplex virus 1 infection	0.010513476422856598	30	1.9782536548928389	0.9650749341061817	23	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Histidine metabolism	0.053655209407850825	6	1.2703881058089246	-1.8147023093519332	0	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	2.309784694403265e-14	24	13.63642850079639	2.035585245895477	24	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Insulin signaling pathway	0.04279876016153012	25	1.3685688118934893	-0.6459260301218662	7	18		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	3.932851868800352e-6	13	5.405292411020748	-0.18079235986751807	4	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Lysosome	5.724652198996669e-5	35	4.242250893729544	-0.8328981473796554	5	30		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Metabolism of xenobiotics by cytochrome P450	3.9770045401067085e-6	22	5.400443913227707	-1.7670591875008228	1	21		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	4.850617101105963e-16	19	15.314203006437632	1.8819112203288784	19	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Mitophagy - animal	0.053655209407850825	20	1.2703881058089246	-0.9460960332873082	4	16		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Motor proteins	0.04279876016153012	33	1.3685688118934893	1.3565191416760354	26	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	0.07702318110797741	23	1.1133785486954828	1.3387197698132942	16	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleocytoplasmic transport	4.712964131553249e-5	25	4.326705865465863	1.439691573586177	25	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	4.440785205187004e-6	19	5.352540232558818	1.6624364793627782	18	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide metabolism	1.6903822727549185e-5	26	4.772015070431067	0.4203078139373486	14	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Oocyte meiosis	0.0054764465029255695	25	2.261501150411774	2.296843710151951	23	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	2.1226498286301832e-8	29	7.673121645041244	-1.5272595118680616	2	27		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	1.2149291401818068e-4	16	3.9154490512224167	-1.8700149757671094	0	16		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Peroxisome	0.022542876869365538	17	1.6469906611042904	-1.1538016437058018	2	15		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Polycomb repressive complex	0.03251495811231136	15	1.4879168011395134	1.199048666745162	13	2		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Porphyrin metabolism	2.2479506263379856e-4	19	3.648213231779331	-1.3996780825013049	2	17		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	1.2651836576177147e-5	12	4.897846426503617	-1.9629208377192169	0	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Progesterone-mediated oocyte maturation	0.0034783868485796926	21	2.4586221196131377	2.389007148366873	20	1		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	0.01094352562582762	12	1.9608427407839133	1.4020802378756072	12	0		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Purine metabolism	0.0060861173963310845	27	2.2156596747042636	0.012341412777894393	13	14		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	1.190949234982962e-5	20	4.92410675021886	0.4409187841381803	11	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Pyruvate metabolism	0.009030803050272665	12	2.0442736290004295	-1.5957437643882333	1	11		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	RNA degradation	0.0016377990066037253	18	2.7857393966408557	0.5551652789081322	11	7		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	1.3420129991009043e-6	26	5.872243277452831	-1.5110459618253482	1	25		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Sphingolipid metabolism	0.003589887316987615	16	2.4449191832819945	-1.3596942595404315	0	16		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	4.440785205187004e-6	23	5.352540232558818	-1.4986766670645528	1	22		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Taurine and hypotaurine metabolism	0.018758527304859204	6	1.7268012602255436	-1.305987770414635	0	6		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Tryptophan metabolism	0.09164772070220778	9	1.0378783315611537	-1.6298812487609118	0	9		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Ubiquitin mediated proteolysis	0.009956184256343915	25	2.0019070746214047	1.4539590584385427	21	4		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	Vitamin digestion and absorption	7.379211083819394e-4	12	3.1319900663962312	-1.742675728974874	0	12		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	alpha-Linolenic acid metabolism	2.8914263451560075e-4	9	3.538887866234234	0.580970190175089	4	5		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	beta-Alanine metabolism	0.0363814384277422	8	1.4391201340553457	-1.7180057781193891	0	8		
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	2.8845231130615386e-6	25	5.539925976783887	0.871002411359247	16	9		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	0.08361628898762796	1	1.0777091109778918	-1.4148745219687002	0	1		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	0.05996934541655341	1	1.2220706915912736	-2.609052164515837	0	1		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	0.013288205964854544	2	1.8765336490164326	-1.8963261602158932	0	2		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	0.016733096183220345	2	1.7764236925775485	-1.8963261602158932	0	2		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	One carbon pool by folate	0.061254523632988826	1	1.2128618332279002	-2.609052164515837	0	1		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Protein export	0.05996934541655341	1	1.2220706915912736	-1.277227542528698	0	1		
+A_minus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	RNA polymerase	0.05996934541655341	1	1.2220706915912736	-1.4148745219687002	0	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	6.24739248341415e-6	17	5.204301209273019	-1.6087476249228172	1	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Adipocytokine signaling pathway	0.0075189780056356655	18	2.123841185562061	-1.528731834508145	1	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Alanine, aspartate and glutamate metabolism	0.06174359411169552	9	1.2094080937161598	-1.1230487770469715	2	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	6.14822658329067e-7	44	6.211250135632353	0.5432644828742438	29	15		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	4.129569069203102e-5	18	4.384095265687828	-0.8713152382099564	5	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	3.5047500103343094e-5	19	4.455342954303401	-0.725752683392946	5	14		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	5.9851682998497284e-5	17	4.222923632948735	-1.649280852639628	0	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Autophagy - animal	0.05415550005162465	30	1.266357429698476	-1.1791975364437548	4	26		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	1.2827966559370642e-13	26	12.891842180884206	1.6101060847349893	25	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of amino acids	0.01877848700702354	16	1.7263394020044633	-1.1729779829605806	3	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of cofactors	1.9247599912927294e-4	37	3.7156234173012908	-1.198249758666019	6	31		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of unsaturated fatty acids	0.002776997163780894	10	2.5564245638057153	-0.9559652848402391	3	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Carbon metabolism	7.513924341534062e-4	26	3.1241331822057843	-0.9108161656553316	5	21		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	6.645599247063646e-28	75	27.177465851747726	2.3172922929531623	73	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cellular senescence	6.558028831454217e-5	38	4.183226678347662	1.105745836023985	26	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cysteine and methionine metabolism	0.03923519067139502	11	1.4063242325071916	-0.4572281757842916	5	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	0.0036619473708655913	15	2.4362879016255037	1.163816293598126	12	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	D-Amino acid metabolism	0.005307695152623273	5	2.275094028787156	-1.5516936331579274	0	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	2.0035971481236791e-29	34	28.69818959514734	1.9956754067483236	34	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	3.9472043036923725e-6	22	5.403710394336699	-1.4462674030251084	1	21		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	7.352382101587284e-6	27	5.133571930852256	-0.6131095151901579	8	19		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	4.9126170038228796e-14	27	13.308687092899568	2.1803212950641626	27	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fatty acid biosynthesis	0.09780810386355338	5	1.0096251603717317	-0.8655783719459776	1	4		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fatty acid degradation	0.010931833258744927	12	1.9613070011432303	-1.5510289295428084	0	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fatty acid metabolism	0.011102622395025548	15	1.954574430476627	-1.0363666728960792	3	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	0.00109446276602958	10	2.960799008680748	-1.2837951940755405	1	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	6.14822658329067e-7	41	6.211250135632353	0.010029961772632354	16	25		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Galactose metabolism	0.002201640019068464	10	2.6572536892300813	-0.8475753407075239	3	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glutathione metabolism	0.0016283947982890907	16	2.7882402935917985	-0.39307610575889	5	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	1.2899109736036368e-4	19	3.8894402625743076	-0.7920378053158341	3	16		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	4.79096162792325e-6	29	5.3195773075071076	-1.081311631967452	5	24		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycine, serine and threonine metabolism	2.8021109732626363e-4	14	3.552514669149729	-1.3057423658825085	1	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycolysis / Gluconeogenesis	1.6256320783853587e-5	22	4.788977739435364	-0.9209482081534864	5	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glyoxylate and dicarboxylate metabolism	0.005050761415468139	10	2.296643145919028	-1.6553896244255615	0	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Histidine metabolism	0.005027368594856075	8	2.298659272153343	-1.6387910950868707	0	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	4.0698542456588745e-15	25	14.390421143954029	2.161480629760605	25	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Insulin signaling pathway	3.930173041207737e-4	33	3.40558832769398	-0.8088850516194622	8	25		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	4.72632662971734e-6	13	5.32547626819199	-1.098350240096973	3	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Lysosome	0.0019142402467645162	31	2.7180035569999332	-1.32125009255567	3	28		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Metabolism of xenobiotics by cytochrome P450	1.8710452694703072e-4	19	3.727915704726974	-1.4521574008190707	1	18		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	3.316121585242134e-14	18	13.47936955446926	2.0389899859718397	18	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Motor proteins	0.005067950102099612	38	2.2951676697336394	1.540735136813431	32	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Non-homologous end-joining	0.07325483093892983	4	1.1351637295958594	1.5542636051683343	4	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleocytoplasmic transport	3.2757331995332245e-5	26	4.484691477695815	1.3691753812516514	26	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	8.81440162314515e-8	22	7.054807164996744	1.7583148167717455	21	1		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide metabolism	1.9463447854874076e-4	24	3.7107802241030616	0.6520611853952716	15	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	One carbon pool by folate	0.0012375903058260698	12	2.9074231011693334	-1.2851778363645638	1	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Oocyte meiosis	0.0016911453201775223	27	2.771819071858478	2.039063264455635	25	2		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Other glycan degradation	0.0428232257177453	6	1.3683206219866328	-1.333634912961329	0	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	2.973493589708993e-13	36	12.526732993420636	-1.4028580760838159	3	33		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pantothenate and CoA biosynthesis	0.0428232257177453	6	1.3683206219866328	-1.931435724512493	0	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	4.801572825409147e-5	17	4.318616479809978	-1.5633261574880941	0	17		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Peroxisome	6.433167199125607e-5	24	4.1915751610644225	-1.0014818184493768	3	21		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Porphyrin metabolism	8.158628692069833e-4	18	3.0883828316278312	-0.838801425232173	4	14		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	3.249300500252835e-6	13	5.488210122583379	-1.614388149574592	1	12		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Progesterone-mediated oocyte maturation	8.158628692069833e-4	23	3.0883828316278312	1.8796598633753943	20	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Propanoate metabolism	0.05275027680199588	7	1.277775257105834	-1.3956091230001293	0	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	4.706019863057946e-9	23	8.327346244096194	1.3046512941354738	23	0		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Purine metabolism	0.004096775951141703	28	2.3875577865578403	-0.13223313614965918	13	15		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	5.742452411013021e-4	17	3.2409025952134907	0.9243580328256815	11	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pyruvate metabolism	0.003473132527291391	13	2.4592786446266883	-1.701294378173788	0	13		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA degradation	3.5047500103343094e-5	22	4.455342954303401	0.4904799351375124	15	7		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	2.003240306260777e-6	26	5.6982669501457135	-1.6441598968739934	0	26		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Sphingolipid metabolism	6.791721011439391e-5	20	4.168020162234202	-1.4739729599620823	0	20		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Starch and sucrose metabolism	0.018396743765022004	9	1.7352590405790163	-0.6475872771515726	3	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Steroid biosynthesis	1.1289084435755565e-6	12	5.947341278679351	-1.740276684100363	1	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	1.9463447854874076e-4	20	3.7107802241030616	-1.8115967490439004	0	20		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Taurine and hypotaurine metabolism	0.018396743765022004	6	1.7352590405790163	-1.488849762691539	0	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Tryptophan metabolism	0.018396743765022004	11	1.7352590405790163	-1.5933510092098833	0	11		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Tyrosine metabolism	0.018396743765022004	9	1.7352590405790163	-1.4961568954576037	1	8		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ubiquitin mediated proteolysis	0.02251087593261103	24	1.6476076056081796	1.1914901320371523	18	6		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Vitamin digestion and absorption	0.00868711092024912	10	2.0611246332188444	-1.5012827434655824	0	10		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alpha-Linolenic acid metabolism	0.0016824456817507722	8	2.7740589482015836	-0.8093891138786566	3	5		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	beta-Alanine metabolism	0.013437374994577249	9	1.8716855628830416	-1.5677761662006109	0	9		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	2.8021109732626363e-4	21	3.552514669149729	0.6823516591364774	12	9		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Apoptosis	0.02979488127052714	3	1.525858340853648	-2.4305360905987676	0	3		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	C-type lectin receptor signaling pathway	0.08927832795929941	2	1.0492539519733606	-3.3716877762373914	0	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Cytokine-cytokine receptor interaction	0.02979488127052714	3	1.525858340853648	-1.4218954590994284	1	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	0.02979488127052714	2	1.525858340853648	-1.6991272070090457	0	2		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Herpes simplex virus 1 infection	1.6723065463225586e-4	5	3.7766841101663804	-7.2430874942709735	0	5		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	1.2177141003977238e-4	5	3.9144546650647443	-2.312679935727135	0	5		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	RIG-I-like receptor signaling pathway	1.2177141003977238e-4	4	3.9144546650647443	-2.3087362551379553	0	4		
+A_plus_T_plus_P_minus_vs_A_minus_T_minus_P_minus	Toll-like receptor signaling pathway	2.485478066325741e-4	4	3.60459006503986	-2.5354074916232188	0	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	ABC transporters	1.8814260559772085e-5	14	4.7255128457002815	-0.8949897502917635	4	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Adipocytokine signaling pathway	0.06253811615105308	12	1.2038552052409084	-1.7752076779607753	0	12		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Alanine, aspartate and glutamate metabolism	0.035196994256846664	8	1.453494422698064	-1.851972840215999	1	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Apoptosis	3.960966650838445e-6	34	5.402198814101087	0.47390018128108746	20	14		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arachidonic acid metabolism	0.0010346971097827521	13	2.98518676402511	-0.11565164520057016	5	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arginine and proline metabolism	0.005789060662439372	12	2.237391899522047	-0.6346329988736347	3	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Arginine biosynthesis	0.04416359255756219	6	1.354935605467629	-2.322771998163172	0	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ascorbate and aldarate metabolism	0.005789060662439372	11	2.237391899522047	-1.6831891648829618	0	11		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Base excision repair	7.732704176960667e-7	16	6.11166860391364	1.791668740653238	16	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of amino acids	0.020187504783262724	13	1.6949173574223149	-1.09719478091244	3	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Biosynthesis of cofactors	0.02313311006710795	23	1.6357659757817062	-1.1085709812736362	4	19		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Carbon metabolism	0.02157910254254789	17	1.665966621234387	-0.5795982515139446	5	12		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cell cycle	9.832412039157498e-27	63	26.007339930103	2.012092412232806	58	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cellular senescence	3.4444801480432776e-4	29	3.46287631392246	1.0949062369342217	20	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cytokine-cytokine receptor interaction	0.01688770999920037	25	1.7724292374709123	0.6883443224800841	16	9		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Cytosolic DNA-sensing pathway	8.82959412009705e-4	14	3.0540592596674525	1.0607063889397859	11	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	D-Amino acid metabolism	0.016761360382884068	4	1.7756907361351162	-1.5994780642912905	0	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	5.2875496132475456e-27	30	26.276745544598736	1.9925419885858424	30	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - cytochrome P450	0.004719731800104305	13	2.326082679553226	-1.3537693647439195	1	12		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Drug metabolism - other enzymes	0.0013040878573113911	18	2.884693148895351	-0.39728248196194876	6	12		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ether lipid metabolism	0.07141413213501882	8	1.1462158372302584	0.09944713772489663	3	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fanconi anemia pathway	4.422559085720407e-10	20	9.354326356172695	2.0777261815297625	20	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Folate transport and metabolism	0.0393513365447146	6	1.4050405125009302	-1.1214608752370316	1	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	FoxO signaling pathway	1.1799840549095623e-6	33	5.928123861263009	-0.24999329874717302	9	24		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Fructose and mannose metabolism	0.07164009587802073	7	1.1448438415937001	0.13969384768748064	3	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Galactose metabolism	0.020182576169060613	7	1.6950233998136872	-1.2208764255185816	1	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glutathione metabolism	0.0880312184311577	9	1.0553632870762863	-0.12226757482822959	3	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerolipid metabolism	0.011953909116384151	12	1.9224900503596989	-0.8218768570272504	2	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycerophospholipid metabolism	5.1870270370198004e-6	24	5.2850814882705555	-0.7477054401938357	4	20		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glycolysis / Gluconeogenesis	0.020187504783262724	12	1.6949173574223149	-0.15355091779407795	5	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Glyoxylate and dicarboxylate metabolism	0.08464238095541797	6	1.07241212861163	-1.8579579379849436	0	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Herpes simplex virus 1 infection	0.003848739119714915	26	2.4146815258261807	0.3826202340968303	18	8		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Homologous recombination	7.108707516391987e-15	22	14.148209354196315	1.8889854895910185	22	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Insulin signaling pathway	0.00750285901188703	23	2.1247732144101272	-0.9499065133840869	4	19		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Linoleic acid metabolism	0.0024134797657719004	8	2.6173563378854574	-0.14213977002519346	3	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Metabolism of xenobiotics by cytochrome P450	0.014187687490839027	12	1.8480883862065012	-1.2971715032322468	1	11		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Mismatch repair	4.971198470809866e-15	17	14.303538897682387	1.7484830299807415	17	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Motor proteins	0.026584048409008357	27	1.5753788808872575	1.18814772219612	21	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	NOD-like receptor signaling pathway	0.017488222065348124	21	1.757254340690404	1.5132256601963814	15	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleocytoplasmic transport	0.06790221451195576	13	1.1681160617336452	1.6621190485983068	13	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide excision repair	2.3728638374607167e-6	17	5.624727182278273	1.7753273074914857	17	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Nucleotide metabolism	0.008510223168995941	16	2.0700590509856065	1.008520037250083	11	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Oocyte meiosis	0.008194254130699987	20	2.0864905712775266	2.0793775147440954	18	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	PPAR signaling pathway	3.1498562171450256e-9	26	8.50170927018681	-1.2684026775127755	3	23		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pentose and glucuronate interconversions	0.014187687490839027	10	1.8480883862065012	-1.595026479948363	0	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Phagosome	0.03810873437964148	20	1.4189754742418703	0.37361174580798995	16	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Polycomb repressive complex	0.03893918191180098	12	1.4096131769793858	0.7855271302591633	9	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Porphyrin metabolism	0.017670650196885705	12	1.752747470203226	-1.0198572877228844	2	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Primary bile acid biosynthesis	5.5777500234162854e-5	10	4.253540953297579	-1.5858237411720906	0	10		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Progesterone-mediated oocyte maturation	3.3699151456162516e-4	20	3.472381034515779	1.9280834843829895	17	3		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Proteasome	2.3452825314354644e-5	15	4.629804831220852	1.3885306452931918	15	0		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pyrimidine metabolism	3.05575590909703e-4	15	3.514881339744912	0.9782894915069851	10	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Pyruvate metabolism	0.06704651968624425	8	1.1736237609934177	-1.5469001987523265	1	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	RNA degradation	0.026614584395494766	12	1.5748803112365783	0.4431364801432975	8	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Retinol metabolism	0.0021972493972370454	16	2.6581206459940603	-1.2134853477660381	1	15		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Sphingolipid metabolism	0.006239793673471292	13	2.20482977056667	-1.0016330309168375	2	11		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Starch and sucrose metabolism	0.0918214164527975	6	1.0370560120177323	-0.2580617208723923	2	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Steroid hormone biosynthesis	0.004719731800104305	14	2.326082679553226	-1.1383130973055415	1	13		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Toll-like receptor signaling pathway	0.07356706425819806	13	1.1333165744169806	0.3787296040413801	8	5		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Ubiquitin mediated proteolysis	0.02313311006710795	19	1.6357659757817062	1.452593651492461	17	2		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	Vitamin digestion and absorption	0.04416359255756219	7	1.354935605467629	-1.522296445357352	0	7		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	alpha-Linolenic acid metabolism	0.0022436939054602946	7	2.6490363917282296	0.16708159591157887	3	4		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	beta-Alanine metabolism	0.07646504437104792	6	1.116537055123583	-1.5320553797222878	0	6		
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	p53 signaling pathway	3.960966650838445e-6	21	5.402198814101087	0.4953632772655215	11	10		

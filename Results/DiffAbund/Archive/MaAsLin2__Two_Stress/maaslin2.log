@@ -1,0 +1,122 @@
+2025-06-02 09:02:34.536818 INFO::Writing function arguments to log file
+2025-06-02 09:02:34.538612 DEBUG::Function arguments
+2025-06-02 09:02:34.539007 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress
+2025-06-02 09:02:34.539333 DEBUG::Min Abundance: 0.000000
+2025-06-02 09:02:34.539637 DEBUG::Min Prevalence: 0.000000
+2025-06-02 09:02:34.539931 DEBUG::Normalization: TSS
+2025-06-02 09:02:34.540218 DEBUG::Transform: LOG
+2025-06-02 09:02:34.540535 DEBUG::Analysis method: LM
+2025-06-02 09:02:34.540828 DEBUG::Max significance: 0.250000
+2025-06-02 09:02:34.541255 DEBUG::Random effects:
+2025-06-02 09:02:34.541792 DEBUG::Fixed effects: Treatment
+2025-06-02 09:02:34.542124 DEBUG::Correction method: BH
+2025-06-02 09:02:34.542432 DEBUG::Standardize: FALSE
+2025-06-02 09:02:34.542727 DEBUG::Cores: 8
+2025-06-02 09:02:34.543001 INFO::Verifying options selected are valid
+2025-06-02 09:02:34.543985 INFO::Determining format of input files
+2025-06-02 09:02:34.544792 INFO::Input format is data samples as rows and metadata samples as rows
+2025-06-02 09:02:34.547265 DEBUG::A total of 68 samples were found in both the data and metadata
+2025-06-02 09:02:34.547694 DEBUG::Reordering data/metadata to use same sample ordering
+2025-06-02 09:02:34.552602 INFO::Formula for fixed effects: expr ~  Treatment
+2025-06-02 09:02:34.554237 INFO::Filter data based on min abundance and min prevalence
+2025-06-02 09:02:34.555164 INFO::Total samples in data: 68
+2025-06-02 09:02:34.556122 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-06-02 09:02:34.565667 INFO::Total filtered features: 0
+2025-06-02 09:02:34.566882 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-06-02 09:02:34.589419 INFO::Total filtered features with variance filtering: 0
+2025-06-02 09:02:34.590841 INFO::Filtered feature names from variance filtering:
+2025-06-02 09:02:34.591903 INFO::Running selected normalization method: TSS
+2025-06-02 09:02:34.599477 INFO::Bypass z-score application to metadata
+2025-06-02 09:02:34.600806 INFO::Running selected transform method: LOG
+2025-06-02 09:02:34.625244 INFO::Running selected analysis method: LM
+2025-06-02 09:02:34.627629 INFO::Creating cluster of 8 R processes
+2025-06-02 09:02:46.550327 INFO::Counting total values for each feature
+2025-06-02 09:02:46.596259 INFO::Writing filtered data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/features/filtered_data.tsv
+2025-06-02 09:02:46.615676 INFO::Writing filtered, normalized data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/features/filtered_data_norm.tsv
+2025-06-02 09:02:46.653015 INFO::Writing filtered, normalized, transformed data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/features/filtered_data_norm_transformed.tsv
+2025-06-02 09:02:46.738624 INFO::Writing residuals to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/fits/residuals.rds
+2025-06-02 09:02:46.912837 INFO::Writing fitted values to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/fits/fitted.rds
+2025-06-02 09:02:46.916662 INFO::Writing all results to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/all_results.tsv
+2025-06-02 09:02:46.924103 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/significant_results.tsv
+2025-06-02 09:02:46.92706 INFO::Writing heatmap of significant results to file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress/heatmap.pdf
+2025-06-02 09:02:46.932345 INFO::Writing association plots (one for each significant association) to output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Two_Stress
+2025-06-02 09:02:46.942413 INFO::Plotting associations from most to least significant, grouped by metadata
+2025-06-02 09:02:46.944004 INFO::Plotting data for metadata number 1, Treatment
+2025-06-02 09:02:46.947771 INFO::Creating boxplot for categorical data, Treatment vs Vogesella
+2025-06-02 09:02:51.159271 INFO::Creating boxplot for categorical data, Treatment vs Culicoidibacter
+2025-06-02 09:02:51.314544 INFO::Creating boxplot for categorical data, Treatment vs Plesiomonas
+2025-06-02 09:02:51.45853 INFO::Creating boxplot for categorical data, Treatment vs Pseudomonas
+2025-06-02 09:02:51.798876 INFO::Creating boxplot for categorical data, Treatment vs Rubrivivax
+2025-06-02 09:02:54.368878 INFO::Creating boxplot for categorical data, Treatment vs Polymorphobacter
+2025-06-02 09:02:54.617639 INFO::Creating boxplot for categorical data, Treatment vs Pirellulaceae_Genus
+2025-06-02 09:02:55.919076 INFO::Creating boxplot for categorical data, Treatment vs Shewanella
+2025-06-02 09:02:56.074228 INFO::Creating boxplot for categorical data, Treatment vs Crenobacter
+2025-06-02 09:02:56.236745 INFO::Creating boxplot for categorical data, Treatment vs Paenirhodobacter
+2025-06-02 09:02:56.387188 INFO::Creating boxplot for categorical data, Treatment vs Chitinivorax
+2025-06-02 09:02:56.587309 INFO::Creating boxplot for categorical data, Treatment vs Unknown_Family_Genus
+2025-06-02 09:02:57.908937 INFO::Creating boxplot for categorical data, Treatment vs Candidatus_Berkiella
+2025-06-02 09:02:58.055147 INFO::Creating boxplot for categorical data, Treatment vs Parachlamydiaceae_Genus
+2025-06-02 09:02:58.193208 INFO::Creating boxplot for categorical data, Treatment vs Gemmobacter
+2025-06-02 09:02:58.454699 INFO::Creating boxplot for categorical data, Treatment vs Chthoniobacter
+2025-06-02 09:02:58.608848 INFO::Creating boxplot for categorical data, Treatment vs Phreatobacter
+2025-06-02 09:02:59.948501 INFO::Creating boxplot for categorical data, Treatment vs Cetobacterium
+2025-06-02 09:03:00.114846 INFO::Creating boxplot for categorical data, Treatment vs Agromyces
+2025-06-02 09:03:00.268933 INFO::Creating boxplot for categorical data, Treatment vs Cloacibacterium
+2025-06-02 09:03:00.449463 INFO::Creating boxplot for categorical data, Treatment vs Chlamydiales_Genus
+2025-06-02 09:03:00.630154 INFO::Creating boxplot for categorical data, Treatment vs Nocardia
+2025-06-02 09:03:00.777745 INFO::Creating boxplot for categorical data, Treatment vs Paucibacter
+2025-06-02 09:03:03.203192 INFO::Creating boxplot for categorical data, Treatment vs Burkholderiales_Genus
+2025-06-02 09:03:03.352226 INFO::Creating boxplot for categorical data, Treatment vs Microtrichales_Genus
+2025-06-02 09:03:03.490206 INFO::Creating boxplot for categorical data, Treatment vs Polyangiia_Genus
+2025-06-02 09:03:04.968183 INFO::Creating boxplot for categorical data, Treatment vs Azospira
+2025-06-02 09:03:05.2398 INFO::Creating boxplot for categorical data, Treatment vs Bosea
+2025-06-02 09:03:05.492632 INFO::Creating boxplot for categorical data, Treatment vs Verrucomicrobiia_Genus
+2025-06-02 09:03:05.696788 INFO::Creating boxplot for categorical data, Treatment vs Vibrio
+2025-06-02 09:03:06.038931 INFO::Creating boxplot for categorical data, Treatment vs Sporomusaceae_Genus
+2025-06-02 09:03:08.297554 INFO::Creating boxplot for categorical data, Treatment vs Haliangiaceae_Genus
+2025-06-02 09:03:08.448715 INFO::Creating boxplot for categorical data, Treatment vs env.OPS_17_Genus
+2025-06-02 09:03:08.597068 INFO::Creating boxplot for categorical data, Treatment vs Vampirovibrionaceae_Genus
+2025-06-02 09:03:09.874301 INFO::Creating boxplot for categorical data, Treatment vs Citrobacter
+2025-06-02 09:03:10.020255 INFO::Creating boxplot for categorical data, Treatment vs Elstera
+2025-06-02 09:03:10.241769 INFO::Creating boxplot for categorical data, Treatment vs Rhodocyclaceae_Genus
+2025-06-02 09:03:10.398151 INFO::Creating boxplot for categorical data, Treatment vs Sphaerotilus
+2025-06-02 09:03:10.550763 INFO::Creating boxplot for categorical data, Treatment vs Tundrisphaera
+2025-06-02 09:03:10.922973 INFO::Creating boxplot for categorical data, Treatment vs Bradyrhizobium
+2025-06-02 09:03:12.035163 INFO::Creating boxplot for categorical data, Treatment vs SH3.11
+2025-06-02 09:03:12.189642 INFO::Creating boxplot for categorical data, Treatment vs Legionella
+2025-06-02 09:03:12.346865 INFO::Creating boxplot for categorical data, Treatment vs Candidatus_Megaira
+2025-06-02 09:03:12.519192 INFO::Creating boxplot for categorical data, Treatment vs Rhodovarius
+2025-06-02 09:03:12.684011 INFO::Creating boxplot for categorical data, Treatment vs Sediminibacterium
+2025-06-02 09:03:13.028251 INFO::Creating boxplot for categorical data, Treatment vs Piscinibacter
+2025-06-02 09:03:15.231272 INFO::Creating boxplot for categorical data, Treatment vs Neochlamydia
+2025-06-02 09:03:15.469384 INFO::Creating boxplot for categorical data, Treatment vs NS9_marine_group_Genus
+2025-06-02 09:03:15.631581 INFO::Creating boxplot for categorical data, Treatment vs Devosia
+2025-06-02 09:03:17.36523 INFO::Creating boxplot for categorical data, Treatment vs Aurantisolimonas
+2025-06-02 09:03:17.533826 INFO::Creating boxplot for categorical data, Treatment vs Chitinibacter
+2025-06-02 09:03:17.695706 INFO::Creating boxplot for categorical data, Treatment vs Candidatus_Paracaedibacter
+2025-06-02 09:03:18.98939 INFO::Creating boxplot for categorical data, Treatment vs Rhodospirillales_Genus
+2025-06-02 09:03:19.153895 INFO::Creating boxplot for categorical data, Treatment vs Pseudorhodoplanes
+2025-06-02 09:03:19.298123 INFO::Creating boxplot for categorical data, Treatment vs Chryseotalea
+2025-06-02 09:03:19.44038 INFO::Creating boxplot for categorical data, Treatment vs Pseudolysobacter
+2025-06-02 09:03:19.580447 INFO::Creating boxplot for categorical data, Treatment vs Rhizobium
+2025-06-02 09:03:19.72774 INFO::Creating boxplot for categorical data, Treatment vs Elsteraceae_Genus
+2025-06-02 09:03:21.153406 INFO::Creating boxplot for categorical data, Treatment vs Barnesiellaceae_Genus
+2025-06-02 09:03:21.315972 INFO::Creating boxplot for categorical data, Treatment vs SWB02
+2025-06-02 09:03:21.467207 INFO::Creating boxplot for categorical data, Treatment vs Halomonas
+2025-06-02 09:03:21.622585 INFO::Creating boxplot for categorical data, Treatment vs Longivirga
+2025-06-02 09:03:21.765199 INFO::Creating boxplot for categorical data, Treatment vs Aeromonas
+2025-06-02 09:03:23.06612 INFO::Creating boxplot for categorical data, Treatment vs Acetobacteroides
+2025-06-02 09:03:23.225674 INFO::Creating boxplot for categorical data, Treatment vs Permianibacter
+2025-06-02 09:03:23.369562 INFO::Creating boxplot for categorical data, Treatment vs Paracoccaceae_Genus
+2025-06-02 09:03:23.507558 INFO::Creating boxplot for categorical data, Treatment vs Paracaedibacteraceae_Genus
+2025-06-02 09:03:23.643885 INFO::Creating boxplot for categorical data, Treatment vs alphaI_cluster
+2025-06-02 09:03:24.907825 INFO::Creating boxplot for categorical data, Treatment vs Simkaniaceae_Genus
+2025-06-02 09:03:25.158581 INFO::Creating boxplot for categorical data, Treatment vs Eremiobacteria_Genus
+2025-06-02 09:03:25.318757 INFO::Creating boxplot for categorical data, Treatment vs Candidatus_Alysiosphaera
+2025-06-02 09:03:25.472713 INFO::Creating boxplot for categorical data, Treatment vs Comamonadaceae_Genus
+2025-06-02 09:03:25.624038 INFO::Creating boxplot for categorical data, Treatment vs Phaselicystis
+2025-06-02 09:03:26.979961 INFO::Creating boxplot for categorical data, Treatment vs Nitrosomonas
+2025-06-02 09:03:27.261871 INFO::Creating boxplot for categorical data, Treatment vs Hyphomicrobiales_Incertae_Sedis_Genus
+2025-06-02 09:03:27.486292 INFO::Creating boxplot for categorical data, Treatment vs Kapabacteriales_Genus
+2025-06-02 09:03:27.864966 INFO::Creating boxplot for categorical data, Treatment vs Flavihumibacter
+2025-06-02 09:03:28.952327 INFO::Creating boxplot for categorical data, Treatment vs Agitococcus

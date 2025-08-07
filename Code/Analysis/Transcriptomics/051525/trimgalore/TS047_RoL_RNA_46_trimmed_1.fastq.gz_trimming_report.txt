@@ -1,0 +1,159 @@
+
+SUMMARISING RUN PARAMETERS
+==========================
+Input filename: TS047_RoL_RNA_46_trimmed_1.fastq.gz
+Trimming mode: paired-end
+Trim Galore version: 0.6.10
+Cutadapt version: 4.9
+Python version: could not detect
+Number of cores used for trimming: 8
+Quality Phred score cutoff: 20
+Quality encoding type selected: ASCII+33
+Using Illumina adapter for trimming (count: 27462). Second best hit was smallRNA (count: 1)
+Adapter sequence: 'AGATCGGAAGAGC' (Illumina TruSeq, Sanger iPCR; auto-detected)
+Maximum trimming error rate: 0.1 (default)
+Minimum required adapter overlap (stringency): 1 bp
+Minimum required sequence length for both reads before a sequence pair gets removed: 20 bp
+Running FastQC on the data once trimming has completed
+Running FastQC with the following extra arguments: -t 12
+Output file will be GZIP compressed
+
+
+This is cutadapt 4.9 with Python 3.12.7
+Command line parameters: -j 8 -e 0.1 -q 20 -O 1 -a AGATCGGAAGAGC TS047_RoL_RNA_46_trimmed_1.fastq.gz
+Processing single-end reads on 8 cores ...
+Finished in 79.324 s (3.082 µs/read; 19.47 M reads/minute).
+
+=== Summary ===
+
+Total reads processed:              25,735,455
+Reads with adapters:                10,132,901 (39.4%)
+Reads written (passing filters):    25,735,455 (100.0%)
+
+Total basepairs processed: 2,599,280,955 bp
+Quality-trimmed:               1,064,625 bp (0.0%)
+Total written (filtered):  2,564,217,179 bp (98.7%)
+
+=== Adapter 1 ===
+
+Sequence: AGATCGGAAGAGC; Type: regular 3'; Length: 13; Trimmed: 10132901 times
+
+Minimum overlap: 1
+No. of allowed errors:
+1-9 bp: 0; 10-13 bp: 1
+
+Bases preceding removed adapters:
+  A: 26.1%
+  C: 36.6%
+  G: 22.0%
+  T: 14.9%
+  none/other: 0.4%
+
+Overview of removed sequences
+length	count	expect	max.err	error counts
+1	5881414	6433863.8	0	5881414
+2	2038958	1608465.9	0	2038958
+3	535994	402116.5	0	535994
+4	194089	100529.1	0	194089
+5	134242	25132.3	0	134242
+6	103768	6283.1	0	103768
+7	96744	1570.8	0	96744
+8	89912	392.7	0	89912
+9	86666	98.2	0	86023 643
+10	81069	24.5	1	79501 1568
+11	75579	6.1	1	74138 1441
+12	71100	1.5	1	69770 1330
+13	67829	0.4	1	66596 1233
+14	64298	0.4	1	62963 1335
+15	60689	0.4	1	59786 903
+16	57464	0.4	1	56679 785
+17	52419	0.4	1	51601 818
+18	48641	0.4	1	47915 726
+19	43325	0.4	1	42786 539
+20	39700	0.4	1	39108 592
+21	35793	0.4	1	35350 443
+22	31923	0.4	1	31483 440
+23	29069	0.4	1	28581 488
+24	25988	0.4	1	25532 456
+25	23740	0.4	1	23349 391
+26	20867	0.4	1	20469 398
+27	19656	0.4	1	19257 399
+28	17794	0.4	1	17358 436
+29	14987	0.4	1	14719 268
+30	12776	0.4	1	12531 245
+31	10891	0.4	1	10651 240
+32	9319	0.4	1	9147 172
+33	8100	0.4	1	7914 186
+34	6579	0.4	1	6457 122
+35	6096	0.4	1	5977 119
+36	5120	0.4	1	5055 65
+37	4430	0.4	1	4365 65
+38	3511	0.4	1	3444 67
+39	3255	0.4	1	3207 48
+40	2610	0.4	1	2581 29
+41	2179	0.4	1	2142 37
+42	1786	0.4	1	1739 47
+43	1639	0.4	1	1619 20
+44	1613	0.4	1	1598 15
+45	923	0.4	1	898 25
+46	801	0.4	1	786 15
+47	658	0.4	1	645 13
+48	878	0.4	1	866 12
+49	626	0.4	1	606 20
+50	696	0.4	1	684 12
+51	363	0.4	1	346 17
+52	639	0.4	1	625 14
+53	300	0.4	1	290 10
+54	34	0.4	1	30 4
+55	70	0.4	1	63 7
+56	62	0.4	1	62
+57	21	0.4	1	18 3
+58	9	0.4	1	9
+59	20	0.4	1	11 9
+60	8	0.4	1	4 4
+61	8	0.4	1	5 3
+62	6	0.4	1	3 3
+63	7	0.4	1	7
+64	11	0.4	1	3 8
+65	8	0.4	1	8
+66	4	0.4	1	3 1
+67	12	0.4	1	9 3
+68	18	0.4	1	16 2
+69	17	0.4	1	10 7
+70	2	0.4	1	2
+71	12	0.4	1	2 10
+72	11	0.4	1	2 9
+73	7	0.4	1	4 3
+74	11	0.4	1	10 1
+75	8	0.4	1	8
+76	25	0.4	1	20 5
+77	15	0.4	1	12 3
+78	4	0.4	1	2 2
+79	9	0.4	1	6 3
+80	11	0.4	1	4 7
+81	7	0.4	1	3 4
+82	12	0.4	1	9 3
+83	14	0.4	1	7 7
+84	11	0.4	1	8 3
+85	15	0.4	1	12 3
+86	16	0.4	1	14 2
+87	21	0.4	1	17 4
+88	25	0.4	1	24 1
+89	22	0.4	1	20 2
+90	23	0.4	1	21 2
+91	22	0.4	1	20 2
+92	78	0.4	1	73 5
+93	28	0.4	1	24 4
+94	41	0.4	1	36 5
+95	32	0.4	1	31 1
+96	41	0.4	1	39 2
+97	73	0.4	1	70 3
+98	127	0.4	1	116 11
+99	48	0.4	1	42 6
+100	55	0.4	1	5 50
+101	2255	0.4	1	37 2218
+
+RUN STATISTICS FOR INPUT FILE: TS047_RoL_RNA_46_trimmed_1.fastq.gz
+=============================================
+25735455 sequences processed in total
+

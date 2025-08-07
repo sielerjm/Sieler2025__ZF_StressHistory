@@ -1,0 +1,14 @@
+ID	Description	p.adjust	Count	geneID	log_padj
+GO:0019941	modification-dependent protein catabolic process	8.746324795260377e-4	10	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/lonp1/psmd3	3.058174399141834
+GO:0043632	modification-dependent macromolecule catabolic process	8.746324795260377e-4	10	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/lonp1/psmd3	3.058174399141834
+GO:0006511	ubiquitin-dependent protein catabolic process	0.003082109008082881	9	spsb1/uchl5/psmc4/nsfl1c/psmd4a/psmd6/psmd1/ppp1r11/psmd3	2.511152005211474
+GO:0022613	ribonucleoprotein complex biogenesis	0.016685767099521527	7	mtrex/prpf31/srpk1b/denr/imp4/nom1/mcts1	1.7776538226063583
+GO:0043161	proteasome-mediated ubiquitin-dependent protein catabolic process	0.025492260763051312	6	spsb1/psmc4/nsfl1c/psmd4a/psmd6/psmd1	1.593591647724925
+GO:0010498	proteasomal protein catabolic process	0.040536790463273985	6	spsb1/psmc4/nsfl1c/psmd4a/psmd6/psmd1	1.3921506399367725
+GO:0006002	fructose 6-phosphate metabolic process	0.040536790463273985	2	gfpt1/pfkpa	1.3921506399367725
+GO:0022618	protein-RNA complex assembly	0.060810728186260044	4	prpf31/srpk1b/denr/mcts1	1.2160197960383887
+GO:0071826	protein-RNA complex organization	0.06221532648651334	4	prpf31/srpk1b/denr/mcts1	1.206102615492658
+GO:0033617	mitochondrial cytochrome c oxidase assembly	0.063006847550935	2	uqcc6/sco2	1.2006122490863969
+GO:0006260	DNA replication	0.063006847550935	4	rfc3/recql4/rmi1/ssbp1	1.2006122490863969
+GO:0008535	respiratory chain complex IV assembly	0.06473201231393824	2	uqcc6/sco2	1.1888808919276106
+GO:0007005	mitochondrion organization	0.07649747297378347	5	bbc3/uqcc6/sco2/ssbp1/lonp1	1.1163529111427

@@ -1,0 +1,1601 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Differentially Abundant Taxa Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+
+library(gt)
+library(pheatmap)
+library(ggrepel)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(DESeq2)
+library(phyloseq)
+library(microViz)
+library(vegan)
+library(RColorBrewer)
+library(clusterProfiler)
+library(ggpubr)
+library(org.Dr.eg.db)
+library(ppcor)
+library(GO.db)
+library(AnnotationDbi)
+library(KEGGREST)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+# sourceFolder(here::here("Code", "R", "Functions", "AnalysisScripts"), T)
+
+
+
+```
+
+```{r}
+
+# Function to map gene IDs to Entrez IDs
+get_entrez <- function(deg_df) {
+  # Use org.Dr.eg.db to map gene symbols to Entrez IDs
+  gene_ids <- deg_df$gene_id
+  
+  # Create a mapping dataframe first
+  entrez_map <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = gene_ids,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "gene_id", value = "entrezgene_id") %>%
+    dplyr::filter(!is.na(entrezgene_id))
+  
+  # Join with original data to keep all information
+  result <- deg_df %>%
+    dplyr::left_join(entrez_map, by = "gene_id") %>%
+    dplyr::filter(!is.na(entrezgene_id)) %>%
+    dplyr::distinct(entrezgene_id, .keep_all = TRUE)
+  
+  return(result)
+}
+
+
+# Function to enrich GO
+get_go <- function(entrez_df) {
+  # Print diagnostic information
+  cat("\nProcessing contrast with", nrow(entrez_df), "genes\n")
+  
+  # First get the enrichment results
+  go_results <- enrichGO(
+    gene = entrez_df$entrezgene_id,
+    OrgDb = org.Dr.eg.db,
+    keyType = "ENTREZID",
+    ont = "BP",
+    pAdjustMethod = "BH",
+    pvalueCutoff = 0.1,
+    readable = TRUE
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Create a mapping of gene symbols to Entrez IDs
+  symbol_to_entrez <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = entrez_df$entrezgene_id,
+    column = "SYMBOL",
+    keytype = "ENTREZID",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "entrezgene_id", value = "SYMBOL") %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Create a mapping of gene IDs to log2FoldChange
+  gene_fc_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, log2FoldChange) %>%
+    dplyr::left_join(symbol_to_entrez, by = "entrezgene_id") %>%
+    dplyr::select(SYMBOL, log2FoldChange) %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Split the geneID column and create a long format dataframe
+  go_results_long <- go_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    # Join with the fold change data using gene symbols
+    dplyr::left_join(gene_fc_map, by = c("geneID" = "SYMBOL"))
+  
+  # Group back by GO term and calculate summary statistics
+  go_results_summary <- go_results_long %>%
+    dplyr::group_by(Description, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_log2FC = mean(log2FoldChange, na.rm = TRUE),
+      n_up = sum(log2FoldChange > 0, na.rm = TRUE),
+      n_down = sum(log2FoldChange < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      fc_list = list(log2FoldChange),
+      .groups = "drop"
+    )
+  
+  return(go_results_summary)
+}
+
+# Function to enrich KEGG
+get_kegg <- function(entrez_df) {
+  # Print diagnostic information
+  cat("\nProcessing contrast with", nrow(entrez_df), "genes\n")
+  
+  # First get the enrichment results
+  kegg_results <- enrichKEGG(
+    gene = entrez_df$entrezgene_id,
+    organism = 'dre',  # Danio rerio
+    keyType = 'ncbi-geneid',
+    pvalueCutoff = 0.1,
+    pAdjustMethod = "BH"
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Create a mapping of gene IDs to log2FoldChange
+  gene_fc_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, log2FoldChange) %>%
+    dplyr::mutate(entrezgene_id = as.character(entrezgene_id))
+  
+  # Split the geneID column and create a long format dataframe
+  kegg_results_long <- kegg_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    # Convert geneID to character for joining
+    dplyr::mutate(geneID = as.character(geneID)) %>%
+    # Join with the fold change data
+    dplyr::left_join(gene_fc_map, by = c("geneID" = "entrezgene_id"))
+  
+  # Group back by KEGG pathway and calculate summary statistics
+  kegg_results_summary <- kegg_results_long %>%
+    dplyr::group_by(Description, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_log2FC = mean(log2FoldChange, na.rm = TRUE),
+      n_up = sum(log2FoldChange > 0, na.rm = TRUE),
+      n_down = sum(log2FoldChange < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      fc_list = list(log2FoldChange),
+      .groups = "drop"
+    )
+  
+  return(kegg_results_summary)
+}
+
+
+# Function to prepare data for heatmap
+prepare_heatmap_data <- function(enrichment_results, top_n = 10) {
+  # Get top terms from each contrast
+  top_terms <- enrichment_results %>%
+    purrr::map(~ dplyr::slice_max(.x, order_by = log_padj, n = top_n)) %>%
+    purrr::map(~ dplyr::pull(.x, Description)) %>%
+    unlist() %>%
+    unique()
+  
+  # Create matrix for heatmap
+  heatmap_data <- enrichment_results %>%
+    purrr::map_dfr(~ dplyr::filter(.x, Description %in% top_terms), .id = "contrast") %>%
+    tidyr::pivot_wider(
+      id_cols = Description,
+      names_from = contrast,
+      values_from = log_padj,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames("Description") %>%
+    as.matrix()
+  
+  return(heatmap_data)
+}
+
+# Helper to subset enrichment results by group
+enrichment_subset <- function(enrichment_list, group) {
+  enrichment_list[names(enrichment_list) %in% group]
+}
+
+
+get_go_correlations <- function(entrez_df) {
+  # Print diagnostic information
+  cat("\nProcessing contrast with", nrow(entrez_df), "genes\n")
+  
+  # First get the enrichment results
+  go_results <- enrichGO(
+    gene = entrez_df$entrezgene_id,
+    OrgDb = org.Dr.eg.db,
+    keyType = "ENTREZID",
+    ont = "BP",
+    pAdjustMethod = "BH",
+    pvalueCutoff = 0.1,
+    qvalueCutoff = 0.2,
+    readable = TRUE
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Get GO term categories and definitions
+  go_categories <- AnnotationDbi::select(
+    GO.db,
+    keys = go_results$ID,
+    columns = c("GOID", "TERM", "ONTOLOGY", "DEFINITION"),
+    keytype = "GOID"
+  )
+  
+  # Get parent terms using GO.db functions
+  go_parents <- lapply(go_results$ID, function(go_id) {
+    # Get all parent terms
+    parents <- GO.db::GOBPANCESTOR[[go_id]]
+    if (is.null(parents)) return(NA)
+    
+    # Get parent term descriptions
+    parent_terms <- AnnotationDbi::select(
+      GO.db,
+      keys = parents,
+      columns = c("GOID", "TERM"),
+      keytype = "GOID"
+    )
+    
+    # Return as a list of parent terms
+    return(list(parent_terms$TERM))
+  })
+  
+  # Create a mapping of GO IDs to their parent terms
+  go_hierarchy <- tibble::tibble(
+    GOID = go_results$ID,
+    parent_terms = go_parents
+  )
+  
+  # Create a mapping of gene symbols to Entrez IDs
+  symbol_to_entrez <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = entrez_df$entrezgene_id,
+    column = "SYMBOL",
+    keytype = "ENTREZID",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "entrezgene_id", value = "SYMBOL") %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Create a mapping of gene IDs to correlation and taxa information
+  gene_cor_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, correlation, taxa_id, abs_correlation) %>%
+    dplyr::left_join(symbol_to_entrez, by = "entrezgene_id") %>%
+    dplyr::select(SYMBOL, correlation, taxa_id, abs_correlation) %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Split the geneID column and create a long format dataframe
+  go_results_long <- go_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    # Join with the correlation data using gene symbols
+    dplyr::left_join(gene_cor_map, by = c("geneID" = "SYMBOL")) %>%
+    # Join with GO categories and hierarchy
+    dplyr::left_join(go_categories, by = c("ID" = "GOID")) %>%
+    dplyr::left_join(go_hierarchy, by = c("ID" = "GOID"))
+  
+  # Group back by GO term and calculate summary statistics
+  go_results_summary <- go_results_long %>%
+    dplyr::group_by(ID, Description, TERM, ONTOLOGY, DEFINITION, parent_terms, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_correlation = mean(correlation, na.rm = TRUE),
+      mean_abs_correlation = mean(abs_correlation, na.rm = TRUE),
+      n_positive = sum(correlation > 0, na.rm = TRUE),
+      n_negative = sum(correlation < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      correlation_list = list(correlation),
+      taxa_list = list(taxa_id),
+      .groups = "drop"
+    ) %>%
+    # Arrange by adjusted p-value
+    dplyr::arrange(p.adjust)
+  
+  return(go_results_summary)
+}
+
+```
+
+```{r}
+get_kegg_pathways <- function(sig_partial_cor) {
+  # Print diagnostic information
+  cat("\nProcessing KEGG analysis for significant correlations\n")
+  
+  # Get unique gene symbols from significant correlations
+  sig_genes <- unique(sig_partial_cor$gene_id)
+  cat("Number of significant genes:", length(sig_genes), "\n")
+  
+  # Convert gene symbols to Entrez IDs
+  entrez_ids <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = sig_genes,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "SYMBOL", value = "ENTREZID") %>%
+    dplyr::filter(!is.na(ENTREZID))
+  
+  cat("Number of genes successfully mapped to Entrez IDs:", nrow(entrez_ids), "\n")
+  
+  # Get KEGG enrichment results
+  kegg_results <- enrichKEGG(
+    gene = entrez_ids$ENTREZID,
+    organism = 'dre',  # Danio rerio
+    keyType = 'ncbi-geneid',
+    pAdjustMethod = "BH",
+    pvalueCutoff = .1,  # Remove p-value cutoff
+    qvalueCutoff = .2   # Remove q-value cutoff
+  )
+  
+  if (is.null(kegg_results)) {
+    cat("No KEGG pathways found.\n")
+    return(NULL)
+  }
+  
+  # Print raw enrichment results for diagnostics
+  cat("\nRaw KEGG enrichment results:\n")
+  print(as.data.frame(kegg_results))
+  
+  kegg_results <- as.data.frame(kegg_results) %>%
+    dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Print summary of results
+  cat("\nNumber of pathways found:", nrow(kegg_results), "\n")
+  cat("P-value range:", range(kegg_results$p.adjust), "\n")
+  cat("Number of genes per pathway range:", range(kegg_results$Count), "\n")
+
+  # Get detailed KEGG pathway information
+  kegg_info <- lapply(kegg_results$ID, function(path_id) {
+    # Remove 'dre' prefix if present
+    clean_id <- gsub("dre", "", path_id)
+    tryCatch({
+      path_info <- KEGGREST::keggGet(clean_id)
+      if (length(path_info) > 0) {
+        return(list(
+          name = path_info[[1]]$NAME,
+          description = ifelse(is.null(path_info[[1]]$DESCRIPTION),
+                             path_info[[1]]$NAME,  # Use NAME if DESCRIPTION is NULL
+                             path_info[[1]]$DESCRIPTION),
+          class = ifelse(is.null(path_info[[1]]$CLASS),
+                        "Not specified",
+                        path_info[[1]]$CLASS)
+        ))
+      }
+    }, error = function(e) {
+      # Try with 'dre' prefix if first attempt failed
+      tryCatch({
+        path_info <- KEGGREST::keggGet(path_id)
+        if (length(path_info) > 0) {
+          return(list(
+            name = path_info[[1]]$NAME,
+            description = ifelse(is.null(path_info[[1]]$DESCRIPTION),
+                               path_info[[1]]$NAME,  # Use NAME if DESCRIPTION is NULL
+                               path_info[[1]]$DESCRIPTION),
+            class = ifelse(is.null(path_info[[1]]$CLASS),
+                          "Not specified",
+                          path_info[[1]]$CLASS)
+          ))
+        }
+      }, error = function(e2) {
+        return(list(
+          name = "Not available",
+          description = "Not available",
+          class = "Not available"
+        ))
+      })
+    })
+  })
+  
+  # Create a mapping of KEGG IDs to their information
+  kegg_details <- tibble::tibble(
+    KEGGID = kegg_results$ID,
+    Name = sapply(kegg_info, function(x) x$name),
+    Description = sapply(kegg_info, function(x) x$description),
+    Class = sapply(kegg_info, function(x) x$class)
+  )
+  
+  # Print diagnostic information
+  cat("\nKEGG pathway information retrieved:\n")
+  print(kegg_details)
+  
+  # Create a mapping between Entrez IDs and gene symbols
+  id_mapping <- entrez_ids %>%
+    dplyr::select(ENTREZID, SYMBOL)
+  
+  # Split the geneID column and create a long format dataframe
+  kegg_results_long <- kegg_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    dplyr::mutate(geneID = as.character(geneID)) %>%
+    # Join with symbol mapping
+    dplyr::left_join(id_mapping, by = c("geneID" = "ENTREZID"))
+
+  # Print diagnostic information about the input data
+  cat("\nInput data diagnostics:\n")
+  cat("Number of unique genes in correlation data:", length(unique(sig_partial_cor$gene_id)), "\n")
+  cat("Number of unique taxa in correlation data:", length(unique(sig_partial_cor$taxa_id)), "\n")
+  cat("Unique taxa:", paste(unique(sig_partial_cor$taxa_id), collapse = ", "), "\n")
+
+  # Create final summary
+  kegg_summary <- kegg_results_long %>%
+    dplyr::group_by(ID) %>%
+    dplyr::summarise(
+      Name = Description[1],
+      Description = kegg_details$Description[kegg_details$KEGGID == ID[1]][1],
+      Class = kegg_details$Class[kegg_details$KEGGID == ID[1]][1],
+      p.adjust = p.adjust[1],
+      Count = Count[1],
+      Gene_List = list(unique(SYMBOL)),
+      .groups = "drop"
+    ) %>%
+    # Add taxa and correlation information directly from sig_partial_cor
+    dplyr::mutate(
+      # Create a nested dataframe of gene-taxa relationships for each pathway
+      Gene_Taxa_Relations = lapply(Gene_List, function(genes) {
+        sig_partial_cor %>%
+          dplyr::filter(gene_id %in% genes) %>%
+          dplyr::select(gene_id, taxa_id, correlation) %>%
+          dplyr::arrange(gene_id, taxa_id)
+      }),
+      # Extract unique taxa from the relationships
+      Taxa_List = lapply(Gene_Taxa_Relations, function(rel) {
+        unique(rel$taxa_id)
+      }),
+      # Get all correlations
+      Correlation_List = lapply(Gene_Taxa_Relations, function(rel) {
+        rel$correlation
+      })
+    ) %>%
+    dplyr::arrange(p.adjust)
+
+  # Print diagnostic information about the results
+  cat("\nResults diagnostics:\n")
+  for(i in 1:nrow(kegg_summary)) {
+    cat("\nPathway:", kegg_summary$Name[i], "\n")
+    cat("Genes:", paste(unlist(kegg_summary$Gene_List[i]), collapse = ", "), "\n")
+    cat("Number of genes:", length(unlist(kegg_summary$Gene_List[i])), "\n")
+    cat("Taxa:", paste(unlist(kegg_summary$Taxa_List[i]), collapse = ", "), "\n")
+    cat("Number of taxa:", length(unlist(kegg_summary$Taxa_List[i])), "\n")
+    
+    # Print detailed gene-taxa relationships
+    cat("\nGene-Taxa relationships:\n")
+    gene_taxa_data <- kegg_summary$Gene_Taxa_Relations[[i]]
+    
+    # Group by gene and show all its taxa relationships
+    gene_taxa_data %>%
+      dplyr::group_by(gene_id) %>%
+      dplyr::group_walk(~{
+        cat(sprintf("\n%s:\n", .x$gene_id[1]))
+        for(j in 1:nrow(.x)) {
+          cat(sprintf("  -> %s (cor = %.3f)\n", 
+                     .x$taxa_id[j],
+                     .x$correlation[j]))
+        }
+      })
+    
+    # Print summary statistics
+    cat("\nSummary statistics:\n")
+    gene_taxa_data %>%
+      dplyr::group_by(taxa_id) %>%
+      dplyr::summarise(
+        n_genes = n(),
+        mean_cor = mean(correlation),
+        min_cor = min(correlation),
+        max_cor = max(correlation),
+        .groups = "drop"
+      ) %>%
+      dplyr::arrange(desc(abs(mean_cor))) %>%
+      dplyr::mutate(
+        across(where(is.numeric), ~round(., 3))
+      ) %>%
+      print()
+  }
+
+  # Print summary of results
+  cat("\nKEGG Pathway Analysis Summary:\n")
+  cat("Number of significant pathways:", nrow(kegg_summary), "\n")
+  cat("Pathways found:", paste(kegg_summary$Name, collapse = ", "), "\n")
+
+  return(kegg_summary)
+}
+
+
+```
+
+
+
+### Import Data
+
+#### Phyloseq
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+
+# ps.cleaned %>% microViz::samdat_tbl()
+
+# Read and process OTU table
+taxa_counts.all <- ps.cleaned %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+taxa_counts.parasite <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+taxa_counts.priorStressors <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+taxa_counts.noPriorStressors <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+```
+
+#### DAT
+
+```{r}
+
+dat_results.parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/ParasiteExp_60DPE__TREATMENT__significant_results.tsv') %>%
+    dplyr::rename(taxa = feature)
+    
+```
+
+
+
+#### DEG
+
+```{r}
+
+deg_results.parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/Parasite_Effect__significant_results.tsv') 
+
+```
+
+
+```{r}
+# Import raw data
+expr_counts <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Results/rnaseq/051525/salmon/salmon.merged.gene_counts_length_scale__Corrected_f136-f138.tsv') %>%
+  # Clean up column names
+  dplyr::rename_with(~gsub("TS047_RoL_RNA_", "", .), -c(gene_id, gene_name)) %>%
+    dplyr::mutate(gene = gene_id, .before = 1)
+
+
+# Get samples from raw expression data
+expr_samples <- colnames(expr_counts)[-c(1:3)] # Exclude gene_id and gene_name columns
+```
+
+
+
+#### Metadata
+
+```{r}
+# Import metadata to get treatment info
+metadata <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/sample_metadata.tsv') %>%
+    dplyr::mutate(Treatment_long = Treatment) %>%
+    dplyr::rename(Sample = sample) %>%
+  dplyr::mutate(
+    Treatment = stringr::str_c(
+      dplyr::case_when(Antibiotics == 0 ~ "A-", Antibiotics == 1 ~ "A+"),
+      dplyr::case_when(Temperature == 0 ~ " T-", Temperature == 1 ~ " T+"),
+      dplyr::case_when(Pathogen == 0 ~ " P-", Pathogen == 1 ~ " P+")
+    )
+  ) %>% 
+    dplyr::relocate(Treatment, .after = Pathogen) %>%
+    dplyr::arrange(desc(Treatment))
+
+# Get samples with transcriptomics data and filter for specific treatments
+rna_samples.parasite <- metadata %>%
+  dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+  dplyr::filter(Sample %in% expr_samples) %>%  # Only keep samples present in expression data
+  dplyr::pull(Sample) %>%
+  as.character()  # Convert to character to match expression data column names
+
+# Debug: Check sample matching
+cat("\n=== SAMPLE MATCHING DEBUG ===\n")
+cat("Total samples in expression data:", length(expr_samples), "\n")
+cat("First 10 expression samples:", head(expr_samples, 10), "\n")
+cat("Data type of expression samples:", class(expr_samples), "\n")
+cat("Total samples in metadata:", nrow(metadata), "\n")
+cat("Data type of metadata Sample column:", class(metadata$Sample), "\n")
+cat("Samples in metadata with target treatments:", 
+    metadata %>% dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>% nrow(), "\n")
+cat("Samples in metadata with target treatments:", 
+    metadata %>% dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>% dplyr::pull(Sample), "\n")
+cat("Samples that match between metadata and expression data:", 
+    sum(metadata %>% dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>% dplyr::pull(Sample) %in% expr_samples), "\n")
+cat("Final rna_samples.parasite:", rna_samples.parasite, "\n")
+cat("Length of rna_samples.parasite:", length(rna_samples.parasite), "\n")
+cat("Data type of rna_samples.parasite after conversion:", class(rna_samples.parasite), "\n")
+```
+
+
+
+### Preprocesing data
+
+```{r}
+
+# Print sample filtering summary
+cat("\nSample filtering summary:\n")
+cat("Total samples in expression data:", length(expr_samples), "\n")
+cat("Samples matching treatment conditions:", length(rna_samples.parasite), "\n")
+cat("\nTreatment distribution in filtered samples:\n")
+metadata %>%
+  dplyr::filter(Sample %in% rna_samples.parasite) %>%
+  dplyr::count(Treatment) %>%
+  print()
+
+```
+
+
+```{r}
+
+# Filter for significant features
+deg_sig <- deg_results.parasite %>%
+  filter(padj < 0.05)
+
+dat_sig <- dat_results.parasite %>%
+  filter(qval < 0.05)
+
+# Filter expression data for significant genes and relevant samples
+filtered_expr <- expr_counts %>%
+  # Keep only significant genes
+  dplyr::filter(gene %in% deg_sig$gene) %>%
+  # Keep only relevant samples
+  dplyr::select(gene, gene_id, gene_name, any_of(rna_samples.parasite))
+
+# Debug: Check what samples are actually being selected
+cat("\n=== FILTERING DEBUG ===\n")
+cat("Number of significant genes:", nrow(deg_sig), "\n")
+cat("Samples in rna_samples.parasite:", rna_samples.parasite, "\n")
+cat("Samples actually present in expr_counts:", 
+    intersect(rna_samples.parasite, colnames(expr_counts)), "\n")
+cat("Samples NOT present in expr_counts:", 
+    setdiff(rna_samples.parasite, colnames(expr_counts)), "\n")
+cat("Final filtered_expr dimensions:", nrow(filtered_expr), "x", ncol(filtered_expr), "\n")
+cat("Sample columns in filtered_expr:", 
+    setdiff(colnames(filtered_expr), c("gene", "gene_id", "gene_name")), "\n")
+
+# Filter taxa data for significant taxa and relevant samples
+filtered_taxa <- taxa_counts.parasite %>%
+  # Convert to data frame with Sample as first column
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "Sample") %>%
+  dplyr::mutate(Sample = gsub("^f", "", Sample)) %>%
+  # Keep only significant taxa (columns)
+  dplyr::select(Sample, any_of(dat_sig$taxa)) %>%
+  # Keep only samples that have RNA data and match treatment conditions
+  dplyr::filter(Sample %in% rna_samples.parasite)
+
+# Debug: Check taxa filtering
+cat("\n=== TAXA FILTERING DEBUG ===\n")
+cat("Number of significant taxa:", nrow(dat_sig), "\n")
+cat("Structure of taxa_counts.parasite:", class(taxa_counts.parasite), "\n")
+cat("Dimensions of taxa_counts.parasite:", dim(taxa_counts.parasite), "\n")
+cat("Sample names in taxa_counts.parasite (first 10):", head(rownames(taxa_counts.parasite), 10), "\n")
+cat("Samples that match rna_samples.parasite:", 
+    sum(rownames(taxa_counts.parasite) %in% rna_samples.parasite), "\n")
+cat("Final filtered_taxa dimensions:", nrow(filtered_taxa), "x", ncol(filtered_taxa), "\n")
+
+# Normalize gene expression data using z-score
+normalized_expr <- filtered_expr %>%
+  # Convert to long format for easier processing
+  tidyr::pivot_longer(
+    cols = -c(gene, gene_id, gene_name),
+    names_to = "Sample",
+    values_to = "count"
+  ) %>%
+  # Group by gene to normalize within each gene
+  dplyr::group_by(gene_id) %>%
+  dplyr::mutate(
+    z_score = (count - mean(count)) / sd(count)
+  ) %>%
+  # Convert back to wide format
+  dplyr::select(-count) %>%
+  tidyr::pivot_wider(
+    names_from = Sample,
+    values_from = z_score
+  )
+
+# Prepare taxa data (z-score normalized)
+prepared_taxa <- filtered_taxa %>%
+  # Convert to long format
+  tidyr::pivot_longer(
+    cols = -Sample,
+    names_to = "TaxaID",
+    values_to = "abundance"
+  ) %>%
+  # Group by taxon to normalize within each taxon
+  dplyr::group_by(TaxaID) %>%
+  dplyr::mutate(
+    z_score = (abundance - mean(abundance)) / sd(abundance)
+  ) %>%
+  # Keep only the normalized values
+  dplyr::select(Sample, TaxaID, z_score) %>%
+  dplyr::rename(abundance = z_score) %>%
+  dplyr::mutate(Sample = as.character(Sample))
+
+# Prepare expression data for correlation
+prepared_expr <- normalized_expr %>%
+  # Convert to long format
+  tidyr::pivot_longer(
+    cols = -c(gene, gene_id, gene_name),
+    names_to = "Sample",
+    values_to = "z_score"
+  )
+```
+
+## Analysis
+
+### Simple Correlation
+
+```{r}
+# Calculate correlations between genes and taxa
+correlation_results <- prepared_expr %>%
+  # Join with taxa data
+  dplyr::left_join(
+    prepared_taxa,
+    by = "Sample"
+  ) %>%
+  # Group by gene and taxon
+  dplyr::group_by(gene_id, gene_name, TaxaID) %>%
+  # Calculate correlation
+  dplyr::summarise(
+    correlation = cor(z_score, abundance, method = "spearman"),
+    .groups = "drop"
+  ) %>%
+  # Add absolute correlation for filtering
+  dplyr::mutate(
+    abs_correlation = abs(correlation)
+  ) %>%
+  # Arrange by absolute correlation
+  dplyr::arrange(desc(abs_correlation))
+
+# Print summary of correlations
+cat("\nCorrelation Summary:\n")
+summary(correlation_results$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+correlation_results %>%
+  head(10) %>%
+  print()
+
+# Create a histogram of correlations
+ggplot2::ggplot(correlation_results, ggplot2::aes(x = correlation)) +
+  ggplot2::geom_histogram(bins = 50, fill = "steelblue", color = "black") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Distribution of Gene-Taxa Correlations",
+    x = "Spearman Correlation",
+    y = "Count"
+  )
+
+# Calculate correlation significance
+correlation_results <- correlation_results %>%
+  dplyr::mutate(
+    p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(filtered_taxa) - 2) / (1 - correlation^2)))),
+    fdr = p.adjust(p_value, method = "BH")
+  )
+
+# Display significant correlations (FDR < 0.05)
+cat("\nSignificant correlations (FDR < 0.05):\n")
+correlation_results %>%
+  dplyr::filter(fdr < 0.05) %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(10) %>%
+  print()
+
+# Create a heatmap of top correlations
+top_correlations <- correlation_results %>%
+  dplyr::filter(fdr < 0.05) %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(100)
+
+# Create a matrix for the heatmap
+heatmap_matrix <- matrix(
+  top_correlations$correlation,
+  nrow = length(unique(top_correlations$gene_id)),
+  ncol = length(unique(top_correlations$TaxaID)),
+  dimnames = list(
+    unique(top_correlations$gene_id),
+    unique(top_correlations$TaxaID)
+  )
+)
+
+# Plot heatmap
+pheatmap::pheatmap(
+  heatmap_matrix,
+  main = "Top 100 Significant Gene-Taxa Correlations (A- T- P- vs A- T- P+)",
+  color = colorRampPalette(c("blue", "white", "red"))(16),
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  treeheight_row = 0,  # hides row dendrogram
+  treeheight_col = 0,  # hides column dendrogram
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  breaks = seq(-1,1,.125),
+  fontsize_row = 8,
+  fontsize_col = 8
+) 
+
+```
+
+### Partial
+
+```{r}
+# Set seed for reproducibility
+set.seed(42)
+
+# Import metadata to get worm counts and treatment info
+# metadata <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Output/sample_metadata__2025-05-19.tsv') %>%
+#   dplyr::select(Sample, Total.Worm.Count, Treatment) %>%
+#   dplyr::mutate(Sample = as.character(Sample))
+
+
+
+# Print sample filtering summary
+cat("\nSample filtering summary:\n")
+cat("Total samples in expression data:", length(expr_samples), "\n")
+cat("Samples matching treatment conditions:", length(rna_samples.parasite), "\n")
+cat("\nTreatment distribution in filtered samples:\n")
+metadata %>%
+  dplyr::filter(Sample %in% rna_samples.parasite) %>%
+  dplyr::count(Treatment) %>%
+  print()
+
+# Convert filtered expression data to wide format with samples as rows
+expr_wide <- filtered_expr %>%
+  # Convert to long format first
+  tidyr::pivot_longer(
+    cols = -c(gene, gene_id, gene_name),
+    names_to = "Sample",
+    values_to = "count"
+  ) %>%
+  # Group by gene to normalize within each gene
+  dplyr::group_by(gene_id) %>%
+  dplyr::mutate(
+    z_score = (count - mean(count)) / sd(count)
+  ) %>%
+  # Convert to wide format with samples as rows
+  dplyr::select(-c(count, gene_name, gene)) %>%
+  tidyr::pivot_wider(
+    names_from = gene_id,
+    values_from = z_score
+  ) %>%
+  dplyr::arrange(as.numeric(Sample))
+
+# Convert filtered taxa data to wide format with samples as rows
+taxa_wide <- filtered_taxa %>%
+  tidyr::pivot_longer(
+    cols = -Sample,
+    names_to = "TaxaID",
+    values_to = "abundance"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = TaxaID,
+    values_from = abundance
+  ) %>%
+  dplyr::mutate(Sample = as.character(Sample)) %>%
+  dplyr::arrange(as.numeric(Sample))
+
+# Create control variable matrix (worm counts)
+control_matrix <- metadata %>%
+  dplyr::filter(Sample %in% rna_samples.parasite) %>%
+  dplyr::arrange(Sample) %>%
+  dplyr::select(Total.Worm.Count) %>%
+  as.matrix()
+
+# Verify sample alignment
+if(!all(expr_wide$Sample == taxa_wide$Sample) || 
+   !all(expr_wide$Sample == rownames(control_matrix))) {
+  stop("Sample order mismatch between expression, taxa, and control data")
+}
+
+# Print data structure to verify
+cat("\nExpression data structure:\n")
+str(expr_wide)
+cat("\nNumber of samples:", nrow(expr_wide), "\n")
+cat("Number of genes:", ncol(expr_wide) - 1, "\n") # Subtract Sample column
+cat("\nSamples included:", paste(expr_wide$Sample, collapse = ", "), "\n")
+
+cat("\nTaxa data structure:\n")
+str(taxa_wide)
+cat("\nNumber of samples:", nrow(taxa_wide), "\n")
+cat("Number of taxa:", ncol(taxa_wide) - 1, "\n") # Subtract Sample column
+cat("\nSamples included:", paste(taxa_wide$Sample, collapse = ", "), "\n")
+
+cat("\nControl variable structure:\n")
+str(control_matrix)
+cat("\nNumber of samples:", nrow(control_matrix), "\n")
+cat("Number of control variables:", ncol(control_matrix), "\n")
+```
+
+
+```{r partial_correlation, fig.width=8, fig.height=10}
+# Initialize results storage
+partial_cor_results <- list()
+failed_pairs <- list()
+
+# Set up parallel processing
+library(parallel)
+cl <- makeCluster(6)  # Create a cluster with 6 cores
+on.exit(stopCluster(cl))  # Ensure cluster is stopped when done
+
+# Get the top correlations from simple correlation analysis
+top_pairs <- top_correlations %>%
+  dplyr::select(gene_id, TaxaID) %>%
+  dplyr::distinct()
+
+# Calculate partial correlations only for the top pairs
+for(i in 1:nrow(top_pairs)) {
+  gene <- top_pairs$gene_id[i]
+  taxa <- top_pairs$TaxaID[i]
+  
+  # Get data for this gene-taxa pair
+  x <- expr_wide[[gene]]
+  y <- taxa_wide[[taxa]]
+  
+  # Skip if any data is missing
+  if(any(is.na(c(x, y)))) {
+    failed_pairs[[paste(gene, taxa, sep = "_")]] <- "Missing data"
+    next
+  }
+  
+  set.seed(42)
+  
+  # Calculate partial correlation
+  res_pcor <- try(nptest::np.cor.test(
+    x = x,
+    y = y,
+    z = control_matrix,
+    partial = TRUE,
+    parallel = TRUE,
+    cl = cl,  # Use the cluster object
+    R = 1000,
+    na.rm = TRUE
+  ), silent = TRUE)
+  
+  # Only store results if calculation was successful
+  if(!inherits(res_pcor, "try-error")) {
+    partial_cor_results[[paste(gene, taxa, sep = "_")]] <- list(
+      gene_id = gene,
+      taxa_id = taxa,
+      correlation = res_pcor$estimate,
+      p_value = res_pcor$p.value
+    )
+  } else {
+    failed_pairs[[paste(gene, taxa, sep = "_")]] <- as.character(res_pcor)
+  }
+}
+
+# Print summary of failed calculations
+cat("\nNumber of failed correlation calculations:", length(failed_pairs), "\n")
+if(length(failed_pairs) > 0) {
+  cat("\nFirst few failed pairs and reasons:\n")
+  head(failed_pairs) %>% print()
+}
+
+# Check if we have any successful results
+if(length(partial_cor_results) == 0) {
+  stop("No successful partial correlations were calculated. Check the failed_pairs list for details.")
+}
+
+# Convert results to data frame
+partial_cor_df <- do.call(rbind, lapply(partial_cor_results, function(x) {
+  data.frame(
+    gene_id = x$gene_id,
+    taxa_id = x$taxa_id,
+    correlation = x$correlation,
+    p_value = x$p_value
+  )
+})) %>%
+  # Add FDR correction
+  dplyr::mutate(
+    fdr = p.adjust(p_value, method = "BH"),
+    abs_correlation = abs(correlation)
+  ) %>%
+  # Arrange by absolute correlation
+  dplyr::arrange(desc(abs_correlation))
+
+# Print summary of partial correlations
+cat("\nPartial Correlation Summary:\n")
+summary(partial_cor_df$correlation)
+
+# Display top correlations
+cat("\nTop 10 strongest partial correlations:\n")
+partial_cor_df %>%
+  head(10) %>%
+  print()
+
+# Create a heatmap of significant partial correlations
+sig_partial_cor <- partial_cor_df %>%
+  dplyr::filter(fdr < 0.1) %>%
+  dplyr::arrange(desc(abs_correlation))
+
+# Print diagnostic information
+cat("\nNumber of significant partial correlations:", nrow(sig_partial_cor), "\n")
+cat("Number of unique genes:", length(unique(sig_partial_cor$gene_id)), "\n")
+cat("Number of unique taxa:", length(unique(sig_partial_cor$taxa_id)), "\n")
+
+# Only create heatmap if we have enough data
+if(nrow(sig_partial_cor) >= 2 && 
+   length(unique(sig_partial_cor$gene_id)) >= 2 && 
+   length(unique(sig_partial_cor$taxa_id)) >= 2) {
+  
+  # Create a matrix for the heatmap
+  partial_heatmap_matrix <- matrix(
+    sig_partial_cor$correlation,
+    nrow = length(unique(sig_partial_cor$gene_id)),
+    ncol = length(unique(sig_partial_cor$taxa_id)),
+    dimnames = list(
+      unique(sig_partial_cor$gene_id),
+      unique(sig_partial_cor$taxa_id)
+    )
+  )
+  
+  # Plot heatmap
+  pheatmap::pheatmap(
+    partial_heatmap_matrix,
+    main = "Significant Partial Correlations (Controlling for Worm Counts; FDR < 0.1)",
+    color = colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,  # hides row dendrogram
+    treeheight_col = 0,  # hides column dendrogram
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.125),
+    fontsize_row = 10,
+    fontsize_col = 12
+  )
+} else {
+  cat("\nNot enough significant partial correlations to create a meaningful heatmap.\n")
+  cat("Showing top correlations instead:\n")
+  print(head(sig_partial_cor, 10))
+}
+
+sig_partial_cor %>%
+    head(20) %>%
+    gt::gt()
+
+```
+
+
+```{r fig.width=6, fig.height=7}
+# ---- bipartite_edge_plot.R ----
+# Description: Creates a bipartite edge plot (alluvial style) of significant gene-taxa partial correlations.
+# Input: sig_partial_cor (data.frame with columns: gene_id, taxa_id, correlation, etc.)
+# Output: Bipartite edge plot (ggplot2)
+
+# library(tidyverse)
+
+# Assign y positions for genes and taxa
+gene_levels <- sig_partial_cor %>%
+  dplyr::pull(gene_id) %>%
+  unique() %>%
+  sort()
+
+taxa_levels <- sig_partial_cor %>%
+  dplyr::pull(taxa_id) %>%
+  unique() %>%
+  sort()
+
+# Number of genes and taxa
+n_genes <- length(gene_levels)
+n_taxa <- length(taxa_levels)
+
+# Assign y positions for genes (as before)
+gene_pos <- tibble(
+  gene_id = gene_levels,
+  y = seq_len(n_genes)
+)
+
+# Assign y positions for taxa, evenly spaced across the gene y-range
+taxa_pos <- tibble(
+  taxa_id = taxa_levels,
+  y = seq(1, n_genes, length.out = n_taxa)
+)
+
+# Merge positions into edge data
+edges <- sig_partial_cor %>%
+  dplyr::left_join(gene_pos, by = "gene_id") %>%
+  dplyr::rename(y_gene = y) %>%
+  dplyr::left_join(taxa_pos, by = "taxa_id") %>%
+  dplyr::rename(y_taxa = y)
+
+# Set x positions for left (genes) and right (taxa)
+x_gene <- 1
+x_taxa <- 3
+
+# Plot
+set.seed(42)
+ggplot() +
+  # Edges
+  geom_segment(
+    data = edges,
+    aes(
+      x = x_gene, xend = x_taxa,
+      y = y_gene, yend = y_taxa,
+      color = correlation
+    ),
+    size = 1
+  ) +
+  # Gene labels (left)
+  geom_text(
+    data = gene_pos,
+    aes(x = x_gene - 0.05, y = y, label = gene_id),
+    hjust = 1, size = 3
+  ) +
+  # Taxa labels (right)
+  geom_text(
+    data = taxa_pos,
+    aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+    hjust = 0, size = 3
+  ) +
+  # Color scale for correlation
+  scale_color_gradient2(
+    low = "blue", mid = "white", high = "red", 
+    midpoint = 0,
+    limits = c(-1, 1),           # Set color bar range
+    name = "Partial Correlation"
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12)
+  ) +
+  labs(
+    title = "Bipartite Network of Significant Gene-Taxa Partial Correlations",
+    subtitle = "Edge color: partial correlation (blue = negative, red = positive)"
+  ) +
+  xlim(0.5, 3.5)
+```
+
+```{r}
+entrez_ParasiteEffect <- get_entrez(sig_partial_cor)
+```
+
+
+## Enrichment
+
+```{r}
+entrez.ParasiteEffect <- get_entrez(sig_partial_cor)
+go_results.ParasiteEffect <- get_go_correlations(entrez.ParasiteEffect)
+
+# View the first few rows with parent terms
+go_results.ParasiteEffect %>%
+  dplyr::select(ID, TERM, parent_terms, Description, p.adjust, mean_correlation) %>%
+  head()
+
+# Unnest parent terms to see the full hierarchy
+go_results.ParasiteEffect %>%
+  tidyr::unnest(parent_terms) %>%
+  dplyr::select(ID, TERM, parent_terms, Description, p.adjust) %>%
+  head() %>% glimpse()
+
+go_results.ParasiteEffect %>%
+  tidyr::unnest(parent_terms) %>%
+  gt::gt()
+```
+
+
+```{r}
+kegg_pathways.ParasiteEffect <- get_kegg_pathways(sig_partial_cor)
+
+
+if (!is.null(kegg_pathways)) {
+  # Display results in a formatted table
+  kegg_pathways %>%
+    dplyr::select(ID, Name, Class, p.adjust, Count) %>%
+    gt::gt() %>%
+    gt::fmt_scientific(columns = c("p.adjust")) %>%
+    gt::tab_header(
+      title = "KEGG Pathway Enrichment Analysis",
+      subtitle = "Significant pathways from partial correlation analysis"
+    )
+  
+  # Print detailed information for each pathway
+  for(i in 1:nrow(kegg_pathways)) {
+    cat("\n=== Pathway", i, "===\n")
+    cat("ID:", kegg_pathways$ID[i], "\n")
+    cat("Name:", kegg_pathways$Name[i], "\n")
+    cat("Class:", kegg_pathways$Class[i], "\n")
+    cat("Description:", kegg_pathways$Description[i], "\n")
+    cat("Genes:", paste(unlist(kegg_pathways$Gene_List[i]), collapse = ", "), "\n")
+    cat("Taxa:", paste(unlist(kegg_pathways$Taxa_List[i]), collapse = ", "), "\n")
+    cat("===================\n")
+  }
+} else {
+  cat("\nNo significant KEGG pathways were found.\n")
+}
+```
+
+
+## Taxon
+
+### Culicoidibacter
+
+```{r fig.width=6, fig.height=7}
+
+# Culicoidibacter
+
+
+tmp.taxa <- "Rubrivivax"
+
+ps.cleaned %>%
+    ps_filter(Pathogen == 1) %>%
+    # ps_filter(Treatment %in% c("A- T- P-", "A- T- P+", "A+ T+ P+", "A+ T+ P-")) %>%
+    ps_filter(Time == 60) %>%
+  tax_fix() %>%
+  tax_transform("compositional", rank = "Genus") %>%
+  tax_transform("log2", zero_replace = "halfmin", chain = TRUE) %>%
+  ps_get() %>%
+  ps_otu2samdat(tmp.taxa) %>% # adds Parabacteroides as sample data!
+  samdat_tbl() %>%
+    ggplot(aes(x = Treatment, y = !!sym(tmp.taxa), fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  geom_violin(width = 0.5, scale = "width", alpha = .5) +
+  ggbeeswarm::geom_quasirandom(
+      ggplot2::aes(color = Treatment),
+      alpha = 1,
+      size = 1.5,
+      width = .05,
+      varwidth = T,
+      dodge.width = .5
+    ) +
+    facet_wrap(.~Time, scales = "free_x") +
+  scale_y_continuous(
+    breaks = log2(1 / 2^(0:18)),
+    labels = function(x) paste0(100 * round(2^x, digits = 5), "%")#,
+    # limits = c(log2(0.00005), log2(0.025))
+  ) +
+        ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(title = paste0(tmp.taxa, " log2 abundance at final time point")) +
+  theme_bw()
+
+ps.cleaned %>%
+    ps_filter(Pathogen == 1) %>%
+    # ps_filter(Treatment %in% c("A- T- P-", "A- T- P+", "A+ T+ P+", "A+ T+ P-")) %>%
+    ps_filter(Time == 60) %>%
+  tax_fix() %>%
+  tax_transform("compositional", rank = "Genus") %>%
+  tax_transform("log2", zero_replace = "halfmin", chain = TRUE) %>%
+  ps_get() %>%
+  ps_otu2samdat(tmp.taxa) %>% # adds Parabacteroides as sample data!
+  samdat_tbl() %>%
+    ggplot(aes(x = Treatment, y = !!sym(tmp.taxa), fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  geom_violin(width = 0.5, scale = "width", alpha = .5) +
+  ggbeeswarm::geom_quasirandom(
+      ggplot2::aes(color = Treatment),
+      alpha = 1,
+      size = 1.5,
+      width = .2,
+      varwidth = T,
+      dodge.width = .5
+    ) +
+    facet_wrap(.~Tank.ID, scales = "free_x", ncol = 3) +
+  scale_y_continuous(
+    breaks = log2(1 / 2^(0:18)),
+    labels = function(x) paste0(100 * round(2^x, digits = 5), "%")#,
+    # limits = c(log2(0.00005), log2(0.025))
+  ) +
+        ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(title = paste0(tmp.taxa, " log2 abundance at final time point")) +
+  theme_bw()
+
+
+
+
+
+ps.cleaned %>%
+    # ps_filter(Treatment == "A- T- P-" | 
+    #               Treatment == "A- T- P+") %>%
+    ps_filter(Time == 60) %>%
+  tax_fix() %>%
+  tax_transform("compositional", rank = "Genus") %>%
+  tax_transform("log2", zero_replace = "halfmin", chain = TRUE) %>%
+  ps_get() %>%
+  ps_otu2samdat(tmp.taxa) %>% # adds Parabacteroides as sample data!
+  samdat_tbl() %>%
+    ggplot(aes(x = Treatment, y = !!sym(tmp.taxa), fill = Treatment)) + #group = interaction(Treatment, Tank.ID)
+  geom_violin(width = 0.5, scale = "width", alpha = .5, draw_quantiles = c(0.5)) +
+  ggbeeswarm::geom_quasirandom(
+      ggplot2::aes(color = Treatment),
+      alpha = 1,
+      size = 1.5,
+      width = 0.2,
+      varwidth = T,
+      dodge.width = .5
+    ) +
+    facet_wrap(.~Time, scale = "free_x") +
+  scale_y_continuous(
+    breaks = log2(1 / 2^(0:18)),
+    labels = function(x) paste0(100 * round(2^x, digits = 5), "%")#,
+    # limits = c(log2(0.00005), log2(0.025))
+  ) +
+        ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(title = paste0(tmp.taxa, " log2 abundance")) +
+  theme_bw()
+
+
+
+ps.cleaned %>%
+    # ps_filter(Treatment == "A- T- P-" | 
+    #               Treatment == "A- T- P+") %>%
+    # ps_filter(Time >= 28) %>%
+  tax_transform("compositional", rank = "Genus") %>%
+  tax_transform("log2", zero_replace = "halfmin", chain = TRUE) %>%
+  ps_get() %>%
+  ps_otu2samdat(tmp.taxa) %>% # adds Parabacteroides as sample data!
+  samdat_tbl() %>%
+    ggplot(aes(x = Time, y = !!sym(tmp.taxa), fill = Treatment)) +
+  # geom_violin(width = 0.5, scale = "width", alpha = .5) +
+    geom_smooth(aes(color = Treatment), 
+                method = "loess",
+                se = F) +
+  ggbeeswarm::geom_quasirandom(
+      ggplot2::aes(color = Treatment),
+      alpha = 1,
+      size = 1.5,
+      width = 0.2
+    ) +
+    # facet_grid(Antibiotics + Temperature ~ Pathogen) +
+    facet_grid(Antibiotics + Temperature ~ .) +
+  scale_y_continuous(
+    breaks = log2(1 / 2^(0:18)),
+    labels = function(x) paste0(100 * round(2^x, digits = 5), "%")#,
+    # limits = c(log2(0.00005), log2(0.025))
+  ) +
+        ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    labs(title = paste0(tmp.taxa," log 2 abundance")) +
+  theme_bw()
+```
+
+
+
+
+01) What is the host-microbiome response to parasite exposure? 
+A- T- P- vs (A- T- P+)
+
+02) Is the host-microbiome response to parasite exposure historically contingent?
+A- T- P- vs (A+ T- P+, A- T+ P+, A+ T+ P+)
+
+03) Is the host-microbiome recovery historically contingent?
+A- T- P- vs (A+ T- P-, A- T+ P-, A+ T+ P-)
+
+
+

@@ -1,0 +1,3 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	actomyosin structure organization	0.04125057541383792	4	1.3845699889974097	-1.0322457716366826	1	3		
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_plus	regulation of reactive oxygen species metabolic process	0.04125057541383792	2	1.3845699889974097	2.697010623341024	2	0		

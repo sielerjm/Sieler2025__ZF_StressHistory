@@ -1,0 +1,72 @@
+[2025-05-16 00:13:43.019] [jointLog] [info] setting maxHashResizeThreads to 6
+[2025-05-16 00:13:43.019] [jointLog] [info] Fragment incompatibility prior below threshold.  Incompatible fragments will be ignored.
+[2025-05-16 00:13:43.019] [jointLog] [info] Usage of --validateMappings implies use of minScoreFraction. Since not explicitly specified, it is being set to 0.65
+[2025-05-16 00:13:43.019] [jointLog] [info] Setting consensusSlack to selective-alignment default of 0.35.
+[2025-05-16 00:13:43.019] [jointLog] [info] parsing read library format
+[2025-05-16 00:13:43.019] [jointLog] [info] There is 1 library.
+[2025-05-16 00:13:43.020] [jointLog] [info] Loading pufferfish index
+[2025-05-16 00:13:43.020] [jointLog] [info] Loading dense pufferfish index.
+[2025-05-16 00:14:06.537] [jointLog] [info] done
+[2025-05-16 00:14:07.086] [jointLog] [info] Index contained 121143 targets
+[2025-05-16 00:14:07.164] [jointLog] [info] Number of decoys : 26
+[2025-05-16 00:14:07.164] [jointLog] [info] First decoy index : 120752 
+[2025-05-16 00:19:46.761] [jointLog] [info] Thread saw mini-batch with a maximum of 1.02% zero probability fragments
+[2025-05-16 00:19:46.776] [jointLog] [info] Thread saw mini-batch with a maximum of 1.00% zero probability fragments
+[2025-05-16 00:19:46.779] [jointLog] [info] Thread saw mini-batch with a maximum of 1.10% zero probability fragments
+[2025-05-16 00:19:46.819] [jointLog] [info] Thread saw mini-batch with a maximum of 0.92% zero probability fragments
+[2025-05-16 00:19:46.888] [jointLog] [info] Thread saw mini-batch with a maximum of 1.10% zero probability fragments
+[2025-05-16 00:19:46.889] [jointLog] [info] Thread saw mini-batch with a maximum of 1.06% zero probability fragments
+[2025-05-16 00:19:46.974] [jointLog] [info] Computed 94942 rich equivalence classes for further processing
+[2025-05-16 00:19:46.974] [jointLog] [info] Counted 21546889 total reads in the equivalence classes 
+[2025-05-16 00:19:46.977] [jointLog] [warning] 0.00146154% of fragments were shorter than the k used to build the index.
+If this fraction is too large, consider re-building the index with a smaller k.
+The minimum read size found was 20.
+
+
+[2025-05-16 00:19:46.977] [jointLog] [info] Number of mappings discarded because of alignment score : 16248022
+[2025-05-16 00:19:46.977] [jointLog] [info] Number of fragments entirely discarded because of alignment score : 1650477
+[2025-05-16 00:19:46.977] [jointLog] [info] Number of fragments discarded because they are best-mapped to decoys : 1208595
+[2025-05-16 00:19:46.977] [jointLog] [info] Number of fragments discarded because they have only dovetail (discordant) mappings to valid targets : 200326
+[2025-05-16 00:19:46.977] [jointLog] [info] Mapping rate = 85.1128%
+
+[2025-05-16 00:19:46.977] [jointLog] [info] finished quantifyLibrary()
+[2025-05-16 00:19:47.089] [jointLog] [info] Starting optimizer
+[2025-05-16 00:19:46.974] [fileLog] [info] 
+At end of round 0
+==================
+Observed 25315686 total fragments (25315686 in most recent round)
+
+[2025-05-16 00:19:47.642] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
+[2025-05-16 00:19:47.650] [jointLog] [info] iteration = 0 | max rel diff. = 10082.9
+[2025-05-16 00:19:48.421] [jointLog] [info] iteration = 100 | max rel diff. = 20.5785
+[2025-05-16 00:19:49.185] [jointLog] [info] iteration = 200 | max rel diff. = 7.08743
+[2025-05-16 00:19:49.948] [jointLog] [info] iteration = 300 | max rel diff. = 2.13673
+[2025-05-16 00:19:50.712] [jointLog] [info] iteration = 400 | max rel diff. = 3.72604
+[2025-05-16 00:19:51.478] [jointLog] [info] iteration = 500 | max rel diff. = 1.98062
+[2025-05-16 00:19:52.243] [jointLog] [info] iteration = 600 | max rel diff. = 0.426993
+[2025-05-16 00:19:53.008] [jointLog] [info] iteration = 700 | max rel diff. = 0.22126
+[2025-05-16 00:19:53.772] [jointLog] [info] iteration = 800 | max rel diff. = 0.89564
+[2025-05-16 00:19:54.538] [jointLog] [info] iteration = 900 | max rel diff. = 0.0890949
+[2025-05-16 00:19:55.301] [jointLog] [info] iteration = 1000 | max rel diff. = 0.832811
+[2025-05-16 00:19:56.063] [jointLog] [info] iteration = 1100 | max rel diff. = 0.472554
+[2025-05-16 00:19:56.824] [jointLog] [info] iteration = 1200 | max rel diff. = 0.227203
+[2025-05-16 00:19:57.586] [jointLog] [info] iteration = 1300 | max rel diff. = 0.196642
+[2025-05-16 00:19:58.347] [jointLog] [info] iteration = 1400 | max rel diff. = 0.133107
+[2025-05-16 00:19:59.110] [jointLog] [info] iteration = 1500 | max rel diff. = 0.506529
+[2025-05-16 00:19:59.870] [jointLog] [info] iteration = 1600 | max rel diff. = 0.121647
+[2025-05-16 00:20:00.631] [jointLog] [info] iteration = 1700 | max rel diff. = 0.095756
+[2025-05-16 00:20:01.395] [jointLog] [info] iteration = 1800 | max rel diff. = 0.0654976
+[2025-05-16 00:20:02.162] [jointLog] [info] iteration = 1900 | max rel diff. = 0.0337856
+[2025-05-16 00:20:02.924] [jointLog] [info] iteration = 2000 | max rel diff. = 0.0972968
+[2025-05-16 00:20:03.683] [jointLog] [info] iteration = 2100 | max rel diff. = 1.33652
+[2025-05-16 00:20:04.446] [jointLog] [info] iteration = 2200 | max rel diff. = 0.0787861
+[2025-05-16 00:20:05.210] [jointLog] [info] iteration = 2300 | max rel diff. = 0.0710679
+[2025-05-16 00:20:05.454] [jointLog] [info] iteration = 2333 | max rel diff. = 0.00181412
+[2025-05-16 00:20:05.456] [jointLog] [info] Finished optimizer
+[2025-05-16 00:20:05.456] [jointLog] [info] writing output 
+
+[2025-05-16 00:20:05.716] [jointLog] [info] Computing gene-level abundance estimates
+[2025-05-16 00:20:21.254] [jointLog] [info] There were 131460 transcripts mapping to 49285 genes
+[2025-05-16 00:20:21.255] [jointLog] [info] NOTE: We recommend using tximport (https://bioconductor.org/packages/release/bioc/html/tximport.html) for aggregating transcript-level salmon abundance estimates to the gene level.  It is more versatile, exposes more features, and allows considering multi-sample information during aggregation.
+[2025-05-16 00:20:21.436] [jointLog] [info] Aggregating expressions to gene level
+[2025-05-16 00:20:21.575] [jointLog] [info] done

@@ -1,0 +1,212 @@
+2025-05-26 19:51:58.520887 INFO::Writing function arguments to log file
+2025-05-26 19:51:58.522224 DEBUG::Function arguments
+2025-05-26 19:51:58.522527 DEBUG::Output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden
+2025-05-26 19:51:58.52281 DEBUG::Min Abundance: 0.000000
+2025-05-26 19:51:58.523106 DEBUG::Min Prevalence: 0.000000
+2025-05-26 19:51:58.523433 DEBUG::Normalization: TSS
+2025-05-26 19:51:58.523729 DEBUG::Transform: LOG
+2025-05-26 19:51:58.523995 DEBUG::Analysis method: LM
+2025-05-26 19:51:58.524308 DEBUG::Max significance: 0.250000
+2025-05-26 19:51:58.524621 DEBUG::Random effects:
+2025-05-26 19:51:58.524936 DEBUG::Fixed effects: Pathogen,Total.Worm.Count
+2025-05-26 19:51:58.525357 DEBUG::Correction method: BH
+2025-05-26 19:51:58.525866 DEBUG::Standardize: FALSE
+2025-05-26 19:51:58.526181 DEBUG::Cores: 8
+2025-05-26 19:51:58.526483 INFO::Verifying options selected are valid
+2025-05-26 19:51:58.527774 INFO::Determining format of input files
+2025-05-26 19:51:58.528825 INFO::Input format is data samples as rows and metadata samples as rows
+2025-05-26 19:51:58.531936 DEBUG::A total of 236 samples were found in both the data and metadata
+2025-05-26 19:51:58.532442 DEBUG::Reordering data/metadata to use same sample ordering
+2025-05-26 19:51:58.538464 INFO::Formula for fixed effects: expr ~  Pathogen + Total.Worm.Count
+2025-05-26 19:51:58.539716 INFO::Filter data based on min abundance and min prevalence
+2025-05-26 19:51:58.540599 INFO::Total samples in data: 236
+2025-05-26 19:51:58.541471 INFO::Min samples required with min abundance for a feature not to be filtered: 0.000000
+2025-05-26 19:51:58.552559 INFO::Total filtered features: 0
+2025-05-26 19:51:58.553911 INFO::Filtered feature names from abundance and prevalence filtering:
+2025-05-26 19:51:58.612097 INFO::Total filtered features with variance filtering: 0
+2025-05-26 19:51:58.61342 INFO::Filtered feature names from variance filtering:
+2025-05-26 19:51:58.614585 INFO::Running selected normalization method: TSS
+2025-05-26 19:51:58.629566 INFO::Bypass z-score application to metadata
+2025-05-26 19:51:58.630962 INFO::Running selected transform method: LOG
+2025-05-26 19:51:58.654337 INFO::Running selected analysis method: LM
+2025-05-26 19:51:58.656652 INFO::Creating cluster of 8 R processes
+2025-05-26 19:52:18.955629 INFO::Counting total values for each feature
+2025-05-26 19:52:19.063152 INFO::Writing filtered data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/features/filtered_data.tsv
+2025-05-26 19:52:19.142564 INFO::Writing filtered, normalized data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/features/filtered_data_norm.tsv
+2025-05-26 19:52:19.299261 INFO::Writing filtered, normalized, transformed data to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/features/filtered_data_norm_transformed.tsv
+2025-05-26 19:52:19.778641 INFO::Writing residuals to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/fits/residuals.rds
+2025-05-26 19:52:20.519521 INFO::Writing fitted values to file /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/fits/fitted.rds
+2025-05-26 19:52:20.53686 INFO::Writing all results to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/all_results.tsv
+2025-05-26 19:52:20.553522 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/significant_results.tsv
+2025-05-26 19:52:20.557488 INFO::Writing heatmap of significant results to file: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden/heatmap.pdf
+2025-05-26 19:52:20.634871 INFO::Writing association plots (one for each significant association) to output folder: /Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/MaAsLin2__Parasites_WormBurden
+2025-05-26 19:52:20.649622 INFO::Plotting associations from most to least significant, grouped by metadata
+2025-05-26 19:52:20.651691 INFO::Plotting data for metadata number 1, Pathogen
+2025-05-26 19:52:23.491616 INFO::Creating boxplot for categorical data, Pathogen vs Cloacibacterium
+2025-05-26 19:52:23.705753 INFO::Creating boxplot for categorical data, Pathogen vs Plesiomonas
+2025-05-26 19:52:23.883104 INFO::Creating boxplot for categorical data, Pathogen vs Vogesella
+2025-05-26 19:52:24.061978 INFO::Creating boxplot for categorical data, Pathogen vs Candidatus_Megaira
+2025-05-26 19:52:25.667132 INFO::Creating boxplot for categorical data, Pathogen vs Polymorphobacter
+2025-05-26 19:52:25.820039 INFO::Creating boxplot for categorical data, Pathogen vs Halomonas
+2025-05-26 19:52:25.987199 INFO::Creating boxplot for categorical data, Pathogen vs Rhodocyclaceae_Genus
+2025-05-26 19:52:26.14909 INFO::Creating boxplot for categorical data, Pathogen vs Caulobacter
+2025-05-26 19:52:27.3653 INFO::Creating boxplot for categorical data, Pathogen vs Vibrio
+2025-05-26 19:52:27.538853 INFO::Creating boxplot for categorical data, Pathogen vs Pseudomonas
+2025-05-26 19:52:27.688455 INFO::Creating boxplot for categorical data, Pathogen vs Paucibacter
+2025-05-26 19:52:27.852376 INFO::Creating boxplot for categorical data, Pathogen vs Rhizobium
+2025-05-26 19:52:28.004268 INFO::Creating boxplot for categorical data, Pathogen vs Niveibacterium
+2025-05-26 19:52:28.157138 INFO::Creating boxplot for categorical data, Pathogen vs Flavobacterium
+2025-05-26 19:52:29.479475 INFO::Creating boxplot for categorical data, Pathogen vs Shewanella
+2025-05-26 19:52:31.296718 INFO::Creating boxplot for categorical data, Pathogen vs Phreatobacter
+2025-05-26 19:52:31.489302 INFO::Creating boxplot for categorical data, Pathogen vs Chthoniobacter
+2025-05-26 19:52:31.797674 INFO::Creating boxplot for categorical data, Pathogen vs Dinghuibacter
+2025-05-26 19:52:31.976309 INFO::Creating boxplot for categorical data, Pathogen vs Bradyrhizobium
+2025-05-26 19:52:32.142063 INFO::Creating boxplot for categorical data, Pathogen vs Citrobacter
+2025-05-26 19:52:33.3531 INFO::Creating boxplot for categorical data, Pathogen vs Gemmobacter
+2025-05-26 19:52:33.522913 INFO::Creating boxplot for categorical data, Pathogen vs Acinetobacter
+2025-05-26 19:52:33.676873 INFO::Creating boxplot for categorical data, Pathogen vs Bosea
+2025-05-26 19:52:33.828679 INFO::Creating boxplot for categorical data, Pathogen vs Paenirhodobacter
+2025-05-26 19:52:33.980285 INFO::Creating boxplot for categorical data, Pathogen vs Tundrisphaera
+2025-05-26 19:52:34.134691 INFO::Creating boxplot for categorical data, Pathogen vs Paracoccaceae_Genus
+2025-05-26 19:52:35.491134 INFO::Creating boxplot for categorical data, Pathogen vs Sporomusaceae_Genus
+2025-05-26 19:52:35.636851 INFO::Creating boxplot for categorical data, Pathogen vs Dechloromonas
+2025-05-26 19:52:35.802354 INFO::Creating boxplot for categorical data, Pathogen vs Barnesiellaceae_Genus
+2025-05-26 19:52:35.984456 INFO::Creating boxplot for categorical data, Pathogen vs Chitinivorax
+2025-05-26 19:52:38.169166 INFO::Creating boxplot for categorical data, Pathogen vs Comamonadaceae_Genus
+2025-05-26 19:52:38.348497 INFO::Creating boxplot for categorical data, Pathogen vs Rubrivivax
+2025-05-26 19:52:38.497749 INFO::Creating boxplot for categorical data, Pathogen vs Pirellulaceae_Genus
+2025-05-26 19:52:38.658247 INFO::Creating boxplot for categorical data, Pathogen vs Uliginosibacterium
+2025-05-26 19:52:38.804987 INFO::Creating boxplot for categorical data, Pathogen vs Vampirovibrionaceae_Genus
+2025-05-26 19:52:38.955799 INFO::Creating boxplot for categorical data, Pathogen vs Aurantisolimonas
+2025-05-26 19:52:39.102929 INFO::Creating boxplot for categorical data, Pathogen vs Pirellula
+2025-05-26 19:52:40.73037 INFO::Creating boxplot for categorical data, Pathogen vs Bdellovibrio
+2025-05-26 19:52:40.952236 INFO::Creating boxplot for categorical data, Pathogen vs Gammaproteobacteria_Genus
+2025-05-26 19:52:42.150083 INFO::Creating boxplot for categorical data, Pathogen vs X67.14_Genus
+2025-05-26 19:52:42.328548 INFO::Creating boxplot for categorical data, Pathogen vs Arthrospira_PCC.7345
+2025-05-26 19:52:42.519278 INFO::Creating boxplot for categorical data, Pathogen vs Haliangiaceae_Genus
+2025-05-26 19:52:42.692191 INFO::Creating boxplot for categorical data, Pathogen vs env.OPS_17_Genus
+2025-05-26 19:52:42.842805 INFO::Creating boxplot for categorical data, Pathogen vs Pseudoxanthomonas
+2025-05-26 19:52:42.996991 INFO::Creating boxplot for categorical data, Pathogen vs Azospira
+2025-05-26 19:52:43.143257 INFO::Creating boxplot for categorical data, Pathogen vs Rhizobiaceae_Genus
+2025-05-26 19:52:43.498295 INFO::Creating boxplot for categorical data, Pathogen vs Sphaerotilus
+2025-05-26 19:52:44.493414 INFO::Creating boxplot for categorical data, Pathogen vs Legionella
+2025-05-26 19:52:44.799755 INFO::Creating boxplot for categorical data, Pathogen vs Roseomonas
+2025-05-26 19:52:44.944512 INFO::Creating boxplot for categorical data, Pathogen vs X11.24_Genus
+2025-05-26 19:52:45.296541 INFO::Creating boxplot for categorical data, Pathogen vs Sporichthyaceae_Genus
+2025-05-26 19:52:46.431867 INFO::Creating boxplot for categorical data, Pathogen vs Hyphomicrobium
+2025-05-26 19:52:48.455272 INFO::Creating boxplot for categorical data, Pathogen vs Eremiobacteria_Genus
+2025-05-26 19:52:48.625785 INFO::Creating boxplot for categorical data, Pathogen vs Bacillaceae_Genus
+2025-05-26 19:52:48.782169 INFO::Creating boxplot for categorical data, Pathogen vs Nordella
+2025-05-26 19:52:48.939426 INFO::Creating boxplot for categorical data, Pathogen vs Burkholderiales_Genus
+2025-05-26 19:52:49.277108 INFO::Creating boxplot for categorical data, Pathogen vs Cellvibrio
+2025-05-26 19:52:50.417146 INFO::Creating boxplot for categorical data, Pathogen vs Ruminiclostridium
+2025-05-26 19:52:52.569425 INFO::Creating boxplot for categorical data, Pathogen vs Novispirillum
+2025-05-26 19:52:52.884653 INFO::Creating boxplot for categorical data, Pathogen vs Unknown_Family_Genus
+2025-05-26 19:52:53.218601 INFO::Creating boxplot for categorical data, Pathogen vs Glutamicibacter
+2025-05-26 19:52:54.406355 INFO::Creating boxplot for categorical data, Pathogen vs Ferruginibacter
+2025-05-26 19:52:56.362188 INFO::Creating boxplot for categorical data, Pathogen vs NS9_marine_group_Genus
+2025-05-26 19:52:56.520164 INFO::Creating boxplot for categorical data, Pathogen vs Clostridium
+2025-05-26 19:52:56.677236 INFO::Creating boxplot for categorical data, Pathogen vs Brucella
+2025-05-26 19:52:56.821359 INFO::Creating boxplot for categorical data, Pathogen vs Telmatocola
+2025-05-26 19:52:56.967259 INFO::Creating boxplot for categorical data, Pathogen vs Polyangiia_Genus
+2025-05-26 19:52:57.324001 INFO::Creating boxplot for categorical data, Pathogen vs Rhodovarius
+2025-05-26 19:52:58.45847 INFO::Creating boxplot for categorical data, Pathogen vs Culicoidibacter
+2025-05-26 19:53:00.424139 INFO::Creating boxplot for categorical data, Pathogen vs Chryseotalea
+2025-05-26 19:53:00.733352 INFO::Creating boxplot for categorical data, Pathogen vs Oscillospiraceae_Genus
+2025-05-26 19:53:00.87742 INFO::Creating boxplot for categorical data, Pathogen vs Undibacterium
+2025-05-26 19:53:01.044176 INFO::Creating boxplot for categorical data, Pathogen vs Aggregatilineales_Genus
+2025-05-26 19:53:01.191358 INFO::Creating boxplot for categorical data, Pathogen vs Lactococcus
+2025-05-26 19:53:02.528963 INFO::Creating boxplot for categorical data, Pathogen vs vadinHA49_Genus
+2025-05-26 19:53:02.803011 INFO::Creating boxplot for categorical data, Pathogen vs Candidatus_Obscuribacter
+2025-05-26 19:53:02.980564 INFO::Creating boxplot for categorical data, Pathogen vs SWB02
+2025-05-26 19:53:04.158958 INFO::Creating boxplot for categorical data, Pathogen vs Chitinimonas
+2025-05-26 19:53:04.335177 INFO::Creating boxplot for categorical data, Pathogen vs Neochlamydia
+2025-05-26 19:53:04.493718 INFO::Creating boxplot for categorical data, Pathogen vs Elsteraceae_Genus
+2025-05-26 19:53:04.731727 INFO::Creating boxplot for categorical data, Pathogen vs Chitinilyticum
+2025-05-26 19:53:04.930899 INFO::Creating boxplot for categorical data, Pathogen vs Nitrospira
+2025-05-26 19:53:05.079905 INFO::Creating boxplot for categorical data, Pathogen vs OM190_Genus
+2025-05-26 19:53:07.221768 INFO::Creating boxplot for categorical data, Pathogen vs Aeromonas
+2025-05-26 19:53:07.387545 INFO::Creating boxplot for categorical data, Pathogen vs Peptostreptococcus
+2025-05-26 19:53:07.546873 INFO::Creating boxplot for categorical data, Pathogen vs Gloeocapsa_PCC.7428
+2025-05-26 19:53:07.702777 INFO::Creating boxplot for categorical data, Pathogen vs Pararhodobacter
+2025-05-26 19:53:07.847876 INFO::Creating boxplot for categorical data, Pathogen vs Flavihumibacter
+2025-05-26 19:53:07.991728 INFO::Creating boxplot for categorical data, Pathogen vs Kineococcus
+2025-05-26 19:53:08.142212 INFO::Creating boxplot for categorical data, Pathogen vs Pedosphaeraceae_Genus
+2025-05-26 19:53:08.476251 INFO::Creating boxplot for categorical data, Pathogen vs Anaerovorax
+2025-05-26 19:53:09.583163 INFO::Creating boxplot for categorical data, Pathogen vs Lutispora
+2025-05-26 19:53:09.770341 INFO::Creating boxplot for categorical data, Pathogen vs Pseudolysobacter
+2025-05-26 19:53:09.922672 INFO::Creating boxplot for categorical data, Pathogen vs Turneriella
+2025-05-26 19:53:10.270617 INFO::Creating boxplot for categorical data, Pathogen vs Roseicella
+2025-05-26 19:53:12.196584 INFO::Creating boxplot for categorical data, Pathogen vs Altererythrobacter
+2025-05-26 19:53:12.365862 INFO::Creating boxplot for categorical data, Pathogen vs Verrucomicrobiia_Genus
+2025-05-26 19:53:12.522321 INFO::Creating boxplot for categorical data, Pathogen vs Propionivibrio
+2025-05-26 19:53:12.672355 INFO::Creating boxplot for categorical data, Pathogen vs SH.PL14
+2025-05-26 19:53:12.813192 INFO::Creating boxplot for categorical data, Pathogen vs Rhodococcus
+2025-05-26 19:53:12.986829 INFO::Creating boxplot for categorical data, Pathogen vs Weissella
+2025-05-26 19:53:13.219872 INFO::Creating boxplot for categorical data, Pathogen vs Crenobacter
+2025-05-26 19:53:15.795366 INFO::Creating boxplot for categorical data, Pathogen vs Saprospiraceae_Genus
+2025-05-26 19:53:15.948961 INFO::Creating boxplot for categorical data, Pathogen vs Stella
+2025-05-26 19:53:20.566156 INFO::Plotting data for metadata number 2, Total.Worm.Count
+2025-05-26 19:53:20.569965 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Aggregatilineales_Genus
+2025-05-26 19:53:20.746028 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Brucella
+2025-05-26 19:53:20.918386 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Bacillaceae_Genus
+2025-05-26 19:53:21.08044 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs vadinHA49_Genus
+2025-05-26 19:53:21.243674 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Ruminiclostridium
+2025-05-26 19:53:23.426793 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dietzia
+2025-05-26 19:53:23.613811 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Pirellulaceae_Genus
+2025-05-26 19:53:23.779799 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chitinivorax
+2025-05-26 19:53:23.989184 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs CM1G08
+2025-05-26 19:53:25.525785 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kineococcus
+2025-05-26 19:53:25.856437 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Acetobacteroides
+2025-05-26 19:53:26.01482 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Arthrobacter
+2025-05-26 19:53:27.192153 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dechlorobacter
+2025-05-26 19:53:29.373488 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Altererythrobacter
+2025-05-26 19:53:29.564833 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs NS9_marine_group_Genus
+2025-05-26 19:53:29.723557 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Spirosomataceae_Genus
+2025-05-26 19:53:29.883771 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Polymorphobacter
+2025-05-26 19:53:30.04739 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodovarius
+2025-05-26 19:53:30.399418 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Leptothrix
+2025-05-26 19:53:31.55242 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Absconditabacteriales_.SR1._Genus
+2025-05-26 19:53:31.701651 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Bacteriovorax
+2025-05-26 19:53:31.871038 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs alphaI_cluster
+2025-05-26 19:53:32.033134 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kinneretia
+2025-05-26 19:53:32.20118 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Candidatus_Alysiosphaera
+2025-05-26 19:53:33.405021 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Vogesella
+2025-05-26 19:53:33.573819 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Fundidesulfovibrio
+2025-05-26 19:53:33.73114 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs X0319.6G20_Genus
+2025-05-26 19:53:33.89251 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodocyclaceae_Genus
+2025-05-26 19:53:34.119639 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Staphylococcus
+2025-05-26 19:53:36.747799 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chthoniobacter
+2025-05-26 19:53:36.933855 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Microscillaceae_Genus
+2025-05-26 19:53:38.215408 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Burkholderia.Caballeronia.Paraburkholderia
+2025-05-26 19:53:38.438373 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs env.OPS_17_Genus
+2025-05-26 19:53:38.636953 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Permianibacter
+2025-05-26 19:53:38.818902 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Curvibacter
+2025-05-26 19:53:38.982549 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Chitinibacter
+2025-05-26 19:53:39.148027 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Nitrospira
+2025-05-26 19:53:40.332466 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Azospira
+2025-05-26 19:53:40.776853 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Pseudobdellovibrionaceae_Genus
+2025-05-26 19:53:40.933276 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Reyranella
+2025-05-26 19:53:41.346824 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Aquihabitans
+2025-05-26 19:53:43.439347 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Microtrichaceae_Genus
+2025-05-26 19:53:43.744766 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Mycobacterium
+2025-05-26 19:53:43.955968 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rubrivivax
+2025-05-26 19:53:44.149005 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Dechloromonas
+2025-05-26 19:53:45.417478 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Kapabacteriales_Genus
+2025-05-26 19:53:45.612054 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Sphingomonas
+2025-05-26 19:53:47.467077 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Sporomusaceae_Genus
+2025-05-26 19:53:47.698543 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Larkinella
+2025-05-26 19:53:47.892186 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Opitutus
+2025-05-26 19:53:48.071457 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Nocardia
+2025-05-26 19:53:48.24192 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Roseomonas
+2025-05-26 19:53:49.462118 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Gemmataceae_Genus
+2025-05-26 19:53:49.639711 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Blastocatella
+2025-05-26 19:53:49.807201 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhizobiaceae_Genus
+2025-05-26 19:53:49.97183 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Acetivibrio
+2025-05-26 19:53:50.334897 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Unknown_Family_Genus
+2025-05-26 19:53:52.511648 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Rhodovastum
+2025-05-26 19:53:52.696807 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs PeM15_Genus
+2025-05-26 19:53:52.870465 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Vampirovibrionaceae_Genus
+2025-05-26 19:53:53.017278 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Arthrospira_PCC.7345
+2025-05-26 19:53:53.169139 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Niveibacterium
+2025-05-26 19:53:54.37015 INFO::Creating scatter plot for continuous data, Total.Worm.Count vs Polyangiaceae_Genus

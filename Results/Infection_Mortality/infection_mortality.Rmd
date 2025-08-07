@@ -1,0 +1,4227 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Infection & Mortality Results"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+
+# Example paths to other project directories using here package
+# These are more robust than using getwd() + paste0()
+# path.results <- here::here("Results")
+# path.data <- here::here("Data")
+# path.code <- here::here("Code")
+```
+
+
+## Overview
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+library(dplyr)
+library(ggplot2)
+library(gt)
+library(broom)
+library(car)
+library(emmeans)
+library(multcomp)
+library(MASS)  # For negative binomial regression
+library(rstatix)
+library(coin)
+library(phyloseq)
+library(microViz)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+```
+
+### Import Data
+
+```{r}
+
+ps.unclean <- readRDS('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds')
+
+
+# Create a dataframe for mortality using the "unclean" phyloseq object
+# The unclean phyloseq object is prior to removing samples during post-DADA2 processing (e.g., insufficient reads/sample)
+
+data.mortality <-
+    ps.unclean %>%
+
+    ## Update Metadata
+    ps_rename(Time = Timepoint) %>%
+    microViz::ps_mutate(
+        Treatment = case_when(
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+            Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+            Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+            Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+            Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+            TRUE ~ "Unknown"
+        ), .after = "Pathogen"
+    ) %>%
+    microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+    microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+    microViz::ps_filter(Treatment != "Unknown") %>%
+    microViz::ps_mutate(
+        History = case_when(
+            Antibiotics + Temperature == 0 ~ 0,
+            Antibiotics + Temperature == 1 ~ 1,
+            Antibiotics + Temperature == 2 ~ 2,
+        ), .after = "Treatment"
+    ) %>%
+    
+    ## Additional metadata updates, factorizing metadata
+    microViz::ps_mutate(
+    # Create treatment code
+        treatment_code = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+        ),
+        # Create treatment group factor
+        treatment_group = case_when(
+          Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+          Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+          Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+          Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+          TRUE ~ "Control"
+        ),
+        # Convert to factor with appropriate levels
+        treatment_group = factor(treatment_group, 
+                               levels = c("Control", "Parasite", 
+                                          "Antibiotics", "Antibiotics_Parasite",
+                                          "Temperature", "Temperature_Parasite",
+                                        "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                               ),
+        treatment_code = factor(treatment_code, levels = treatment_order),
+        # Create time point factor
+        time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+        # Create pathogen status factor
+        pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                               levels = c("Unexposed", "Exposed")),
+        # Create sex factor
+        sex = factor(Sex, levels = c("M", "F"))
+        ) %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+    microViz::samdat_tbl() 
+
+
+data.infection <- data.mortality %>%
+    dplyr::filter(Pathogen == 1) %>%
+    dplyr::group_by(Treatment) %>%
+    dplyr::summarise(
+        n_fish = n(),
+        n_infected = sum(Total.Worm.Count > 0),
+        mean_worm_burden = mean(Total.Worm.Count, na.rm = TRUE),
+        percent_infected = round((n_infected / n_fish) * 100, 1),
+        .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+        # Convert Treatment to factor with specific order
+        Treatment = factor(Treatment, levels = treatment_order)
+    )
+
+data.infection_tank <- data.mortality %>%
+    dplyr::filter(Pathogen == 1) %>%
+    dplyr::group_by(Treatment, Tank.ID) %>%
+    dplyr::summarise(
+        n_fish = n(),
+        n_infected = sum(Total.Worm.Count > 0),
+        mean_worm_burden = mean(Total.Worm.Count, na.rm = TRUE),
+        percent_infected = round((n_infected / n_fish) * 100, 1),
+        .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+        # Convert Treatment to factor with specific order
+        Treatment = factor(Treatment, levels = treatment_order)
+    )
+
+# data.mortality
+# data.infection
+# data.infection_tank
+
+```
+
+```{r eval=FALSE, include=FALSE}
+
+data.mortality %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    alive = n,
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+data.mortality %>%
+  dplyr::group_by(History) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 90 fish per treatment group
+    total_per_group = dplyr::case_when(
+      History == 0 ~ 90 * 2,  # 2 treatment groups: A- T- P- and A- T- P+
+      History == 1 ~ 90 * 4,  # 4 treatment groups: A+ T- P-, A+ T- P+, A- T+ P-, A- T+ P+
+      History == 2 ~ 90 * 2,  # 2 treatment groups: A+ T+ P- and A+ T+ P+
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors"))
+  )
+
+
+```
+
+
+## 00) All {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+# Define the cleaned labels
+facet_labels <- c(
+  "1_A- T- P-" = "A- T- P-",
+  "2_A+ T- P-" = "A+ T- P-",
+  "3_A- T+ P-" = "A- T+ P-",
+  "4_A+ T+ P-" = "A+ T+ P-",
+  "5_A- T- P+" = "A- T- P+",
+  "6_A+ T- P+" = "A+ T- P+",
+  "7_A- T+ P+" = "A- T+ P+",
+  "8_A+ T+ P+" = "A+ T+ P+"
+)
+
+p1 <- data.mortality %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  )  %>%
+    dplyr::mutate(
+        # Create facet order
+    facet_order = dplyr::case_when(
+      Treatment == "A- T- P-" ~ "1_A- T- P-",
+      Treatment == "A+ T- P-" ~ "2_A+ T- P-",
+      Treatment == "A- T+ P-" ~ "3_A- T+ P-",
+      Treatment == "A+ T+ P-" ~ "4_A+ T+ P-",
+      Treatment == "A- T- P+" ~ "5_A- T- P+",
+      Treatment == "A+ T- P+" ~ "6_A+ T- P+",
+      Treatment == "A- T+ P+" ~ "7_A- T+ P+",
+      Treatment == "A+ T+ P+" ~ "8_A+ T+ P+",
+      TRUE ~ Treatment
+    ),
+    facet_order = factor(facet_order, levels = c(
+      "1_A- T- P-",
+      "2_A+ T- P-",
+      "3_A- T+ P-",
+      "4_A+ T+ P-",
+      "5_A- T- P+",
+      "6_A+ T- P+",
+      "7_A- T+ P+",
+      "8_A+ T+ P+"
+    )),
+    # Convert Treatment to factor with specific order
+    Treatment = factor(Treatment, levels = treatment_order)
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 6,
+    color = "white"
+  ) +
+    # facet_wrap(.~Tank.ID, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "All Treatments; by Tank",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p1
+```
+
+```{r include=FALSE}
+# Define the cleaned labels
+facet_labels <- c(
+  "1_A- T- P-" = "A- T- P-",
+  "2_A+ T- P-" = "A+ T- P-",
+  "3_A- T+ P-" = "A- T+ P-",
+  "4_A+ T+ P-" = "A+ T+ P-",
+  "5_A- T- P+" = "A- T- P+",
+  "6_A+ T- P+" = "A+ T- P+",
+  "7_A- T+ P+" = "A- T+ P+",
+  "8_A+ T+ P+" = "A+ T+ P+"
+)
+
+p1.2 <- data.mortality %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment, Pathogen) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  )  %>%
+    dplyr::mutate(
+        # Create facet order
+    facet_order = dplyr::case_when(
+      Treatment == "A- T- P-" ~ "1_A- T- P-",
+      Treatment == "A+ T- P-" ~ "2_A+ T- P-",
+      Treatment == "A- T+ P-" ~ "3_A- T+ P-",
+      Treatment == "A+ T+ P-" ~ "4_A+ T+ P-",
+      Treatment == "A- T- P+" ~ "5_A- T- P+",
+      Treatment == "A+ T- P+" ~ "6_A+ T- P+",
+      Treatment == "A- T+ P+" ~ "7_A- T+ P+",
+      Treatment == "A+ T+ P+" ~ "8_A+ T+ P+",
+      TRUE ~ Treatment
+    ),
+    facet_order = factor(facet_order, levels = c(
+      "1_A- T- P-",
+      "2_A+ T- P-",
+      "3_A- T+ P-",
+      "4_A+ T+ P-",
+      "5_A- T- P+",
+      "6_A+ T- P+",
+      "7_A- T+ P+",
+      "8_A+ T+ P+"
+    )),
+    # Convert Treatment to factor with specific order
+    Treatment = factor(Treatment, levels = treatment_order),
+    # Create Pathogen labels for facets
+    Pathogen_Label = dplyr::case_when(
+      Pathogen == 0 ~ "Unexposed",
+      Pathogen == 1 ~ "Exposed",
+      TRUE ~ as.character(Pathogen)
+    ), 
+    Pathogen_Label = factor(Pathogen_Label, levels = c("Unexposed", "Exposed"))
+  ) %>%
+      dplyr::mutate(Exp_Type = case_when(
+      Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+      Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+      Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+      Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+  )) %>%
+  dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 6,
+    color = "white"
+  ) +
+    facet_wrap(.~Pathogen_Label, ncol = 2, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "All Treatments; by Pathogen Exposure",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p1.2
+```
+
+
+```{r include=FALSE}
+# Define the cleaned labels
+facet_labels <- c(
+  "1_A- T- P-" = "A- T- P-",
+  "2_A+ T- P-" = "A+ T- P-",
+  "3_A- T+ P-" = "A- T+ P-",
+  "4_A+ T+ P-" = "A+ T+ P-",
+  "5_A- T- P+" = "A- T- P+",
+  "6_A+ T- P+" = "A+ T- P+",
+  "7_A- T+ P+" = "A- T+ P+",
+  "8_A+ T+ P+" = "A+ T+ P+"
+)
+
+p1.3 <- data.mortality %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment, Pathogen) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  )  %>%
+    dplyr::mutate(
+        # Create facet order
+    facet_order = dplyr::case_when(
+      Treatment == "A- T- P-" ~ "1_A- T- P-",
+      Treatment == "A+ T- P-" ~ "2_A+ T- P-",
+      Treatment == "A- T+ P-" ~ "3_A- T+ P-",
+      Treatment == "A+ T+ P-" ~ "4_A+ T+ P-",
+      Treatment == "A- T- P+" ~ "5_A- T- P+",
+      Treatment == "A+ T- P+" ~ "6_A+ T- P+",
+      Treatment == "A- T+ P+" ~ "7_A- T+ P+",
+      Treatment == "A+ T+ P+" ~ "8_A+ T+ P+",
+      TRUE ~ Treatment
+    ),
+    facet_order = factor(facet_order, levels = c(
+      "1_A- T- P-",
+      "2_A+ T- P-",
+      "3_A- T+ P-",
+      "4_A+ T+ P-",
+      "5_A- T- P+",
+      "6_A+ T- P+",
+      "7_A- T+ P+",
+      "8_A+ T+ P+"
+    )),
+    # Convert Treatment to factor with specific order
+    Treatment = factor(Treatment, levels = treatment_order),
+    # Create Pathogen labels for facets
+    Pathogen_Label = dplyr::case_when(
+      Pathogen == 0 ~ "Unexposed",
+      Pathogen == 1 ~ "Exposed",
+      TRUE ~ as.character(Pathogen)
+    ), 
+    Pathogen_Label = factor(Pathogen_Label, levels = c("Unexposed", "Exposed"))
+  ) %>%
+      dplyr::mutate(Exp_Type = case_when(
+      Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+      Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+      Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+      Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+  )) %>%
+  dplyr::mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 6,
+    color = "white"
+  ) +
+    facet_wrap(.~Exp_Type, ncol = 4, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "All Treatments; by Exposure Type",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p1.3
+```
+
+#### By Tank
+
+```{r include=FALSE}
+# Define the cleaned labels
+facet_labels <- c(
+  "1_A- T- P-" = "A- T- P-",
+  "2_A+ T- P-" = "A+ T- P-",
+  "3_A- T+ P-" = "A- T+ P-",
+  "4_A+ T+ P-" = "A+ T+ P-",
+  "5_A- T- P+" = "A- T- P+",
+  "6_A+ T- P+" = "A+ T- P+",
+  "7_A- T+ P+" = "A- T+ P+",
+  "8_A+ T+ P+" = "A+ T+ P+"
+)
+
+p2 <- data.mortality %>%
+    # dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 30,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+    dplyr::mutate(
+        # Create facet order
+    facet_order = dplyr::case_when(
+      Treatment == "A- T- P-" ~ "1_A- T- P-",
+      Treatment == "A+ T- P-" ~ "2_A+ T- P-",
+      Treatment == "A- T+ P-" ~ "3_A- T+ P-",
+      Treatment == "A+ T+ P-" ~ "4_A+ T+ P-",
+      Treatment == "A- T- P+" ~ "5_A- T- P+",
+      Treatment == "A+ T- P+" ~ "6_A+ T- P+",
+      Treatment == "A- T+ P+" ~ "7_A- T+ P+",
+      Treatment == "A+ T+ P+" ~ "8_A+ T+ P+",
+      TRUE ~ Treatment
+    ),
+    facet_order = factor(facet_order, levels = c(
+      "1_A- T- P-",
+      "2_A+ T- P-",
+      "3_A- T+ P-",
+      "4_A+ T+ P-",
+      "5_A- T- P+",
+      "6_A+ T- P+",
+      "7_A- T+ P+",
+      "8_A+ T+ P+"
+    ))
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 3,
+    color = "white"
+  ) +
+    facet_wrap(.~facet_order, ncol = 4, scales = "free_x", labeller = ggplot2::labeller(facet_order = facet_labels)) +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "All Treatments; by Tank",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p2
+```
+
+#### Statistical Analysis - All Treatments Mortality {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - percent mortality rates
+mortality_stats_data <- data.mortality %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+# Chi-square test for independence between treatment and mortality
+set.seed(42)
+chi_square_test <- chisq.test(
+  matrix(c(mortality_stats_data$dead, mortality_stats_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Create mortality rate summary table for display
+mortality_rate_table <- mortality_stats_data %>%
+  dplyr::select(Treatment, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Summary - All Treatments",
+    subtitle = "Percent mortality and survival rates by treatment"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Chi-square test results
+test_stat_table <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(chi_square_test$statistic, 4),
+    chi_square_test$parameter,
+    round(chi_square_test$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - All Treatments Mortality",
+    subtitle = "Test for independence between treatment and mortality"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise comparisons using chi-square tests
+set.seed(42)
+pairwise_results <- list()
+treatments <- mortality_stats_data$Treatment
+
+for(i in 1:(length(treatments)-1)) {
+  for(j in (i+1):length(treatments)) {
+    trt1 <- treatments[i]
+    trt2 <- treatments[j]
+    
+    # Get data for these two treatments
+    data1 <- mortality_stats_data %>% dplyr::filter(Treatment == trt1)
+    data2 <- mortality_stats_data %>% dplyr::filter(Treatment == trt2)
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(data1$dead, data1$n, data2$dead, data2$n),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(trt1, trt2)
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    pairwise_results[[paste(trt1, "vs", trt2)]] <- data.frame(
+      Comparison = paste(trt1, "vs", trt2),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise results
+pairwise_summary <- do.call(rbind, pairwise_results) %>%
+    dplyr::arrange(desc(Significant), P_value) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - All Treatments Mortality",
+    subtitle = "Post-hoc comparisons between treatment pairs"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Show only significant pairwise comparisons
+pairwise_summary__SigOnly <- do.call(rbind, pairwise_results) %>%
+    dplyr::arrange(desc(Significant), P_value) %>%
+    dplyr::filter(Significant == "Yes") %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Significant Pairwise Chi-Square Tests - All Treatments Mortality",
+    subtitle = "Post-hoc comparisons between treatment pairs (significant only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+
+##### Mortality Rates
+
+```{r echo=FALSE}
+mortality_rate_table
+```
+
+##### Chi-Square
+
+```{r echo=FALSE}
+test_stat_table
+```
+
+##### Chi-Square Pairwise
+
+```{r echo=FALSE}
+pairwise_summary
+pairwise_summary__SigOnly
+```
+
+
+
+## 01) What is the host-microbiome response to parasite exposure?  {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__01.png"))
+```
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+p3 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient"),
+    # Convert Treatment to factor with specific order
+    Treatment = factor(Treatment, levels = treatment_order)
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 8,
+    color = "white"
+  ) +
+    # facet_wrap(.~Tank.ID, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P- vs A-T-P+",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p3
+```
+
+#### By Tank
+
+```{r include=FALSE}
+p4 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 30,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 4,
+    color = "white"
+  ) +
+    facet_wrap(.~Treatment, ncol = 2, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P- vs A-T-P+; by Tank",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=5, fig.height=5}
+p4
+```
+
+#### Statistical Analysis - Parasite Exposure Mortality {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - parasite exposure comparison (percent mortality rates)
+parasite_mortality_data <- data.mortality %>%
+  dplyr::filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+# Fisher's exact test for 2x2 contingency table (more appropriate for small samples)
+set.seed(42)
+fisher_test <- fisher.test(
+  matrix(c(parasite_mortality_data$dead, parasite_mortality_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Chi-square test as alternative
+chi_square_parasite <- chisq.test(
+  matrix(c(parasite_mortality_data$dead, parasite_mortality_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Create mortality rate summary table for display
+parasite_mortality_rate_table <- parasite_mortality_data %>%
+  dplyr::select(Treatment, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Summary - Parasite Exposure",
+    subtitle = "Percent mortality and survival rates: A-T-P- vs A-T-P+"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Fisher's exact test results
+fisher_results <- data.frame(
+  Statistic = c("Fisher's exact test p-value", "Odds ratio", "95% CI lower", "95% CI upper"),
+  Value = c(
+    round(fisher_test$p.value, 6),
+    round(fisher_test$estimate, 4),
+    round(fisher_test$conf.int[1], 4),
+    round(fisher_test$conf.int[2], 4)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Fisher's Exact Test Results - Parasite Exposure Mortality",
+    subtitle = "Comparison of A-T-P- vs A-T-P+ mortality rates"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Chi-square test results for comparison
+chi_square_parasite_results <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(chi_square_parasite$statistic, 4),
+    chi_square_parasite$parameter,
+    round(chi_square_parasite$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - Parasite Exposure Mortality",
+    subtitle = "Alternative test for A-T-P- vs A-T-P+ mortality rates"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Additional analysis: Compare mortality rates between parasite-exposed and unexposed
+# Calculate difference in mortality rates
+parasite_mortality_diff <- parasite_mortality_data %>%
+  dplyr::arrange(Treatment) %>%
+  dplyr::mutate(
+    Pathogen_Status = dplyr::case_when(
+      stringr::str_detect(Treatment, "P\\+") ~ "Exposed",
+      stringr::str_detect(Treatment, "P\\-") ~ "Unexposed",
+      TRUE ~ "Unknown"
+    )
+  ) %>%
+  dplyr::select(Pathogen_Status, percent_mortality)
+
+# Calculate the difference in mortality rates
+mortality_rate_diff <- parasite_mortality_diff$percent_mortality[2] - parasite_mortality_diff$percent_mortality[1]
+
+# Create summary of mortality rate difference
+parasite_mortality_diff_summary <- data.frame(
+  Comparison = "A-T-P+ vs A-T-P-",
+  Mortality_Rate_Difference = round(mortality_rate_diff, 2),
+  Unexposed_Rate = round(parasite_mortality_diff$percent_mortality[1], 2),
+  Exposed_Rate = round(parasite_mortality_diff$percent_mortality[2], 2),
+  Percent_Increase = round((mortality_rate_diff / parasite_mortality_diff$percent_mortality[1]) * 100, 1)
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Difference - Parasite Exposure",
+    subtitle = "Comparison of mortality rates between parasite-exposed and unexposed groups"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Mortality_Rate_Difference, Unexposed_Rate, Exposed_Rate, Percent_Increase),
+    decimals = 2
+  )
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Mortality Rates
+
+```{r echo=FALSE}
+parasite_mortality_rate_table
+```
+
+##### Mortality Rate Difference
+
+```{r echo=FALSE}
+parasite_mortality_diff_summary
+```
+
+##### Fisher's Exact
+
+```{r echo=FALSE}
+fisher_results
+```
+
+##### Chi-Square
+
+```{r echo=FALSE}
+chi_square_parasite_results
+```
+
+## 02) Is the host-microbiome response to parasite exposure historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__02.png"))
+```
+
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+p5 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+    # facet_wrap(.~Tank.ID, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P+ vs (A+T-P+, A-T+P+, A+T+P+); Historical Contingency",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p5
+```
+
+#### By Tank
+
+```{r include=FALSE}
+p6 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 30,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 4,
+    color = "white"
+  ) +
+    facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P+ vs (A+T-P+, A-T+P+, A+T+P+); Historical Contingency by Tank",
+    x = "Tank ID",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p6
+```
+
+#### Statistical Analysis - Historical Contingency Mortality {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - historical contingency mortality
+historical_mortality_data <- data.mortality %>%
+  dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+# Chi-square test for independence between treatment and mortality
+set.seed(42)
+historical_chi_square_test <- chisq.test(
+  matrix(c(historical_mortality_data$dead, historical_mortality_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Create mortality rate summary table for display
+historical_mortality_rate_table <- historical_mortality_data %>%
+  dplyr::select(Treatment, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Summary - Historical Contingency",
+    subtitle = "Percent mortality and survival rates by treatment (parasite-exposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Chi-square test results
+historical_chi_square_results <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(historical_chi_square_test$statistic, 4),
+    historical_chi_square_test$parameter,
+    round(historical_chi_square_test$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - Historical Contingency Mortality",
+    subtitle = "Test for independence between treatment and mortality (parasite-exposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise comparisons using chi-square tests
+set.seed(42)
+historical_pairwise_results <- list()
+historical_treatments <- historical_mortality_data$Treatment
+
+for(i in 1:(length(historical_treatments)-1)) {
+  for(j in (i+1):length(historical_treatments)) {
+    trt1 <- historical_treatments[i]
+    trt2 <- historical_treatments[j]
+    
+    # Get data for these two treatments
+    data1 <- historical_mortality_data %>% dplyr::filter(Treatment == trt1)
+    data2 <- historical_mortality_data %>% dplyr::filter(Treatment == trt2)
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(data1$dead, data1$n, data2$dead, data2$n),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(trt1, trt2)
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    historical_pairwise_results[[paste(trt1, "vs", trt2)]] <- data.frame(
+      Comparison = paste(trt1, "vs", trt2),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise results
+historical_pairwise_summary <- do.call(rbind, historical_pairwise_results) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - Historical Contingency Mortality",
+    subtitle = "Post-hoc comparisons between treatment pairs (parasite-exposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+
+data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+
+
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Mortality Rates
+
+```{r echo=FALSE}
+historical_mortality_rate_table
+```
+
+##### Chi-Square
+
+```{r echo=FALSE}
+historical_chi_square_results
+```
+
+##### Chi-Square Pairwise
+
+```{r echo=FALSE}
+historical_pairwise_summary
+```
+
+### Infection
+
+#### All
+
+```{r include=FALSE}
+p9 <- data.infection %>%
+    ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_infected, fill = Treatment, group = interaction(Treatment))) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = paste0(percent_infected, "%\n(", n_infected, "/", n_fish, ")")),
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 5,
+        color = "white"
+    ) +
+    # facet_wrap(.~Tank.ID, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::labs(
+        title = "Infection Prevalence by Treatment",
+        subtitle = "Percentage of infected fish per treatment",
+        x = "Treatment",
+        y = "Percent Infected",
+        caption = "Percent infected = # fish with worms / total fish sampled\n(# infected / total sampled)"
+    )
+
+p10 <- data.mortality %>%
+    dplyr::filter(Pathogen == 1) %>%  # Only include parasite-exposed treatments
+    dplyr::group_by(Treatment) %>%
+    dplyr::summarise(
+        total_worms = sum(Total.Worm.Count, na.rm = TRUE),
+        mean_worms = mean(Total.Worm.Count, na.rm = TRUE),
+        n_fish = n(),
+        .groups = "drop"
+    ) %>%
+    ggplot2::ggplot(ggplot2::aes(x = Treatment, y = total_worms, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = total_worms), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 5,
+        color = "white"
+    ) +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Total Worm Counts by Treatment",
+        subtitle = "Sum of all worms across all fish per treatment",
+        x = "Treatment",
+        y = "Total Worm Count",
+        caption = "Total worms = sum of all worms across all fish sampled per treatment"
+    )
+
+
+normalized_worm_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::summarise(
+    total_worms = sum(Total.Worm.Count, na.rm = TRUE),
+    n_infected = sum(Total.Worm.Count > 0, na.rm = TRUE),
+    worms_per_infected = ifelse(n_infected > 0, total_worms / n_infected, 0),
+    n_fish = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = treatment_order)
+  )
+
+p13_normalized <- normalized_worm_data %>%
+    ggplot2::ggplot(ggplot2::aes(x = Treatment, y = worms_per_infected, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = round(worms_per_infected, 1)), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 5,
+        color = "white"
+    ) +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Normalized Worm Burden by Treatment",
+        subtitle = "Worms per infected fish (normalized for infection prevalence)",
+        x = "Treatment",
+        y = "Worms per Infected Fish",
+        caption = "Normalized worm burden = total worms / number of infected fish per treatment"
+    )
+
+p14_normalized <- normalized_worm_data %>%
+    dplyr::mutate(
+    infection_rate = round((n_infected / n_fish) * 100, 1)
+  ) %>%
+    ggplot2::ggplot(ggplot2::aes(x = Treatment, y = infection_rate, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = paste0(infection_rate, "%\n(", n_infected, "/", n_fish, ")")), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 5,
+        color = "white"
+    ) +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Infection Rate by Treatment",
+        subtitle = "Percentage of fish infected per treatment",
+        x = "Treatment",
+        y = "Infection Rate (%)",
+        caption = "Infection rate = number of infected fish / total fish sampled per treatment"
+    )
+
+# Calculate mean worm count among infected individuals only
+infected_only_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1, Total.Worm.Count > 0) %>%  # Only include parasite-exposed and infected fish
+  dplyr::group_by(Treatment) %>%
+  dplyr::summarise(
+    mean_worms_infected = mean(Total.Worm.Count, na.rm = TRUE),
+    n_infected = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = treatment_order)
+  )
+
+p17_mean_infected <- infected_only_data %>%
+    ggplot2::ggplot(ggplot2::aes(x = Treatment, y = mean_worms_infected, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = paste0(round(mean_worms_infected, 1), "\n(n=", n_infected, ")")), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 5,
+        color = "white"
+    ) +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Mean Worm Burden Among Infected Fish",
+        subtitle = "Average worm count per infected fish only",
+        x = "Treatment",
+        y = "Mean Worm Count",
+        caption = "Mean worm count = average worms per infected fish (excluding uninfected fish)\n(# infected fish)"
+    )
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p9
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p10
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p13_normalized
+```
+
+```{r echo=FALSE, fig.width=4, fig.height=5}
+p17_mean_infected
+```
+
+
+#### By Tank
+
+```{r include=FALSE}
+p11 <- data.infection_tank %>%
+    ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_infected, fill = Treatment, group = interaction(Treatment))) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = paste0(percent_infected, "%\n(", n_infected, "/", n_fish, ")")),
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 4,
+        color = "white"
+    ) +
+        facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::labs(
+        title = "Infection Prevalence by Treatment and Tank",
+        subtitle = "Percentage of infected fish per treatment and tank",
+        x = "Treatment",
+        y = "Percent Infected",
+        caption = "Percent infected = # fish with worms / total fish sampled\n(# infected / total sampled)"
+    )
+
+p12 <- data.mortality %>%
+    dplyr::filter(Pathogen == 1) %>%  # Only include parasite-exposed treatments
+    dplyr::group_by(Treatment, Tank.ID) %>%
+    dplyr::summarise(
+        total_worms = sum(Total.Worm.Count, na.rm = TRUE),
+        mean_worms = mean(Total.Worm.Count, na.rm = TRUE),
+        n_fish = n(),
+        .groups = "drop"
+    ) %>%
+    ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = total_worms, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = total_worms), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 4,
+        color = "white"
+    ) +
+    ggplot2::facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Total Worm Counts by Treatment and Tank",
+        subtitle = "Sum of all worms across all fish per tank within each treatment",
+        x = "Tank ID",
+        y = "Total Worm Count",
+        caption = "Total worms = sum of all worms across all fish sampled per tank"
+    )
+
+
+tank_normalized_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1) %>%
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::summarise(
+    total_worms = sum(Total.Worm.Count, na.rm = TRUE),
+    n_infected = sum(Total.Worm.Count > 0, na.rm = TRUE),
+    worms_per_infected = ifelse(n_infected > 0, total_worms / n_infected, 0),
+    n_fish = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = treatment_order),
+    infection_rate = round((n_infected / n_fish) * 100, 1)
+  )
+
+p15_normalized <- tank_normalized_data %>%
+    ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = worms_per_infected, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = ifelse(worms_per_infected > 0, round(worms_per_infected, 1), "0")), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 4,
+        color = "white"
+    ) +
+    ggplot2::facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Normalized Worm Burden by Treatment and Tank",
+        subtitle = "Worms per infected fish by treatment and tank",
+        x = "Tank ID",
+        y = "Worms per Infected Fish",
+        caption = "Normalized worm burden = total worms / number of infected fish per tank"
+    )
+
+p16_normalized <- tank_normalized_data %>%
+    ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = infection_rate, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = paste0(infection_rate, "%\n(", n_infected, "/", n_fish, ")")), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 4,
+        color = "white"
+    ) +
+    ggplot2::facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Infection Rate by Treatment and Tank",
+        subtitle = "Percentage of fish infected by treatment and tank",
+        x = "Tank ID",
+        y = "Infection Rate (%)",
+        caption = "Infection rate = number of infected fish / total fish sampled per tank"
+    )
+
+# Calculate mean worm count among infected individuals by tank
+tank_infected_only_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1, Total.Worm.Count > 0) %>%  # Only include parasite-exposed and infected fish
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::summarise(
+    mean_worms_infected = mean(Total.Worm.Count, na.rm = TRUE),
+    n_infected = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = treatment_order)
+  )
+
+p18_mean_infected_tank <- tank_infected_only_data %>%
+    ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = mean_worms_infected, fill = Treatment)) +
+    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = ifelse(n_infected > 0, paste0(round(mean_worms_infected, 1), "\n(n=", n_infected, ")"), "No infected")), 
+        position = ggplot2::position_dodge(width = 0.9),
+        vjust = 1.5,
+        fontface = "bold",
+        size = 4,
+        color = "white"
+    ) +
+    ggplot2::facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+    ggplot2::scale_fill_manual(
+        values = treatment_color_scale,
+        breaks = treatment_order
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        legend.position = "none"
+    ) +
+    ggplot2::labs(
+        title = "Mean Worm Burden Among Infected Fish by Tank",
+        subtitle = "Average worm count per infected fish by treatment and tank",
+        x = "Tank ID",
+        y = "Mean Worm Count",
+        caption = "Mean worm count = average worms per infected fish (excluding uninfected fish)"
+    )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p11
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p12
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p15_normalized
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p18_mean_infected_tank
+```
+
+
+#### Statistical Analysis - Infection Prevalence and Worm Burden {.tabset}
+
+##### Code
+```{r}
+
+# Statistical analysis for infection prevalence and worm burden
+set.seed(42)
+
+# 1. INFECTION PREVALENCE ANALYSIS
+# Chi-square test for infection prevalence across treatments
+infection_chi_square <- chisq.test(
+  data.infection %>%
+    dplyr::select(n_infected, n_fish) %>%
+    dplyr::mutate(n_uninfected = n_fish - n_infected) %>%
+    dplyr::select(n_infected, n_uninfected) %>%
+    as.matrix()
+)
+
+# Create infection prevalence contingency table
+infection_contingency_table <- data.infection %>%
+  dplyr::mutate(
+    n_uninfected = n_fish - n_infected,
+    percent_uninfected = round((n_uninfected / n_fish) * 100, 1)
+  ) %>%
+  dplyr::select(Treatment, n_infected, n_uninfected, n_fish, percent_infected, percent_uninfected) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Infection Prevalence Contingency Table",
+    subtitle = "Number of infected vs uninfected fish by treatment"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(n_infected, n_uninfected, n_fish),
+    decimals = 0
+  )
+
+# Chi-square test results for infection prevalence
+infection_chi_results <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(infection_chi_square$statistic, 4),
+    infection_chi_square$parameter,
+    round(infection_chi_square$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - Infection Prevalence",
+    subtitle = "Test for independence between treatment and infection status"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise chi-square tests for infection prevalence
+set.seed(42)
+infection_pairwise_results <- list()
+infection_treatments <- data.infection$Treatment
+
+for(i in 1:(length(infection_treatments)-1)) {
+  for(j in (i+1):length(infection_treatments)) {
+    trt1 <- infection_treatments[i]
+    trt2 <- infection_treatments[j]
+    
+    # Get data for these two treatments
+    data1 <- data.infection %>% dplyr::filter(Treatment == trt1)
+    data2 <- data.infection %>% dplyr::filter(Treatment == trt2)
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(data1$n_infected, data1$n_fish - data1$n_infected, 
+        data2$n_infected, data2$n_fish - data2$n_infected),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Infected", "Uninfected"),
+        c(trt1, trt2)
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    infection_pairwise_results[[paste(trt1, "vs", trt2)]] <- data.frame(
+      Comparison = paste(trt1, "vs", trt2),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise results for infection prevalence
+infection_pairwise_summary <- do.call(rbind, infection_pairwise_results) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - Infection Prevalence",
+    subtitle = "Post-hoc comparisons between treatment pairs"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# 2. WORM BURDEN ANALYSIS (TOTAL WORMS)
+# Prepare individual-level data for negative binomial regression
+set.seed(42)
+individual_worm_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1) %>%
+  dplyr::select(Treatment, Total.Worm.Count) %>%
+  dplyr::filter(!is.na(Total.Worm.Count)) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+"))
+  )
+
+# Fit negative binomial model for total worm counts
+# Using MASS::glm.nb for negative binomial regression
+library(MASS)
+nb_model <- MASS::glm.nb(Total.Worm.Count ~ Treatment, data = individual_worm_data)
+
+# Get model summary
+nb_summary <- summary(nb_model)
+
+nb_model.anova <- Anova(nb_model, type = 2)
+
+# Extract coefficients and significance
+nb_coefficients <- data.frame(
+  Treatment = c("Intercept", levels(individual_worm_data$Treatment)[-1]),
+  Estimate = round(nb_summary$coefficients[, 1], 4),
+  Std_Error = round(nb_summary$coefficients[, 2], 4),
+  z_value = round(nb_summary$coefficients[, 3], 4),
+  p_value = round(nb_summary$coefficients[, 4], 6)
+) %>%
+  dplyr::mutate(
+    p_signif = ifelse(p_value < 0.001, "***", 
+                     ifelse(p_value < 0.01, "**",
+                            ifelse(p_value < 0.05, "*", "ns")))
+  )
+
+# Create worm burden summary table
+worm_burden_data <- data.mortality %>%
+  dplyr::filter(Pathogen == 1) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::summarise(
+    total_worms = sum(Total.Worm.Count, na.rm = TRUE),
+    mean_worms = mean(Total.Worm.Count, na.rm = TRUE),
+    median_worms = median(Total.Worm.Count, na.rm = TRUE),
+    sd_worms = sd(Total.Worm.Count, na.rm = TRUE),
+    n_fish = n(),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    se_worms = sd_worms / sqrt(n_fish)
+  )
+
+worm_burden_summary <- worm_burden_data %>%
+  dplyr::select(Treatment, total_worms, mean_worms, median_worms, sd_worms, se_worms, n_fish) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Worm Burden Summary by Treatment",
+    subtitle = "Total, mean, median, standard deviation, and standard error of worm counts per treatment"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(total_worms, n_fish),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(mean_worms, median_worms, sd_worms, se_worms),
+    decimals = 2
+  )
+
+# Negative binomial model results
+nb_model_results <- nb_coefficients %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Negative Binomial Regression Results - Worm Burden",
+    subtitle = "Model: glm.nb(worm counts ~ Treatment)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Estimate, Std_Error, z_value, p_value),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+
+
+nb_model.anova %>%
+    broom::tidy() %>%
+  dplyr::mutate(
+    p_signif = ifelse(p.value < 0.001, "***", 
+                     ifelse(p.value < 0.01, "**",
+                            ifelse(p.value < 0.05, "*", "ns")))
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Negative Binomial Regression ANOVA Results - Worm Burden",
+    subtitle = "Model: Anova(glm.nb(worm counts ~ Treatment))"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(p.value),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+
+# Model fit statistics
+nb_fit_stats <- data.frame(
+  Statistic = c("Log-likelihood", "AIC", "Theta", "SE Theta", "Deviance", "Residual Deviance"),
+  Value = c(
+    round(logLik(nb_model), 2),
+    round(AIC(nb_model), 2),
+    round(nb_model$theta, 4),
+    round(nb_model$SE.theta, 4),
+    round(nb_summary$deviance, 2),
+    round(sum(residuals(nb_model, type = "deviance")^2), 2)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Negative Binomial Model Fit Statistics",
+    subtitle = "Model diagnostics and fit measures"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise comparisons for worm burden using emmeans
+set.seed(42)
+library(emmeans)
+
+# Get estimated marginal means and pairwise comparisons
+nb_emmeans <- emmeans::emmeans(nb_model, ~ Treatment)
+nb_pairwise <- pairs(nb_emmeans, adjust = "bonferroni")
+
+# Convert to data frame for display
+nb_pairwise_df <- as.data.frame(nb_pairwise) %>%
+  dplyr::mutate(
+    contrast = as.character(contrast),
+    estimate = round(estimate, 4),
+    SE = round(SE, 4),
+    z.ratio = round(z.ratio, 4),
+    p.value = round(p.value, 6),
+    p_signif = ifelse(p.value < 0.001, "***", 
+                     ifelse(p.value < 0.01, "**",
+                            ifelse(p.value < 0.05, "*", "ns")))
+  ) %>%
+  dplyr::select(contrast, estimate, SE, z.ratio, p.value, p_signif)
+
+# Display pairwise comparisons for worm burden
+nb_pairwise_summary <- nb_pairwise_df %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Comparisons - Worm Burden (Negative Binomial)",
+    subtitle = "Bonferroni-adjusted pairwise comparisons between treatments"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(estimate, SE, z.ratio, p.value),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+
+# Model diagnostics for negative binomial
+# Check dispersion parameter and model adequacy
+nb_diagnostics <- data.frame(
+  Statistic = c("Theta (dispersion parameter)", "SE Theta", "Deviance", "Degrees of Freedom", "Deviance/DF", "Model adequacy"),
+  Value = c(
+    round(nb_model$theta, 4),
+    round(nb_model$SE.theta, 4),
+    round(nb_summary$deviance, 2),
+    nb_summary$df.residual,
+    round(nb_summary$deviance / nb_summary$df.residual, 2),
+    ifelse(nb_summary$deviance / nb_summary$df.residual < 2, "Good fit", "Consider model diagnostics")
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Negative Binomial Model Diagnostics",
+    subtitle = "Checking model adequacy and dispersion"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Compare with Poisson model for reference
+set.seed(42)
+poisson_model <- glm(Total.Worm.Count ~ Treatment, data = individual_worm_data, family = "poisson")
+poisson_summary <- summary(poisson_model)
+
+# Model comparison
+model_comparison <- data.frame(
+  Model = c("Poisson", "Negative Binomial"),
+  Log_Likelihood = c(round(logLik(poisson_model), 2), round(logLik(nb_model), 2)),
+  AIC = c(round(AIC(poisson_model), 2), round(AIC(nb_model), 2)),
+  Deviance = c(round(poisson_summary$deviance, 2), round(nb_summary$deviance, 2)),
+  DF = c(poisson_summary$df.residual, nb_summary$df.residual),
+  Deviance_DF_Ratio = c(
+    round(poisson_summary$deviance / poisson_summary$df.residual, 2),
+    round(nb_summary$deviance / nb_summary$df.residual, 2)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Model Comparison: Poisson vs Negative Binomial",
+    subtitle = "Comparing model fit and adequacy"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Log_Likelihood, AIC, Deviance, Deviance_DF_Ratio),
+    decimals = 2
+  ) %>%
+  gt::fmt_number(
+    columns = DF,
+    decimals = 0
+  )
+
+# 3. NORMALIZED WORM BURDEN ANALYSIS (WORMS PER INFECTED FISH)
+# Calculate worms per infected fish to normalize for infection prevalence
+# NOTE: This is ratio data, not count data, so we need different statistical approaches
+set.seed(42)
+
+# Create normalized worm burden summary table
+normalized_worm_summary <- normalized_worm_data %>%
+  dplyr::select(Treatment, total_worms, n_infected, worms_per_infected, n_fish) %>%
+  dplyr::mutate(
+    infection_rate = round((n_infected / n_fish) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Normalized Worm Burden Summary by Treatment",
+    subtitle = "Worms per infected fish (normalized for infection prevalence)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(total_worms, n_infected, n_fish),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(worms_per_infected, infection_rate),
+    decimals = 2
+  )
+
+# Create tank_normalized_for_test dataset for statistical analysis
+# Using ANOVA on worms per infected fish (excluding tanks with 0 infected fish)
+set.seed(42)
+tank_normalized_for_test <- tank_normalized_data %>%
+  dplyr::filter(n_infected > 0) %>%
+  dplyr::mutate(
+    Treatment = factor(Treatment, levels = treatment_order)
+  )
+
+# APPROPRIATE STATISTICAL ANALYSIS FOR RATIO DATA
+# Method 1: One-way ANOVA on tank-level ratios (if assumptions are met)
+set.seed(42)
+# Use tank-level data for statistical testing
+normalized_anova <- aov(worms_per_infected ~ Treatment, data = tank_normalized_for_test)
+normalized_anova_summary <- summary(normalized_anova)
+
+# Extract ANOVA results using broom package for cleaner extraction
+library(broom)
+normalized_anova_tidy <- tidy(normalized_anova)
+
+# Calculate F-statistic and p-value manually from ANOVA summary
+f_stat <- normalized_anova_summary[[1]]$"Mean Sq"[1] / normalized_anova_summary[[1]]$"Mean Sq"[2]
+p_val <- pf(f_stat, normalized_anova_summary[[1]]$"Df"[1], normalized_anova_summary[[1]]$"Df"[2], lower.tail = FALSE)
+
+normalized_anova_results <- data.frame(
+  Statistic = c("F-value", "Degrees of freedom (Treatment)", "Degrees of freedom (Residuals)", "P-value"),
+  Value = c(
+    round(f_stat, 4),
+    normalized_anova_summary[[1]]$"Df"[1],
+    normalized_anova_summary[[1]]$"Df"[2],
+    round(p_val, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "ANOVA Results - Normalized Worm Burden",
+    subtitle = "One-way ANOVA: worms per infected fish ~ Treatment (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc Tukey test for normalized worm burden
+set.seed(42)
+normalized_tukey <- TukeyHSD(normalized_anova)
+
+# Convert Tukey results to data frame
+normalized_tukey_df <- as.data.frame(normalized_tukey$Treatment) %>%
+  dplyr::mutate(
+    comparison = rownames(.),
+    diff = round(diff, 4),
+    lwr = round(lwr, 4),
+    upr = round(upr, 4),
+    p_adj = round(`p adj`, 6),
+    p_signif = ifelse(p_adj < 0.001, "***",
+                     ifelse(p_adj < 0.01, "**",
+                            ifelse(p_adj < 0.05, "*", "ns")))
+  ) %>%
+  dplyr::select(comparison, diff, lwr, upr, p_adj, p_signif)
+
+# Display Tukey test results
+normalized_tukey_summary <- normalized_tukey_df %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Tukey HSD Test Results - Normalized Worm Burden",
+    subtitle = "Post-hoc pairwise comparisons for worms per infected fish (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(diff, lwr, upr, p_adj),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+
+# Method 2: Kruskal-Wallis test (non-parametric alternative)
+set.seed(42)
+normalized_kruskal <- kruskal.test(worms_per_infected ~ Treatment, data = tank_normalized_for_test)
+
+# Kruskal-Wallis results
+normalized_kruskal_results <- data.frame(
+  Statistic = c("Kruskal-Wallis chi-squared", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(normalized_kruskal$statistic, 4),
+    normalized_kruskal$parameter,
+    round(normalized_kruskal$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Kruskal-Wallis Test Results - Normalized Worm Burden",
+    subtitle = "Non-parametric test for differences in worms per infected fish across treatments (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Method 3: Permutation test (most appropriate for ratio data with small sample sizes)
+set.seed(42)
+library(coin)
+
+# Create permutation test for normalized worm burden using tank-level data
+normalized_permutation <- coin::oneway_test(
+  worms_per_infected ~ Treatment,
+  data = tank_normalized_for_test,
+  distribution = approximate(nresample = 10000)
+)
+
+# Permutation test results
+normalized_permutation_results <- data.frame(
+  Statistic = c("Z statistic", "P-value (approximate)", "Number of permutations"),
+  Value = c(
+    round(statistic(normalized_permutation), 4),
+    round(pvalue(normalized_permutation), 6),
+    attr(pvalue(normalized_permutation), "nresample")
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Permutation Test Results - Normalized Worm Burden",
+    subtitle = "Non-parametric permutation test for ratio data (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Method 4: Bootstrap confidence intervals for ratios
+set.seed(42)
+library(boot)
+
+# Function to calculate mean ratio for bootstrap
+ratio_mean <- function(data, indices) {
+  d <- data[indices, ]
+  return(mean(d$worms_per_infected, na.rm = TRUE))
+}
+
+# Bootstrap analysis for each treatment using tank-level data
+# We need multiple observations per treatment for bootstrap to work
+bootstrap_results <- list()
+for(trt in unique(tank_normalized_data$Treatment)) {
+  trt_data <- tank_normalized_data %>% dplyr::filter(Treatment == trt, n_infected > 0)
+
+  # Only proceed if we have multiple observations
+  if(nrow(trt_data) > 1) {
+    # Bootstrap with 10000 resamples
+    boot_result <- boot(trt_data, ratio_mean, R = 10000)
+
+    # Calculate confidence intervals
+    ci_result <- boot.ci(boot_result, type = "perc", conf = 0.95)
+
+    bootstrap_results[[trt]] <- data.frame(
+      Treatment = trt,
+      Mean_Ratio = round(mean(trt_data$worms_per_infected, na.rm = TRUE), 3),
+      Bootstrap_Mean = round(boot_result$t0, 3),
+      CI_Lower = round(ci_result$percent[4], 3),
+      CI_Upper = round(ci_result$percent[5], 3),
+      N_Tanks = nrow(trt_data)
+    )
+  } else {
+    # For treatments with only one observation, just report the mean
+    bootstrap_results[[trt]] <- data.frame(
+      Treatment = trt,
+      Mean_Ratio = round(mean(trt_data$worms_per_infected, na.rm = TRUE), 3),
+      Bootstrap_Mean = round(mean(trt_data$worms_per_infected, na.rm = TRUE), 3),
+      CI_Lower = NA,
+      CI_Upper = NA,
+      N_Tanks = nrow(trt_data)
+    )
+  }
+}
+
+# Combine bootstrap results
+bootstrap_summary <- do.call(rbind, bootstrap_results) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Bootstrap Confidence Intervals - Normalized Worm Burden",
+    subtitle = "95% confidence intervals for worms per infected fish by treatment (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Mean_Ratio, Bootstrap_Mean, CI_Lower, CI_Upper),
+    decimals = 3
+  )
+
+# Method 5: Pairwise permutation tests
+set.seed(42)
+pairwise_permutation_results <- list()
+treatments <- unique(tank_normalized_for_test$Treatment)
+
+for(i in 1:(length(treatments)-1)) {
+  for(j in (i+1):length(treatments)) {
+    trt1 <- treatments[i]
+    trt2 <- treatments[j]
+
+    # Get data for these two treatments
+    data1 <- tank_normalized_for_test %>% dplyr::filter(Treatment == trt1)
+    data2 <- tank_normalized_for_test %>% dplyr::filter(Treatment == trt2)
+
+    # Combine data for permutation test
+    combined_data <- rbind(data1, data2)
+
+    # Perform permutation test
+    perm_test <- coin::oneway_test(
+      worms_per_infected ~ Treatment,
+      data = combined_data,
+      distribution = approximate(nresample = 10000)
+    )
+
+    pairwise_permutation_results[[paste(trt1, "vs", trt2)]] <- data.frame(
+      Comparison = paste(trt1, "vs", trt2),
+      Z_statistic = round(statistic(perm_test), 4),
+      P_value = round(pvalue(perm_test), 6),
+      Significant = ifelse(pvalue(perm_test) < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise permutation results
+pairwise_permutation_summary <- do.call(rbind, pairwise_permutation_results) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Permutation Tests - Normalized Worm Burden",
+    subtitle = "Non-parametric pairwise comparisons for ratio data (tank-level data)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Model comparison and diagnostics
+normalized_model_comparison <- data.frame(
+  Test = c("ANOVA", "Kruskal-Wallis", "Permutation Test"),
+  Statistic = c(
+    paste("F =", round(f_stat, 4)),
+    paste("χ² =", round(normalized_kruskal$statistic, 4)),
+    paste("Z =", round(statistic(normalized_permutation), 4))
+  ),
+  P_value = c(
+    round(p_val, 6),
+    round(normalized_kruskal$p.value, 6),
+    round(pvalue(normalized_permutation), 6)
+  ),
+  Assumptions = c(
+    "Normality, homogeneity of variance",
+    "None (non-parametric)",
+    "None (non-parametric)"
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Model Comparison - Normalized Worm Burden Analysis",
+    subtitle = "Comparing different statistical approaches for ratio data"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Tank-level normalized worm burden analysis
+set.seed(42)
+
+# Tank-level normalized worm burden summary
+tank_normalized_summary <- tank_normalized_data %>%
+  dplyr::select(Treatment, Tank.ID, total_worms, n_infected, worms_per_infected, n_fish, infection_rate) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Tank-Level Normalized Worm Burden Summary",
+    subtitle = "Worms per infected fish by treatment and tank"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(total_worms, n_infected, n_fish),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(worms_per_infected, infection_rate),
+    decimals = 2
+  )
+
+# Statistical test for tank-level normalized worm burden
+# Using ANOVA on worms per infected fish (excluding tanks with 0 infected fish)
+set.seed(42)
+
+# One-way ANOVA for worms per infected fish across treatments
+tank_normalized_anova <- aov(worms_per_infected ~ Treatment, data = tank_normalized_for_test)
+tank_normalized_anova_summary <- summary(tank_normalized_anova)
+
+# Extract ANOVA results
+tank_normalized_anova_results <- data.frame(
+  Statistic = c("F-value", "Degrees of freedom (Treatment)", "Degrees of freedom (Residuals)", "P-value"),
+  Value = c(
+    round(tank_normalized_anova_summary[[1]]$"F value"[1], 4),
+    tank_normalized_anova_summary[[1]]$"Df"[1],
+    tank_normalized_anova_summary[[1]]$"Df"[2],
+    round(tank_normalized_anova_summary[[1]]$"Pr(>F)"[1], 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "ANOVA Results - Tank-Level Normalized Worm Burden",
+    subtitle = "One-way ANOVA: worms per infected fish ~ Treatment"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc Tukey test for tank-level normalized worm burden
+set.seed(42)
+tank_normalized_tukey <- TukeyHSD(tank_normalized_anova)
+
+# Convert Tukey results to data frame
+tank_normalized_tukey_df <- as.data.frame(tank_normalized_tukey$Treatment) %>%
+  dplyr::mutate(
+    comparison = rownames(.),
+    diff = round(diff, 4),
+    lwr = round(lwr, 4),
+    upr = round(upr, 4),
+    p_adj = round(`p adj`, 6),
+    p_signif = ifelse(p_adj < 0.001, "***",
+                     ifelse(p_adj < 0.01, "**",
+                            ifelse(p_adj < 0.05, "*", "ns")))
+  ) %>%
+  dplyr::select(comparison, diff, lwr, upr, p_adj, p_signif)
+
+# Display Tukey test results
+tank_normalized_tukey_summary <- tank_normalized_tukey_df %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Tukey HSD Test Results - Tank-Level Normalized Worm Burden",
+    subtitle = "Post-hoc pairwise comparisons for worms per infected fish"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(diff, lwr, upr, p_adj),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+```
+
+##### Table {.active}
+
+#### Infection Prevalence {.tabset}
+
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Summary
+
+```{r echo=FALSE}
+infection_contingency_table
+```
+
+##### Infection Chi-Square
+
+```{r echo=FALSE}
+infection_chi_results
+```
+
+##### Infection Pairwise
+
+```{r echo=FALSE}
+infection_pairwise_summary
+```
+
+#### Worm Burden {.tabset}
+
+##### Summary
+
+```{r echo=FALSE}
+worm_burden_summary
+```
+
+##### Negative Binomial Model
+
+```{r echo=FALSE}
+nb_model_results
+```
+
+##### Model Fit Stats
+
+```{r echo=FALSE}
+nb_fit_stats
+```
+
+##### Worm Burden Pairwise
+
+```{r echo=FALSE}
+nb_pairwise_summary
+```
+
+##### Model Diagnostics
+
+```{r echo=FALSE}
+nb_diagnostics
+```
+
+##### Model Comparison
+
+```{r echo=FALSE}
+model_comparison
+```
+
+#### Normalized Worm Burden {.tabset}
+
+##### Summary
+
+```{r echo=FALSE}
+normalized_worm_summary
+```
+
+##### ANOVA Results
+
+```{r echo=FALSE}
+normalized_anova_results
+```
+
+##### Tukey HSD Test
+
+```{r echo=FALSE}
+normalized_tukey_summary
+```
+
+##### Kruskal-Wallis Test
+
+```{r echo=FALSE}
+normalized_kruskal_results
+```
+
+##### Permutation Test
+
+```{r echo=FALSE}
+normalized_permutation_results
+```
+
+##### Bootstrap Confidence Intervals
+
+```{r echo=FALSE}
+bootstrap_summary
+```
+
+##### Pairwise Permutation Tests
+
+```{r echo=FALSE}
+pairwise_permutation_summary
+```
+
+##### Model Comparison
+
+```{r echo=FALSE}
+normalized_model_comparison
+```
+
+##### Tank-Level Analysis
+
+```{r echo=FALSE}
+tank_normalized_summary
+```
+
+```{r echo=FALSE}
+tank_normalized_anova_results
+```
+
+```{r echo=FALSE}
+tank_normalized_tukey_summary
+```
+
+## 03) Is host-microbiome recovery historically contingent? {.tabset}
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__03.png"))
+```
+
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+p13 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Treatment, y = percent_mortality, fill = Treatment, group = interaction(Treatment))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+    # facet_wrap(.~Tank.ID, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P- vs (A+T-P-, A-T+P-, A+T+P-); Recovery Comparison",
+    x = "Treatment",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.height=5, fig.width=4}
+p13
+```
+
+
+#### By Tank
+
+```{r include=FALSE}
+p14 <- data.mortality %>%
+    dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 30,  # Update this if different per group
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    Temperature = dplyr::if_else(stringr::str_detect(Treatment, "T\\+"), "Elevated", "Ambient")
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = Treatment, group = interaction(Treatment, Tank.ID))) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 4,
+    color = "white"
+  ) +
+    facet_wrap(.~Treatment, ncol = 4, scales = "free_x") +
+  ggplot2::scale_fill_brewer(palette = "Dark2") +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+            ggplot2::scale_fill_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+    ggplot2::scale_color_manual(
+      values = treatment_color_scale,
+      breaks = treatment_order
+    ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by Treatment",
+    subtitle = "A-T-P- vs (A+T-P-, A-T+P-, A+T+P-); Recovery Comparison by Tank",
+    x = "Tank ID",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per treatment group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p14
+```
+
+#### Statistical Analysis - Recovery Mortality {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - recovery mortality
+recovery_mortality_data <- data.mortality %>%
+  dplyr::filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+  dplyr::group_by(Treatment) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    total_per_group = 90,
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1)
+  )
+
+# Chi-square test for independence between treatment and mortality
+set.seed(42)
+recovery_chi_square_test <- chisq.test(
+  matrix(c(recovery_mortality_data$dead, recovery_mortality_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Create mortality rate summary table for display
+recovery_mortality_rate_table <- recovery_mortality_data %>%
+  dplyr::select(Treatment, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Summary - Recovery",
+    subtitle = "Percent mortality and survival rates by treatment (parasite-unexposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Chi-square test results
+recovery_chi_square_results <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(recovery_chi_square_test$statistic, 4),
+    recovery_chi_square_test$parameter,
+    round(recovery_chi_square_test$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - Recovery Mortality",
+    subtitle = "Test for independence between treatment and mortality (parasite-unexposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise comparisons using chi-square tests
+set.seed(42)
+recovery_pairwise_results <- list()
+recovery_treatments <- recovery_mortality_data$Treatment
+
+for(i in 1:(length(recovery_treatments)-1)) {
+  for(j in (i+1):length(recovery_treatments)) {
+    trt1 <- recovery_treatments[i]
+    trt2 <- recovery_treatments[j]
+    
+    # Get data for these two treatments
+    data1 <- recovery_mortality_data %>% dplyr::filter(Treatment == trt1)
+    data2 <- recovery_mortality_data %>% dplyr::filter(Treatment == trt2)
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(data1$dead, data1$n, data2$dead, data2$n),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(trt1, trt2)
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    recovery_pairwise_results[[paste(trt1, "vs", trt2)]] <- data.frame(
+      Comparison = paste(trt1, "vs", trt2),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise results
+recovery_pairwise_summary <- do.call(rbind, recovery_pairwise_results) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - Recovery Mortality",
+    subtitle = "Post-hoc comparisons between treatment pairs (parasite-unexposed only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Mortality Rates
+
+```{r echo=FALSE}
+recovery_mortality_rate_table
+```
+
+##### Chi-Square
+
+```{r echo=FALSE}
+recovery_chi_square_results
+```
+
+##### Chi-Square Pairwise
+
+```{r echo=FALSE}
+recovery_pairwise_summary
+```
+
+
+
+## 04) History of stressors {.tabset}
+
+
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+# Create mortality data grouped by History instead of Treatment
+history_mortality_data <- data.mortality %>%
+  dplyr::group_by(History) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 90 fish per treatment group
+    total_per_group = dplyr::case_when(
+      History == 0 ~ 90 * 2,  # 2 treatment groups: A- T- P- and A- T- P+
+      History == 1 ~ 90 * 4,  # 4 treatment groups: A+ T- P-, A+ T- P+, A- T+ P-, A- T+ P+
+      History == 2 ~ 90 * 2,  # 2 treatment groups: A+ T+ P- and A+ T+ P+
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors"))
+  )
+
+# Create color palette for history levels
+history_colors <- c(
+  "No prior stressors" = "#1B9E77",
+  "One prior stressor" = "#D95F02", 
+  "Two prior stressors" = "#7570B3"
+)
+
+p1_history <- history_mortality_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = History_Label, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 6,
+    color = "white"
+  ) +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by History of Stressors",
+    subtitle = "All fish grouped by number of prior stressors experienced",
+    x = "History of Stressors",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=6, fig.height=5}
+p1_history
+```
+
+```{r include=FALSE}
+# Create mortality data grouped by History and Pathogen exposure
+history_pathogen_mortality_data <- data.mortality %>%
+  dplyr::group_by(History, Pathogen) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 90 fish per treatment group
+    total_per_group = dplyr::case_when(
+      History == 0 & Pathogen == 0 ~ 90 * 1,   # 1 treatment group: A- T- P-
+      History == 0 & Pathogen == 1 ~ 90 * 1,   # 1 treatment group: A- T- P+
+      History == 1 & Pathogen == 0 ~ 90 * 2,   # 2 treatment groups: A+ T- P- and A- T+ P-
+      History == 1 & Pathogen == 1 ~ 90 * 2,   # 2 treatment groups: A+ T- P+ and A- T+ P+
+      History == 2 & Pathogen == 0 ~ 90 * 1,   # 1 treatment group: A+ T+ P-
+      History == 2 & Pathogen == 1 ~ 90 * 1,   # 1 treatment group: A+ T+ P+
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors")),
+    Pathogen_Label = dplyr::case_when(
+      Pathogen == 0 ~ "Unexposed",
+      Pathogen == 1 ~ "Exposed",
+      TRUE ~ as.character(Pathogen)
+    ), 
+    Pathogen_Label = factor(Pathogen_Label, levels = c("Unexposed", "Exposed"))
+  )
+
+p1.2_history <- history_pathogen_mortality_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = History_Label, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~Pathogen_Label, ncol = 2, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by History of Stressors",
+    subtitle = "All fish grouped by number of prior stressors and pathogen exposure",
+    x = "History of Stressors",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+
+p1.3_history <- history_pathogen_mortality_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = Pathogen_Label, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~History, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by History of Stressors",
+    subtitle = "All fish grouped by number of prior stressors and pathogen exposure",
+    x = "History of Stressors",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+# p1.2_history
+# p1.3_history
+```
+
+#### By Tank
+
+```{r include=FALSE}
+# Create mortality data grouped by History and Tank
+history_tank_mortality_data <- data.mortality %>%
+  dplyr::group_by(History, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 30 fish per treatment per tank
+    total_per_group = dplyr::case_when(
+      History == 0 ~ 30 * 2,  # 2 treatment groups × 30 fish per tank
+      History == 1 ~ 30 * 4,  # 4 treatment groups × 30 fish per tank
+      History == 2 ~ 30 * 2,  # 2 treatment groups × 30 fish per tank
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors"))
+  )
+
+p2_history <- history_tank_mortality_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 3,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~History_Label, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Integrated Final Mortality by History of Stressors",
+    subtitle = "All fish grouped by number of prior stressors; by Tank",
+    x = "Tank ID",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p2_history
+```
+
+#### Statistical Analysis - History of Stressors Mortality {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - percent mortality rates by History
+history_mortality_stats_data <- data.mortality %>%
+  dplyr::group_by(History) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 90 fish per treatment group
+    total_per_group = dplyr::case_when(
+      History == 0 ~ 90 * 2,  # 2 treatment groups: A- T- P- and A- T- P+
+      History == 1 ~ 90 * 4,  # 4 treatment groups: A+ T- P-, A+ T- P+, A- T+ P-, A- T+ P+
+      History == 2 ~ 90 * 2,  # 2 treatment groups: A+ T+ P- and A+ T+ P+
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor", 
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    )
+  )
+
+# Chi-square test for independence between history and mortality
+set.seed(42)
+history_chi_square_test <- chisq.test(
+  matrix(c(history_mortality_stats_data$dead, history_mortality_stats_data$n), 
+         ncol = 2, byrow = FALSE)
+)
+
+# Create mortality rate summary table for display
+history_mortality_rate_table <- history_mortality_stats_data %>%
+  dplyr::select(History, History_Label, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Rate Summary - History of Stressors",
+    subtitle = "Percent mortality and survival rates by history of stressors"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Chi-square test results
+history_test_stat_table <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(history_chi_square_test$statistic, 4),
+    history_chi_square_test$parameter,
+    round(history_chi_square_test$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - History of Stressors Mortality",
+    subtitle = "Test for independence between history of stressors and mortality"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Post-hoc pairwise comparisons using chi-square tests
+set.seed(42)
+history_pairwise_results <- list()
+history_levels <- history_mortality_stats_data$History
+
+for(i in 1:(length(history_levels)-1)) {
+  for(j in (i+1):length(history_levels)) {
+    hist1 <- history_levels[i]
+    hist2 <- history_levels[j]
+    
+    # Get data for these two history levels
+    data1 <- history_mortality_stats_data %>% dplyr::filter(History == hist1)
+    data2 <- history_mortality_stats_data %>% dplyr::filter(History == hist2)
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(data1$dead, data1$n, data2$dead, data2$n),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(paste("History", hist1), paste("History", hist2))
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    history_pairwise_results[[paste("History", hist1, "vs", "History", hist2)]] <- data.frame(
+      Comparison = paste("History", hist1, "vs", "History", hist2),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Combine pairwise results
+history_pairwise_summary <- do.call(rbind, history_pairwise_results) %>%
+  dplyr::arrange(desc(Significant), P_value) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - History of Stressors Mortality",
+    subtitle = "Post-hoc comparisons between history levels"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Show only significant pairwise comparisons
+history_pairwise_summary__SigOnly <- do.call(rbind, history_pairwise_results) %>%
+  dplyr::arrange(desc(Significant), P_value) %>%
+  dplyr::filter(Significant == "Yes") %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Significant Pairwise Chi-Square Tests - History of Stressors Mortality",
+    subtitle = "Post-hoc comparisons between history levels (significant only)"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Additional analysis: Trend analysis across history levels
+# Calculate trend in mortality rates
+history_trend_data <- history_mortality_stats_data %>%
+  dplyr::arrange(History) %>%
+  dplyr::select(History, percent_mortality)
+
+# Linear trend test (Cochran-Armitage trend test equivalent using chi-square)
+set.seed(42)
+# Create trend weights (0, 1, 2 for history levels)
+trend_weights <- c(0, 1, 2)
+trend_chi_square <- chisq.test(
+  matrix(c(history_mortality_stats_data$dead, history_mortality_stats_data$n), 
+         ncol = 2, byrow = FALSE),
+  simulate.p.value = TRUE
+)
+
+# Calculate correlation between history level and mortality rate
+history_correlation <- cor.test(
+  history_trend_data$History, 
+  history_trend_data$percent_mortality, 
+  method = "pearson"
+)
+
+# Trend analysis results
+history_trend_results <- data.frame(
+  Statistic = c("Correlation coefficient (r)", "P-value (correlation)", "Chi-square trend test p-value"),
+  Value = c(
+    round(history_correlation$estimate, 4),
+    round(history_correlation$p.value, 6),
+    round(trend_chi_square$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Trend Analysis - History of Stressors Mortality",
+    subtitle = "Testing for linear trend in mortality rates across history levels"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Effect size analysis: Calculate odds ratios between history levels
+history_effect_sizes <- data.frame(
+  Comparison = c("History 1 vs History 0", "History 2 vs History 0", "History 2 vs History 1"),
+  Odds_Ratio = c(
+    round((history_mortality_stats_data$dead[2] * history_mortality_stats_data$n[1]) / 
+          (history_mortality_stats_data$dead[1] * history_mortality_stats_data$n[2]), 3),
+    round((history_mortality_stats_data$dead[3] * history_mortality_stats_data$n[1]) / 
+          (history_mortality_stats_data$dead[1] * history_mortality_stats_data$n[3]), 3),
+    round((history_mortality_stats_data$dead[3] * history_mortality_stats_data$n[2]) / 
+          (history_mortality_stats_data$dead[2] * history_mortality_stats_data$n[3]), 3)
+  ),
+  Mortality_Rate_1 = c(
+    round(history_mortality_stats_data$percent_mortality[2], 1),
+    round(history_mortality_stats_data$percent_mortality[3], 1),
+    round(history_mortality_stats_data$percent_mortality[3], 1)
+  ),
+  Mortality_Rate_2 = c(
+    round(history_mortality_stats_data$percent_mortality[1], 1),
+    round(history_mortality_stats_data$percent_mortality[1], 1),
+    round(history_mortality_stats_data$percent_mortality[2], 1)
+  )
+) %>%
+  dplyr::mutate(
+    Interpretation = dplyr::case_when(
+      Odds_Ratio > 1 ~ "Higher mortality in first group",
+      Odds_Ratio < 1 ~ "Lower mortality in first group",
+      Odds_Ratio == 1 ~ "No difference"
+    )
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Effect Size Analysis - History of Stressors Mortality",
+    subtitle = "Odds ratios comparing mortality rates between history levels"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Odds_Ratio, Mortality_Rate_1, Mortality_Rate_2),
+    decimals = 1
+  )
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Mortality Rates
+
+```{r echo=FALSE}
+history_mortality_rate_table
+```
+
+##### Chi-Square
+
+```{r echo=FALSE}
+history_test_stat_table
+```
+
+##### Chi-Square Pairwise
+
+```{r echo=FALSE}
+history_pairwise_summary
+history_pairwise_summary__SigOnly
+```
+
+##### Trend Analysis
+
+```{r echo=FALSE}
+history_trend_results
+```
+
+##### Effect Sizes
+
+```{r echo=FALSE}
+history_effect_sizes
+```
+
+
+## 05) History of stressors by pathogen exposure {.tabset}
+
+
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design__ALL.png"))
+```
+
+### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+### Mortality
+
+#### All
+
+```{r include=FALSE}
+# Create mortality data grouped by History and Pathogen exposure for interaction analysis
+history_pathogen_interaction_data <- data.mortality %>%
+  dplyr::group_by(History, Pathogen) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 90 fish per treatment group
+    total_per_group = dplyr::case_when(
+      History == 0 & Pathogen == 0 ~ 90 * 1,   # 1 treatment group: A- T- P-
+      History == 0 & Pathogen == 1 ~ 90 * 1,   # 1 treatment group: A- T- P+
+      History == 1 & Pathogen == 0 ~ 90 * 2,   # 2 treatment groups: A+ T- P- and A- T+ P-
+      History == 1 & Pathogen == 1 ~ 90 * 2,   # 2 treatment groups: A+ T- P+ and A- T+ P+
+      History == 2 & Pathogen == 0 ~ 90 * 1,   # 1 treatment group: A+ T+ P-
+      History == 2 & Pathogen == 1 ~ 90 * 1,   # 1 treatment group: A+ T+ P+
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors")),
+    Pathogen_Label = dplyr::case_when(
+      Pathogen == 0 ~ "Unexposed",
+      Pathogen == 1 ~ "Exposed",
+      TRUE ~ as.character(Pathogen)
+    ), 
+    Pathogen_Label = factor(Pathogen_Label, levels = c("Unexposed", "Exposed"))
+  )
+
+# Create color palette for history levels
+history_colors <- c(
+  "No prior stressors" = "#1B9E77",
+  "One prior stressor" = "#D95F02", 
+  "Two prior stressors" = "#7570B3"
+)
+
+# Plot 1: History by Pathogen exposure (faceted by pathogen)
+p1_interaction <- history_pathogen_interaction_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = History_Label, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~Pathogen_Label, ncol = 2, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Mortality by History of Stressors",
+    subtitle = "Stratified by pathogen exposure status",
+    x = "History of Stressors",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+
+# Plot 2: Pathogen exposure by History (faceted by history)
+p2_interaction <- history_pathogen_interaction_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = Pathogen_Label, y = percent_mortality, fill = History_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 5,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~History_Label, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = history_colors) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  ) +
+  ggplot2::labs(
+    title = "Mortality by Pathogen Exposure",
+    subtitle = "Stratified by history of stressors",
+    x = "Pathogen Exposure",
+    y = "Percent Mortality",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+
+# Plot 3: Interaction plot showing both variables
+p3_interaction <- history_pathogen_interaction_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = History_Label, y = percent_mortality, fill = Pathogen_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 4,
+    color = "white"
+  ) +
+  ggplot2::scale_fill_manual(values = c("Unexposed" = "#1B9E77", "Exposed" = "#D95F02")) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
+  ggplot2::labs(
+    title = "Mortality by History of Stressors and Pathogen Exposure",
+    subtitle = "Interaction between prior stressors and pathogen exposure",
+    x = "History of Stressors",
+    y = "Percent Mortality",
+    fill = "Pathogen Exposure",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p1_interaction
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p2_interaction
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=5}
+p3_interaction
+```
+
+#### By Tank
+
+```{r include=FALSE}
+# Create mortality data grouped by History, Pathogen, and Tank
+history_pathogen_tank_data <- data.mortality %>%
+  dplyr::group_by(History, Pathogen, Tank.ID) %>%
+  dplyr::count() %>%
+  dplyr::mutate(
+    # Calculate expected totals: 30 fish per treatment per tank
+    total_per_group = dplyr::case_when(
+      History == 0 & Pathogen == 0 ~ 30 * 1,   # 1 treatment group × 30 fish per tank
+      History == 0 & Pathogen == 1 ~ 30 * 1,   # 1 treatment group × 30 fish per tank
+      History == 1 & Pathogen == 0 ~ 30 * 2,   # 2 treatment groups × 30 fish per tank
+      History == 1 & Pathogen == 1 ~ 30 * 2,   # 2 treatment groups × 30 fish per tank
+      History == 2 & Pathogen == 0 ~ 30 * 1,   # 1 treatment group × 30 fish per tank
+      History == 2 & Pathogen == 1 ~ 30 * 1,   # 1 treatment group × 30 fish per tank
+      TRUE ~ 0
+    ),
+    dead = total_per_group - n,
+    percent_mortality = round((dead / total_per_group) * 100, 1),
+    History_Label = dplyr::case_when(
+      History == 0 ~ "No prior stressors",
+      History == 1 ~ "One prior stressor",
+      History == 2 ~ "Two prior stressors",
+      TRUE ~ "Unknown"
+    ),
+    History_Label = factor(History_Label, levels = c("No prior stressors", "One prior stressor", "Two prior stressors")),
+    Pathogen_Label = dplyr::case_when(
+      Pathogen == 0 ~ "Unexposed",
+      Pathogen == 1 ~ "Exposed",
+      TRUE ~ as.character(Pathogen)
+    ), 
+    Pathogen_Label = factor(Pathogen_Label, levels = c("Unexposed", "Exposed"))
+  )
+
+p4_interaction_tank <- history_pathogen_tank_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = Tank.ID, y = percent_mortality, fill = Pathogen_Label)) +
+  ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.9)) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(percent_mortality, "%\n(", dead, ")")),
+    position = ggplot2::position_dodge(width = 0.9),
+    vjust = 1.5,
+    fontface = "bold",
+    size = 3,
+    color = "white"
+  ) +
+  ggplot2::facet_wrap(.~History_Label, ncol = 3, scales = "free_x") +
+  ggplot2::scale_fill_manual(values = c("Unexposed" = "#1B9E77", "Exposed" = "#D95F02")) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
+  ggplot2::labs(
+    title = "Mortality by History of Stressors and Pathogen Exposure",
+    subtitle = "Stratified by tank and history of stressors",
+    x = "Tank ID",
+    y = "Percent Mortality",
+    fill = "Pathogen Exposure",
+    caption = "Percent mortality = # survived (sampled) fish / total samples per history group\n(# of dead fish)"
+  )
+```
+
+```{r echo=FALSE, fig.width=10, fig.height=6}
+p4_interaction_tank
+```
+
+#### Statistical Analysis - History × Pathogen Interaction {.tabset}
+
+##### Code
+```{r}
+# Prepare data for statistical analysis - History × Pathogen interaction
+interaction_stats_data <- history_pathogen_interaction_data %>%
+  dplyr::select(History, Pathogen, History_Label, Pathogen_Label, dead, n, percent_mortality) %>%
+  dplyr::rename(Survived = n) %>%
+  dplyr::mutate(
+    Total = dead + Survived,
+    percent_survived = round((Survived / Total) * 100, 1)
+  )
+
+# 1. Chi-square test for independence between History and Pathogen exposure
+set.seed(42)
+# Create 3x2 contingency table (History × Pathogen)
+interaction_contingency <- matrix(
+  c(interaction_stats_data$dead), 
+  nrow = 3, ncol = 2,
+  dimnames = list(
+    c("History 0", "History 1", "History 2"),
+    c("Unexposed", "Exposed")
+  )
+)
+
+interaction_chi_square <- chisq.test(interaction_contingency)
+
+# 2. Test for interaction effect using logistic regression approach
+# Create individual-level data for interaction analysis
+set.seed(42)
+individual_interaction_data <- data.mortality %>%
+  dplyr::select(History, Pathogen, Sample) %>%
+  dplyr::mutate(
+    # Create binary outcome: 1 = survived, 0 = died (assuming all sampled fish survived)
+    Outcome = 1,  # All fish in the dataset survived (were sampled)
+    History = factor(History, levels = c(0, 1, 2)),
+    Pathogen = factor(Pathogen, levels = c(0, 1))
+  )
+
+# Fit logistic regression model with interaction
+interaction_model <- glm(Outcome ~ History * Pathogen, 
+                        data = individual_interaction_data, 
+                        family = "binomial")
+
+# Get model summary
+interaction_summary <- summary(interaction_model)
+
+# Extract coefficients and significance
+interaction_coefficients <- data.frame(
+  Term = rownames(interaction_summary$coefficients),
+  Estimate = round(interaction_summary$coefficients[, 1], 4),
+  Std_Error = round(interaction_summary$coefficients[, 2], 4),
+  z_value = round(interaction_summary$coefficients[, 3], 4),
+  p_value = round(interaction_summary$coefficients[, 4], 6)
+) %>%
+  dplyr::mutate(
+    p_signif = ifelse(p_value < 0.001, "***", 
+                     ifelse(p_value < 0.01, "**",
+                            ifelse(p_value < 0.05, "*", "ns")))
+  )
+
+# 3. Create summary tables for display
+interaction_summary_table <- interaction_stats_data %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Mortality Summary - History × Pathogen Interaction",
+    subtitle = "Percent mortality and survival rates by history and pathogen exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(dead, Survived, Total),
+    decimals = 0
+  ) %>%
+  gt::fmt_number(
+    columns = c(percent_mortality, percent_survived),
+    decimals = 1
+  )
+
+# Chi-square test results
+interaction_chi_results <- data.frame(
+  Statistic = c("Chi-square statistic", "Degrees of freedom", "P-value"),
+  Value = c(
+    round(interaction_chi_square$statistic, 4),
+    interaction_chi_square$parameter,
+    round(interaction_chi_square$p.value, 6)
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Chi-Square Test Results - History × Pathogen Interaction",
+    subtitle = "Test for independence between history and pathogen exposure"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# Logistic regression results
+interaction_model_results <- interaction_coefficients %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Logistic Regression Results - History × Pathogen Interaction",
+    subtitle = "Model: Outcome ~ History * Pathogen"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Estimate, Std_Error, z_value, p_value),
+    decimals = 3
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = p_signif,
+      rows = p_signif != "ns"
+    )
+  )
+
+# 4. Calculate effect sizes for each comparison
+# Calculate odds ratios for each history level comparing exposed vs unexposed
+set.seed(42)
+effect_size_comparisons <- data.frame(
+  Comparison = c(
+    "History 0: Exposed vs Unexposed",
+    "History 1: Exposed vs Unexposed", 
+    "History 2: Exposed vs Unexposed"
+  ),
+  Odds_Ratio = c(
+    # History 0: Exposed vs Unexposed
+    round((interaction_stats_data$dead[2] * interaction_stats_data$Survived[1]) / 
+          (interaction_stats_data$dead[1] * interaction_stats_data$Survived[2]), 3),
+    # History 1: Exposed vs Unexposed
+    round((interaction_stats_data$dead[4] * interaction_stats_data$Survived[3]) / 
+          (interaction_stats_data$dead[3] * interaction_stats_data$Survived[4]), 3),
+    # History 2: Exposed vs Unexposed
+    round((interaction_stats_data$dead[6] * interaction_stats_data$Survived[5]) / 
+          (interaction_stats_data$dead[5] * interaction_stats_data$Survived[6]), 3)
+  ),
+  Mortality_Exposed = c(
+    round(interaction_stats_data$percent_mortality[2], 1),
+    round(interaction_stats_data$percent_mortality[4], 1),
+    round(interaction_stats_data$percent_mortality[6], 1)
+  ),
+  Mortality_Unexposed = c(
+    round(interaction_stats_data$percent_mortality[1], 1),
+    round(interaction_stats_data$percent_mortality[3], 1),
+    round(interaction_stats_data$percent_mortality[5], 1)
+  )
+) %>%
+  dplyr::mutate(
+    Mortality_Difference = Mortality_Exposed - Mortality_Unexposed,
+    Interpretation = dplyr::case_when(
+      Odds_Ratio > 1 ~ "Higher mortality when exposed",
+      Odds_Ratio < 1 ~ "Lower mortality when exposed",
+      Odds_Ratio == 1 ~ "No difference"
+    )
+  ) 
+
+effect_size_comparisons_table <- effect_size_comparisons %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Effect Size Analysis - History × Pathogen Interaction",
+    subtitle = "Odds ratios comparing exposed vs unexposed within each history level"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Odds_Ratio, Mortality_Exposed, Mortality_Unexposed, Mortality_Difference),
+    decimals = 1
+  )
+
+# 5. Test for trend in pathogen effect across history levels
+set.seed(42)
+# Calculate correlation between history level and the difference in mortality (exposed - unexposed)
+trend_data <- effect_size_comparisons %>%
+  dplyr::mutate(History_Level = c(0, 1, 2))
+
+pathogen_effect_trend <- cor.test(
+  trend_data$History_Level, 
+  trend_data$Mortality_Difference, 
+  method = "pearson"
+)
+
+# Trend analysis results
+pathogen_effect_trend_results <- data.frame(
+  Statistic = c("Correlation coefficient (r)", "P-value", "Interpretation"),
+  Value = c(
+    round(pathogen_effect_trend$estimate, 4),
+    round(pathogen_effect_trend$p.value, 6),
+    ifelse(pathogen_effect_trend$p.value < 0.05, 
+           "Significant trend in pathogen effect across history levels",
+           "No significant trend in pathogen effect across history levels")
+  )
+) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Trend Analysis - Pathogen Effect Across History Levels",
+    subtitle = "Testing whether the effect of pathogen exposure changes across history levels"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  )
+
+# 6. Post-hoc pairwise comparisons within each pathogen group
+set.seed(42)
+# Within unexposed group
+unexposed_data <- interaction_stats_data %>% dplyr::filter(Pathogen == 0)
+unexposed_pairwise <- list()
+
+for(i in 1:(nrow(unexposed_data)-1)) {
+  for(j in (i+1):nrow(unexposed_data)) {
+    hist1 <- unexposed_data$History[i]
+    hist2 <- unexposed_data$History[j]
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(unexposed_data$dead[i], unexposed_data$Survived[i], 
+        unexposed_data$dead[j], unexposed_data$Survived[j]),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(paste("History", hist1), paste("History", hist2))
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    unexposed_pairwise[[paste("History", hist1, "vs", "History", hist2)]] <- data.frame(
+      Comparison = paste("History", hist1, "vs", "History", hist2, "(Unexposed)"),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Within exposed group
+exposed_data <- interaction_stats_data %>% dplyr::filter(Pathogen == 1)
+exposed_pairwise <- list()
+
+for(i in 1:(nrow(exposed_data)-1)) {
+  for(j in (i+1):nrow(exposed_data)) {
+    hist1 <- exposed_data$History[i]
+    hist2 <- exposed_data$History[j]
+    
+    # Create 2x2 contingency table
+    cont_table <- matrix(
+      c(exposed_data$dead[i], exposed_data$Survived[i], 
+        exposed_data$dead[j], exposed_data$Survived[j]),
+      nrow = 2, ncol = 2,
+      dimnames = list(
+        c("Dead", "Survived"),
+        c(paste("History", hist1), paste("History", hist2))
+      )
+    )
+    
+    # Perform chi-square test
+    test_result <- chisq.test(cont_table)
+    
+    exposed_pairwise[[paste("History", hist1, "vs", "History", hist2)]] <- data.frame(
+      Comparison = paste("History", hist1, "vs", "History", hist2, "(Exposed)"),
+      Chi_square = round(test_result$statistic, 4),
+      P_value = round(test_result$p.value, 6),
+      Significant = ifelse(test_result$p.value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# 7. Pairwise comparisons between same history types across pathogen exposures
+set.seed(42)
+same_history_pathogen_pairwise <- list()
+
+# For each history level, compare unexposed vs exposed
+for(hist_level in c(0, 1, 2)) {
+  # Get data for this history level
+  unexposed_row <- interaction_stats_data %>% dplyr::filter(History == hist_level & Pathogen == 0)
+  exposed_row <- interaction_stats_data %>% dplyr::filter(History == hist_level & Pathogen == 1)
+  
+  if(nrow(unexposed_row) > 0 && nrow(exposed_row) > 0) {
+    # Calculate percent mortality for each group
+    unexposed_mortality <- unexposed_row$percent_mortality
+    exposed_mortality <- exposed_row$percent_mortality
+    
+    # Calculate the difference in percent mortality
+    mortality_difference <- exposed_mortality - unexposed_mortality
+    
+    # Perform t-test on percent mortality rates
+    # Since we have single values, we'll use a simple comparison
+    # For small sample sizes, we can use a z-test for proportions
+    # Calculate standard error of the difference
+    unexposed_se <- sqrt((unexposed_mortality * (100 - unexposed_mortality)) / unexposed_row$Total)
+    exposed_se <- sqrt((exposed_mortality * (100 - exposed_mortality)) / exposed_row$Total)
+    se_diff <- sqrt(unexposed_se^2 + exposed_se^2)
+    
+    # Calculate z-statistic
+    z_stat <- mortality_difference / se_diff
+    p_value <- 2 * (1 - pnorm(abs(z_stat)))
+    
+    same_history_pathogen_pairwise[[paste("History", hist_level)]] <- data.frame(
+      Comparison = paste("History", hist_level, "(Unexposed) vs History", hist_level, "(Exposed)"),
+      Unexposed_Mortality = round(unexposed_mortality, 1),
+      Exposed_Mortality = round(exposed_mortality, 1),
+      Mortality_Difference = round(mortality_difference, 1),
+      Z_statistic = round(z_stat, 4),
+      P_value = round(p_value, 6),
+      Significant = ifelse(p_value < 0.05, "Yes", "No")
+    )
+  }
+}
+
+# Create separate tables for different types of pairwise comparisons
+
+# Table 1: Within unexposed group comparisons
+unexposed_pairwise_results <- do.call(rbind, unexposed_pairwise) %>%
+  dplyr::arrange(desc(Significant), P_value) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - Within Unexposed Group",
+    subtitle = "Comparing history levels within unexposed fish"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Table 2: Within exposed group comparisons
+exposed_pairwise_results <- do.call(rbind, exposed_pairwise) %>%
+  dplyr::arrange(desc(Significant), P_value) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Chi-Square Tests - Within Exposed Group",
+    subtitle = "Comparing history levels within exposed fish"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Create separate table for same history comparisons across pathogen exposures
+same_history_pathogen_results <- do.call(rbind, same_history_pathogen_pairwise) %>%
+  dplyr::arrange(desc(Significant), P_value) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pathogen Effect Within Each History Level",
+    subtitle = "Comparing percent mortality between unexposed vs exposed within the same history of stressors"
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "#f7f7f7"),
+    locations = gt::cells_column_labels()
+  ) %>%
+  gt::fmt_number(
+    columns = c(Unexposed_Mortality, Exposed_Mortality, Mortality_Difference),
+    decimals = 1
+  ) %>%
+  gt::fmt_number(
+    columns = c(Z_statistic, P_value),
+    decimals = 4
+  ) %>%
+  gt::tab_style(
+    style = gt::cell_fill(color = "lightgreen"),
+    locations = gt::cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+```
+
+##### Table {.active}
+
+#### {.tabset}
+
+##### (hide)
+
+Click on tabs to display tables. Scroll to see additional rows.
+
+```{r}
+
+```
+
+##### Summary Table
+
+```{r echo=FALSE}
+interaction_summary_table
+```
+
+##### Chi-Square Test
+
+```{r echo=FALSE}
+interaction_chi_results
+```
+
+##### Logistic Regression
+
+```{r echo=FALSE}
+interaction_model_results
+```
+
+##### Effect Sizes
+
+```{r echo=FALSE}
+effect_size_comparisons_table
+```
+
+##### Trend Analysis
+
+```{r echo=FALSE}
+pathogen_effect_trend_results
+```
+
+##### Within Unexposed Group
+
+```{r echo=FALSE}
+unexposed_pairwise_results
+```
+
+##### Within Exposed Group
+
+```{r echo=FALSE}
+exposed_pairwise_results
+```
+
+##### Same History Across Pathogen Exposure
+
+```{r echo=FALSE}
+same_history_pathogen_results
+```
+

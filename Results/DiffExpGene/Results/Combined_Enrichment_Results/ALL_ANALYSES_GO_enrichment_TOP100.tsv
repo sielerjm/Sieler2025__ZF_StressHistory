@@ -1,0 +1,102 @@
+contrast	Description	p.adjust	Count	log_padj	mean_log2FC	n_up	n_down	gene_list	fc_list	analysis
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	1.7949401374912012e-44	82	43.74595003086882	1.9626667112243794	80	2			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	7.958956612775235e-42	88	41.09914386279187	2.139930300852439	87	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.8160056306806576e-41	140	40.74088280924569	1.8984978055826096	133	7			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	1.117377771198038e-38	160	37.9517999726233	1.8482792267407135	149	11			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	1.405798739462108e-37	74	36.85207685043816	1.9827718498846347	73	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	1.405798739462108e-37	74	36.85207685043816	1.9827718498846347	73	1			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	3.1826695963318822e-37	85	36.49720844461425	2.1476960315894695	84	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	6.756168780259623e-37	65	36.17029950957175	1.702886412682309	64	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	6.756168780259623e-37	96	36.17029950957175	1.900499806631723	94	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication	6.756168780259623e-37	65	36.17029950957175	1.702886412682309	64	1			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	6.756168780259623e-37	96	36.17029950957175	1.900499806631723	94	2			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	1.2655026127883861e-36	63	35.89773695384954	2.153401082269738	63	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	1.3344351976492616e-36	114	35.87470251141313	2.203841756722162	109	5			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	3.6147114317162305e-34	56	33.4419263674194	2.019820279470999	56	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	8.804854700301484e-34	91	33.05527780646308	2.6470723850317945	90	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4004987282521329e-33	108	32.85371728120909	2.3622033808233396	107	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	7.816889830450861e-33	92	32.10696600885194	2.423010516005017	88	4			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.977982340964168e-32	94	31.703777590016923	2.083212639111904	92	2			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	chromosome segregation	6.834039930973444e-32	79	31.16532248796764	2.2724075725033925	77	2			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	7.666696378146896e-32	129	31.11539173563595	2.004514329560703	125	4			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	8.440101870412998e-32	60	31.073652311491497	2.1361818708324747	60	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	1.7402168669680873e-31	122	30.75939662628139	2.4019148976859928	117	5			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	4.066724367620552e-31	151	30.390755261988826	1.9298329496935458	144	7			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic cell cycle process	5.066988391153247e-31	124	30.295250090709104	2.3682441420507003	118	6			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	6.54164652403775e-30	52	29.184312926552725	2.031170990757428	52	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	6.54164652403775e-30	52	29.184312926552725	2.031170990757428	52	0			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4758909246296544e-29	76	28.83094573775815	1.8369528798708468	75	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	1.4758909246296544e-29	76	28.83094573775815	1.8369528798708468	75	1			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	8.650325273909887e-29	72	28.062967561667186	2.268594127150131	70	2			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	chromosome organization	2.3661373847653e-28	103	27.625960042584985	2.3069513255748544	100	3			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	3.163169189865037e-28	61	27.4998775781571	1.945769504543333	60	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	3.163169189865037e-28	61	27.4998775781571	1.945769504543333	60	1			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	4.6002677757035315e-28	80	27.337216887856314	2.5608404668916784	79	1			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	6.041391321743347e-28	104	27.218863032608628	1.9644999004087185	103	1			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	6.394580010424908e-28	122	27.194187974272847	1.9008755833443065	119	3			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.259933620292949e-27	43	26.89965233512044	1.9776928055857448	43	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.259933620292949e-27	43	26.89965233512044	1.9776928055857448	43	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear division	7.801205056942002e-27	80	26.107838306391937	2.5349738561373307	78	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.590005426912705e-26	63	25.79860139336872	1.894670405778457	61	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.590005426912705e-26	63	25.79860139336872	1.894670405778457	61	2			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	1.8289445680778714e-26	56	25.737799456985428	2.291654840195552	55	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	2.0378868091680483e-26	84	25.690819941781456	2.4254800993702297	80	4			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	2.325442014417376e-26	74	25.633494485278472	2.218563731191216	71	3			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	2.59700577747537e-26	43	25.585527084208632	1.7770143423840783	43	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA-templated DNA replication	2.59700577747537e-26	43	25.585527084208632	1.7770143423840783	43	0			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	3.400484570267471e-26	62	25.46845919142886	2.738743640660332	62	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	1.0582636254821515e-25	47	24.975406131137802	2.258817179890697	46	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	nuclear chromosome segregation	3.7340601045897597e-25	62	24.427818695791977	2.531903859952559	60	2			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	organelle fission	1.8859498210996603e-24	83	23.724469866587786	2.4398024515301864	79	4			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	2.6913836990701514e-24	38	23.570024382314337	2.047006685997649	38	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	2.6913836990701514e-24	38	23.570024382314337	2.047006685997649	38	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	5.531235644904389e-24	51	23.257177839071662	2.426541395583855	49	2			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	sister chromatid segregation	9.742744265881339e-24	50	23.011318696954874	2.6671058348862324	50	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	1.8898933449863688e-22	51	21.723562704287538	2.1334708001403477	50	1			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	2.0084222307916147e-22	52	21.697144980159326	2.277506647737265	50	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	3.275829930123286e-22	91	21.484678653409254	1.7253184942184208	88	3			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA damage response	3.275829930123286e-22	91	21.484678653409254	1.7253184942184208	88	3			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	4.897910329274438e-22	72	21.30998917018268	2.154290850306664	71	1			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	6.449132355716743e-22	41	21.190498709933866	2.3115991969772405	40	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	7.936512831921981e-22	50	21.100370277235182	2.133353059953172	49	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	1.018932281074401e-21	45	20.991854678538214	2.7271048892403837	45	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.1447626334534245e-21	44	20.941284554955683	1.9683945132982226	43	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.1447626334534245e-21	44	20.941284554955683	1.9683945132982226	43	1			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.2539783481398332e-21	77	20.901709962201135	1.791123878067274	76	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA repair	1.2539783481398332e-21	77	20.901709962201135	1.791123878067274	76	1			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	1.8196221636044035e-21	66	20.740018781958334	2.0605033928134717	65	1			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.3282917004993577e-20	56	19.876706540927366	2.6001864372876606	55	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic sister chromatid segregation	8.086326314173471e-20	44	19.092248737206468	2.5406491393573223	43	1			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	mitotic nuclear division	1.2898330621469855e-19	56	18.889466495033997	2.495343396616935	54	2			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.3421853239245398e-18	59	17.87218751427061	1.9895526003813475	59	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.5170086035831067e-17	56	16.81901195614269	1.9036728140108226	55	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.5170086035831067e-17	56	16.81901195614269	1.9036728140108226	55	1			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	3.5916291189838024e-17	67	16.444708516073447	2.053929714270665	63	4			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	4.3687869921040184e-17	21	16.359639129565778	2.2051571557296032	21	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	9.369856313032428e-17	40	16.028267068977282	2.1065144912382356	40	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.0087867765226596e-16	66	15.996200619259003	2.2473201401004808	66	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.4304268622136061e-16	47	15.844534342786412	1.7807004544865745	47	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA recombination	1.4304268622136061e-16	47	15.844534342786412	1.7807004544865745	47	0			Parasite_Effect
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.4583453956132987e-16	34	15.836139605205927	1.7725035297491403	34	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.4583453956132987e-16	34	15.836139605205927	1.7725035297491403	34	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	1.7507657241563976e-16	68	15.756771964432383	2.265555496009662	65	3			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	1.9618792238615699e-16	76	15.707327731933113	2.3019664883517184	72	4			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	2.1017043947550302e-16	34	15.67742836763918	1.7725035297491403	34	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	2.1017043947550302e-16	34	15.67742836763918	1.7725035297491403	34	0			Parasite_Effect
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	recombinational repair	3.6919965484099875e-16	45	15.432738713661076	2.2934597536170203	45	0			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	4.454122717566259e-16	39	15.351237821691818	2.1023917790005795	39	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle process	5.611086377674709e-16	77	15.250953045668536	2.2179373546300765	72	5			All_Treatments
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	7.061546606791527e-16	57	15.151100170161438	2.14394901050265	55	2			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	9.66989073100412e-16	47	15.014578433382363	2.5993885908436916	47	0			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair via homologous recombination	1.2881280031657817e-15	44	14.890040978353232	2.2798534945785716	44	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	1.4797790860302846e-15	65	14.8298031149288	2.3022252682385904	62	3			All_Treatments
+A_plus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	double-strand break repair	9.728195528249773e-15	58	14.011967709043118	2.1620893366097644	58	0			All_Treatments
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	regulation of cell cycle phase transition	3.197670645346949e-14	52	13.495166269881352	2.285602291417428	50	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell division	4.496368463999835e-14	62	13.347138106841783	2.0374594264184815	62	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell division	4.496368463999835e-14	62	13.347138106841783	2.0374594264184815	62	0			Parasite_Effect
+A_minus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	meiotic cell cycle	4.499481280559279e-14	44	13.346837550663702	2.298762855878414	44	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	4.557263218102454e-14	45	13.341295886741648	1.9239086049041438	44	1			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	cell cycle phase transition	4.557263218102454e-14	45	13.341295886741648	1.9239086049041438	44	1			Parasite_Effect
+A_plus_T_plus_P_plus_vs_A_minus_T_minus_P_minus	cell division	8.805050518821015e-14	76	13.055268147932678	2.328815525292541	74	2			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	1.217243073603607e-13	17	12.914622688011718	1.7792362497962775	17	0			All_Treatments
+A_minus_T_minus_P_plus_vs_A_minus_T_minus_P_minus	DNA replication initiation	1.217243073603607e-13	17	12.914622688011718	1.7792362497962775	17	0			Parasite_Effect

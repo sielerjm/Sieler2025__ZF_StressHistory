@@ -1,0 +1,4741 @@
+---
+title: "Historical Contingency of Host-Microbiome Response to Perturbation"
+subtitle: "Integrated DEGxDAT Analysis Across All Research Questions"
+author: "Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    cache: true
+    cache.lazy: true
+    cache.comments: false
+    cache.rebuild: false
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE,
+  cache = TRUE,           # Enable caching for all chunks
+  cache.lazy = TRUE,      # Lazy loading of cached objects
+  cache.comments = FALSE, # Don't cache comments (saves space)
+  cache.rebuild = FALSE   # Don't rebuild cache unless needed
+)
+
+# Load the here package for project-relative paths
+library(here)
+
+# Get the project root directory (where the .Rproj file is located)
+proj.path <- here::here()
+```
+
+## Configuration
+
+```{r config, echo=TRUE, include=TRUE}
+# Configuration options for analysis
+# Set to TRUE to load existing results, FALSE to recompute
+LOAD_EXISTING_RESULTS <- TRUE
+
+# Analysis parameters
+top_n_taxa <- 10  # Number of top taxa to display in partial correlation summaries
+
+# Directory to save/load results
+RESULTS_DIR <- "/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DEGxDAT/Results"
+
+# Create results directory if it doesn't exist
+if (!dir.exists(RESULTS_DIR)) {
+  dir.create(RESULTS_DIR, recursive = TRUE)
+  cat("Created results directory:", RESULTS_DIR, "\n")
+}
+
+# Function to save results with timestamp
+save_results <- function(results, filename, results_dir = RESULTS_DIR) {
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  full_filename <- file.path(results_dir, paste0(filename, "_", timestamp, ".rds"))
+  saveRDS(results, full_filename)
+  cat("Saved results to:", full_filename, "\n")
+  return(full_filename)
+}
+
+# Function to load most recent results file
+load_latest_results <- function(filename_pattern, results_dir = RESULTS_DIR) {
+  files <- list.files(results_dir, pattern = filename_pattern, full.names = TRUE)
+  if (length(files) == 0) {
+    cat("No existing results found for pattern:", filename_pattern, "\n")
+    return(NULL)
+  }
+  latest_file <- files[order(file.info(files)$mtime, decreasing = TRUE)[1]]
+  cat("Loading results from:", latest_file, "\n")
+  return(readRDS(latest_file))
+}
+
+# Display configuration
+cat("=== ANALYSIS CONFIGURATION ===\n")
+cat("Load existing results:", LOAD_EXISTING_RESULTS, "\n")
+cat("Results directory:", RESULTS_DIR, "\n")
+cat("================================\n\n")
+```
+
+## Overview
+
+This script performs integrated analysis of differentially abundant taxa (DAT) and differentially expressed genes (DEG) across three research questions:
+
+1. **Parasite Exposure Response**: What is the host-microbiome response to parasite exposure? (A- T- P- vs A- T- P+)
+2. **Historical Contingency of Parasite Response**: Is the host-microbiome response to parasite exposure historically contingent? (A- T- P- vs A+ T- P+, A- T+ P+, A+ T+ P+)
+3. **Historical Contingency of Recovery**: Is the host-microbiome recovery historically contingent? (A- T- P- vs A+ T- P-, A- T+ P-, A+ T+ P-)
+
+```{r echo=FALSE}
+# Use here package to build project-relative path to the experimental design image
+knitr::include_graphics(here::here("Manuscript", "Figures", "Experimental_Design", "Experimental_Design.png"))
+```
+
+## Setup  {.tabset}
+
+### (hide)
+
+Click on tabs to display additional information.
+
+```{r}
+
+```
+
+### Libraries
+
+```{r message=FALSE, warning=FALSE}
+# Load required libraries for statistical analysis and table creation
+
+library(gt)
+library(pheatmap)
+library(ggrepel)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(DESeq2)
+library(phyloseq)
+library(microViz)
+library(vegan)
+library(RColorBrewer)
+library(clusterProfiler)
+library(ggpubr)
+library(org.Dr.eg.db)
+library(ppcor)
+library(GO.db)
+library(AnnotationDbi)
+library(KEGGREST)
+library(nptest)
+library(parallel)
+library(tidyverse)
+```
+
+### Plotting
+
+```{r}
+
+# Define treatment order and color palette
+treatment_order <- c(
+  "A- T- P-",  # Control
+  "A- T- P+",  # Parasite
+  "A+ T- P-",  # Antibiotics
+  "A+ T- P+",  # Antibiotics_Parasite
+  "A- T+ P-",  # Temperature
+  "A- T+ P+",  # Temperature_Parasite
+  "A+ T+ P-",  # Antibiotics_Temperature
+  "A+ T+ P+"   # Antibiotics_Temperature_Parasite
+)
+
+# Custom color palette matching treatment order
+treatment_colors <- c(
+  "#1B9E77",  # A- T- P- (Control)
+  "#D95F02",  # A- T- P+ (Parasite)
+  "#7570B3",  # A+ T- P- (Antibiotics)
+  "#E7298A",  # A+ T- P+ (Antibiotics_Parasite)
+  "#66A61E",  # A- T+ P- (Temperature)
+  "#E6AB02",  # A- T+ P+ (Temperature_Parasite)
+  "#A6761D",  # A+ T+ P- (Antibiotics_Temperature)
+  "#666666"   # A+ T+ P+ (Antibiotics_Temperature_Parasite)
+)
+
+# Create named vector for color scale
+treatment_color_scale <- setNames(treatment_colors, treatment_order)
+
+```
+
+### Functions
+
+```{r}
+
+# Function to extract sample data as dataframe from phyloseq object
+samdatAsDataframe <- function(ps) {
+  samdat <- phyloseq::sample_data(ps)
+  df <- data.frame(samdat, check.names = FALSE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+# Function to rename variables in phyloseq object
+ps_rename <- function(ps, ...) {
+  ps <- microViz::ps_get(ps)
+  df <- samdatAsDataframe(ps)
+  df <- dplyr::rename(.data = df, ...)
+  phyloseq::sample_data(ps) <- df
+  return(ps)
+}
+
+# SourceFolder function
+source(here::here("Code", "R", "Functions", "StartFunctions", "sourceFolder.R"))
+
+# Import all helper functions found in `/Functions`
+sourceFolder(here::here("Code", "R", "Functions", "StartFunctions"), T)
+sourceFolder(here::here("Code", "R", "Functions", "HelperFunctions"), T)
+
+
+
+# Function to map gene IDs to Entrez IDs
+get_entrez <- function(deg_df) {
+  # This function maps gene symbols (from the input data frame) to Entrez IDs using org.Dr.eg.db.
+  # INPUT: deg_df - a data frame with a column 'gene_id' (gene symbols)
+  # OUTPUT: the input data frame with an added 'entrezgene_id' column, filtered to only those with valid Entrez IDs
+
+  # Extract gene symbols from the input data frame
+  gene_ids <- deg_df$gene_id
+  
+  # Map gene symbols to Entrez IDs using AnnotationDbi
+  entrez_map <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = gene_ids,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "gene_id", value = "entrezgene_id") %>%
+    dplyr::filter(!is.na(entrezgene_id))
+  
+  # Join the Entrez IDs back to the original data, keep only those with valid Entrez IDs
+  result <- deg_df %>%
+    dplyr::left_join(entrez_map, by = "gene_id") %>%
+    dplyr::filter(!is.na(entrezgene_id)) %>%
+    dplyr::distinct(entrezgene_id, .keep_all = TRUE)
+  
+  return(result)
+}
+
+# Function to perform GO enrichment and summarize correlations for each GO term
+get_go_correlations <- function(entrez_df) {
+  # This function performs GO enrichment analysis on a set of Entrez IDs and summarizes correlation statistics for each GO term.
+  # INPUT: entrez_df - a data frame with 'entrezgene_id', 'correlation', 'TaxaID', etc.
+  # OUTPUT: a summary data frame with GO terms, p-values, mean correlations, and gene/taxa lists
+
+  cat("\nProcessing contrast with", nrow(entrez_df), "genes\n")
+  
+  # Run GO enrichment analysis (Biological Process ontology)
+  go_results <- enrichGO(
+    gene = entrez_df$entrezgene_id,
+    OrgDb = org.Dr.eg.db,
+    keyType = "ENTREZID",
+    ont = "BP",
+    pAdjustMethod = "BH",
+    pvalueCutoff = 0.1,
+    qvalueCutoff = 0.2,
+    readable = TRUE
+  ) %>%
+    as.data.frame() %>%
+    dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # Get GO term categories and definitions for each GO term
+  go_categories <- AnnotationDbi::select(
+    GO.db,
+    keys = go_results$ID,
+    columns = c("GOID", "TERM", "ONTOLOGY", "DEFINITION"),
+    keytype = "GOID"
+  )
+  
+  # For each GO term, get its parent terms (hierarchy)
+  go_parents <- lapply(go_results$ID, function(go_id) {
+    parents <- GO.db::GOBPANCESTOR[[go_id]]
+    if (is.null(parents)) return(NA)
+    parent_terms <- AnnotationDbi::select(
+      GO.db,
+      keys = parents,
+      columns = c("GOID", "TERM"),
+      keytype = "GOID"
+    )
+    return(list(parent_terms$TERM))
+  })
+  
+  # Create a mapping of GO IDs to their parent terms
+  go_hierarchy <- tibble::tibble(
+    GOID = go_results$ID,
+    parent_terms = go_parents
+  )
+  
+  # Map Entrez IDs to gene symbols for easier interpretation
+  symbol_to_entrez <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = entrez_df$entrezgene_id,
+    column = "SYMBOL",
+    keytype = "ENTREZID",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "entrezgene_id", value = "SYMBOL") %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Prepare a mapping of gene IDs to correlation and taxa information
+  gene_cor_map <- entrez_df %>%
+    dplyr::select(entrezgene_id, correlation, TaxaID, abs_correlation) %>%
+    dplyr::left_join(symbol_to_entrez, by = "entrezgene_id") %>%
+    dplyr::select(SYMBOL, correlation, TaxaID, abs_correlation) %>%
+    dplyr::filter(!is.na(SYMBOL))
+  
+  # Expand the geneID column (GO term members) and join with correlation/taxa info
+  go_results_long <- go_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    dplyr::left_join(gene_cor_map, by = c("geneID" = "SYMBOL")) %>%
+    dplyr::left_join(go_categories, by = c("ID" = "GOID")) %>%
+    dplyr::left_join(go_hierarchy, by = c("ID" = "GOID"))
+  
+  # Summarize by GO term: mean correlation, number of positive/negative, gene/taxa lists, etc.
+  go_results_summary <- go_results_long %>%
+    dplyr::group_by(ID, Description, TERM, ONTOLOGY, DEFINITION, parent_terms, p.adjust, Count, log_padj) %>%
+    dplyr::summarise(
+      mean_correlation = mean(correlation, na.rm = TRUE),
+      mean_abs_correlation = mean(abs_correlation, na.rm = TRUE),
+      n_positive = sum(correlation > 0, na.rm = TRUE),
+      n_negative = sum(correlation < 0, na.rm = TRUE),
+      gene_list = list(geneID),
+      correlation_list = list(correlation),
+      taxa_list = list(TaxaID),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(p.adjust)
+  
+  return(go_results_summary)
+}
+
+# Function to enrich KEGG pathways for a set of significant gene-taxa correlations
+get_kegg_pathways <- function(sig_partial_cor) {
+  # This function performs KEGG pathway enrichment for a set of significant gene-taxa correlations.
+  # INPUT: sig_partial_cor - data frame with at least 'gene_id' (gene symbol)
+  # OUTPUT: summary table of enriched KEGG pathways, with gene/taxa/correlation info for each pathway
+
+  cat("\nProcessing KEGG analysis for significant correlations\n")
+  
+  # Get unique gene symbols from significant correlations
+  sig_genes <- unique(sig_partial_cor$gene_id)
+  cat("Number of significant genes:", length(sig_genes), "\n")
+  
+  # Map gene symbols to Entrez IDs
+  entrez_ids <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = sig_genes,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  ) %>%
+    tibble::enframe(name = "SYMBOL", value = "ENTREZID") %>%
+    dplyr::filter(!is.na(ENTREZID))
+  
+  cat("Number of genes successfully mapped to Entrez IDs:", nrow(entrez_ids), "\n")
+  
+  # Run KEGG enrichment analysis
+  kegg_results <- enrichKEGG(
+    gene = entrez_ids$ENTREZID,
+    organism = 'dre',  # Danio rerio
+    keyType = 'ncbi-geneid',
+    pAdjustMethod = "BH",
+    pvalueCutoff = .1,
+    qvalueCutoff = .2
+  )
+  
+  if (is.null(kegg_results)) {
+    cat("No KEGG pathways found.\n")
+    return(NULL)
+  }
+  
+  kegg_results <- as.data.frame(kegg_results) %>%
+    dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+    dplyr::mutate(log_padj = -log10(p.adjust))
+  
+  # For each pathway, get additional info (name, description, class)
+  kegg_info <- lapply(kegg_results$ID, function(path_id) {
+    clean_id <- gsub("dre", "", path_id)
+    tryCatch({
+      path_info <- KEGGREST::keggGet(clean_id)
+      if (length(path_info) > 0) {
+        return(list(
+          name = path_info[[1]]$NAME,
+          description = ifelse(is.null(path_info[[1]]$DESCRIPTION),
+                             path_info[[1]]$NAME,
+                             path_info[[1]]$DESCRIPTION),
+          class = ifelse(is.null(path_info[[1]]$CLASS),
+                        "Not specified",
+                        path_info[[1]]$CLASS)
+        ))
+      }
+    }, error = function(e) {
+      tryCatch({
+        path_info <- KEGGREST::keggGet(path_id)
+        if (length(path_info) > 0) {
+          return(list(
+            name = path_info[[1]]$NAME,
+            description = ifelse(is.null(path_info[[1]]$DESCRIPTION),
+                               path_info[[1]]$NAME,
+                               path_info[[1]]$DESCRIPTION),
+            class = ifelse(is.null(path_info[[1]]$CLASS),
+                          "Not specified",
+                          path_info[[1]]$CLASS)
+          ))
+        }
+      }, error = function(e2) {
+        return(list(
+          name = "Not available",
+          description = "Not available",
+          class = "Not available"
+        ))
+      })
+    })
+  })
+  
+  # Create a mapping of KEGG IDs to their information
+  kegg_details <- tibble::tibble(
+    KEGGID = kegg_results$ID,
+    Name = sapply(kegg_info, function(x) x$name),
+    Description = sapply(kegg_info, function(x) x$description),
+    Class = sapply(kegg_info, function(x) x$class)
+  )
+  
+  # Map Entrez IDs to gene symbols
+  id_mapping <- entrez_ids %>%
+    dplyr::select(ENTREZID, SYMBOL)
+  
+  # Expand geneID column and join with gene symbol mapping
+  kegg_results_long <- kegg_results %>%
+    tidyr::separate_rows(geneID, sep = "/") %>%
+    dplyr::mutate(geneID = as.character(geneID)) %>%
+    dplyr::left_join(id_mapping, by = c("geneID" = "ENTREZID"))
+
+  # For each pathway, summarize gene-taxa-correlation relationships
+  kegg_summary <- kegg_results_long %>%
+    dplyr::group_by(ID) %>%
+    dplyr::summarise(
+      Name = Description[1],
+      Description = kegg_details$Description[kegg_details$KEGGID == ID[1]][1],
+      Class = kegg_details$Class[kegg_details$KEGGID == ID[1]][1],
+      p.adjust = p.adjust[1],
+      Count = Count[1],
+      Gene_List = list(unique(SYMBOL)),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      Gene_Taxa_Relations = lapply(Gene_List, function(genes) {
+        sig_partial_cor %>%
+          dplyr::filter(gene_id %in% genes) %>%
+          dplyr::select(gene_id, TaxaID, correlation) %>%
+          dplyr::arrange(gene_id, TaxaID)
+      }),
+      Taxa_List = lapply(Gene_Taxa_Relations, function(rel) {
+        unique(rel$TaxaID)
+      }),
+      Correlation_List = lapply(Gene_Taxa_Relations, function(rel) {
+        rel$correlation
+      })
+    ) %>%
+    dplyr::arrange(p.adjust)
+
+  return(kegg_summary)
+}
+
+# Helper function to get top correlations by correlation, taxa, or gene
+gen_get_top_correlations <- function(correlation_results, top_n = 100, top_by = c("correlation", "taxa", "gene")) {
+  top_by <- match.arg(top_by)
+  
+  # Check if we have any significant correlations
+  sig_correlations <- correlation_results %>%
+    dplyr::filter(fdr < 0.05)
+  
+  if(nrow(sig_correlations) == 0) {
+    cat("WARNING: No significant correlations found (FDR < 0.05). Returning empty data frame.\n")
+    return(data.frame())
+  }
+  
+  if (top_by == "correlation") {
+    top_correlations <- sig_correlations %>%
+      dplyr::arrange(desc(abs_correlation)) %>%
+      head(top_n)
+  } else if (top_by == "taxa") {
+    top_taxa <- sig_correlations %>%
+      dplyr::group_by(TaxaID) %>%
+      dplyr::summarise(n = n()) %>%
+      dplyr::arrange(desc(n)) %>%
+      head(top_n) %>%
+      dplyr::pull(TaxaID)
+    
+    if(length(top_taxa) == 0) {
+      cat("WARNING: No taxa found with significant correlations. Returning empty data frame.\n")
+      return(data.frame())
+    }
+    
+    top_correlations <- sig_correlations %>%
+      dplyr::filter(TaxaID %in% top_taxa)
+  } else if (top_by == "gene") {
+    top_genes <- sig_correlations %>%
+      dplyr::group_by(gene_id) %>%
+      dplyr::summarise(n = n()) %>%
+      dplyr::arrange(desc(n)) %>%
+      head(top_n) %>%
+      dplyr::pull(gene_id)
+    
+    if(length(top_genes) == 0) {
+      cat("WARNING: No genes found with significant correlations. Returning empty data frame.\n")
+      return(data.frame())
+    }
+    
+    top_correlations <- sig_correlations %>%
+      dplyr::filter(gene_id %in% top_genes)
+  }
+  
+  return(top_correlations)
+}
+
+# Function to perform integrated analysis for a single research question
+perform_integrated_analysis <- function(question_name, 
+                                       dat_results, 
+                                       deg_results, 
+                                       taxa_counts, 
+                                       expr_counts, 
+                                       metadata, 
+                                       treatment_comparison,
+                                       top_n = 100,
+                                       top_by = c("correlation", "taxa", "gene")) {
+  # This function performs the full DEGxDAT analysis for a single research question (single treatment comparison).
+  # INPUTS:
+  #   - question_name: string, name of the research question
+  #   - dat_results: data frame of DAT results
+  #   - deg_results: data frame of DEG results
+  #   - taxa_counts: OTU/taxa count matrix
+  #   - expr_counts: gene expression count matrix
+  #   - metadata: sample metadata
+  #   - treatment_comparison: vector of treatment names to compare
+  #   - top_n: number of top correlations to use for partial correlation analysis
+  #   - top_by: selection of top correlations by correlation, taxa, or gene
+  # OUTPUT: list with all results for this comparison (correlations, significant genes/taxa, etc.)
+
+  cat("\n=== ANALYSIS FOR:", question_name, "===\n")
+  cat("Treatment comparison:", paste(treatment_comparison, collapse = " vs "), "\n")
+  
+  # Set seed for reproducibility
+  set.seed(42)
+  
+  # Filter for significant DEGs and DATs
+  deg_sig <- deg_results %>%
+    dplyr::filter(padj < 0.05)
+  
+  dat_sig <- dat_results %>%
+    dplyr::filter(qval < 0.05)
+  
+  cat("Significant genes:", nrow(deg_sig), "\n")
+  cat("Significant taxa:", nrow(dat_sig), "\n")
+  
+  # Check if we have any significant genes or taxa
+  if(nrow(deg_sig) == 0 || nrow(dat_sig) == 0) {
+    cat("WARNING: No significant genes or taxa found. Returning empty results.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = data.frame(),
+      sig_correlations = data.frame(),
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = character(0)
+    ))
+  }
+  
+  # Get relevant samples for this comparison
+  rna_samples <- metadata %>%
+    dplyr::filter(Treatment %in% treatment_comparison) %>%
+    dplyr::filter(Sample %in% colnames(expr_counts)) %>%
+    dplyr::pull(Sample) %>%
+    as.character()
+  
+  cat("Samples for analysis:", length(rna_samples), "\n")
+  
+  # Check if we have enough samples
+  if(length(rna_samples) < 3) {
+    cat("WARNING: Insufficient samples for analysis. Returning empty results.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = data.frame(),
+      sig_correlations = data.frame(),
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = rna_samples
+    ))
+  }
+  
+  # Filter expression data for significant genes and relevant samples
+  filtered_expr <- expr_counts %>%
+    dplyr::filter(gene %in% deg_sig$gene) %>%
+    dplyr::select(gene, gene_id, gene_name, any_of(rna_samples))
+  
+  # Filter taxa data for significant taxa and relevant samples
+  filtered_taxa <- taxa_counts %>%
+    as.data.frame() %>%
+    tibble::rownames_to_column(var = "Sample") %>%
+    dplyr::mutate(Sample = gsub("^f", "", Sample)) %>%
+    dplyr::select(Sample, any_of(dat_sig$taxa)) %>%
+    dplyr::filter(Sample %in% rna_samples)
+  
+  # Check if we have data after filtering
+  if(nrow(filtered_expr) == 0 || ncol(filtered_taxa) <= 1) {
+    cat("WARNING: No expression or taxa data available after filtering. Returning empty results.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = data.frame(),
+      sig_correlations = data.frame(),
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = rna_samples
+    ))
+  }
+  
+  # Normalize gene expression data (z-score per gene)
+  normalized_expr <- filtered_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene, gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "count"
+    ) %>%
+    dplyr::group_by(gene_id) %>%
+    dplyr::mutate(
+      z_score = (count - mean(count)) / sd(count)
+    ) %>%
+    dplyr::select(-count) %>%
+    tidyr::pivot_wider(
+      names_from = Sample,
+      values_from = z_score
+    )
+  
+  # Normalize taxa data (z-score per taxon)
+  prepared_taxa <- filtered_taxa %>%
+    tidyr::pivot_longer(
+      cols = -Sample,
+      names_to = "TaxaID",
+      values_to = "abundance"
+    ) %>%
+    dplyr::group_by(TaxaID) %>%
+    dplyr::mutate(
+      z_score = (abundance - mean(abundance)) / sd(abundance)
+    ) %>%
+    dplyr::select(Sample, TaxaID, z_score) %>%
+    dplyr::rename(abundance = z_score) %>%
+    dplyr::mutate(Sample = as.character(Sample))
+  
+  # Prepare expression data for correlation
+  prepared_expr <- normalized_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene, gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "z_score"
+    )
+  
+  # Calculate gene-taxa correlations (Spearman)
+  correlation_results <- prepared_expr %>%
+    dplyr::left_join(
+      prepared_taxa,
+      by = "Sample"
+    ) %>%
+    dplyr::group_by(gene_id, gene_name, TaxaID) %>%
+    dplyr::summarise(
+      correlation = cor(z_score, abundance, method = "spearman"),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      abs_correlation = abs(correlation)
+    ) %>%
+    dplyr::arrange(desc(abs_correlation))
+  
+  # Calculate significance (p-value, FDR)
+  correlation_results <- correlation_results %>%
+    dplyr::mutate(
+      p_value = 2 * (1 - pnorm(abs(correlation) * sqrt((nrow(filtered_taxa) - 2) / (1 - correlation^2)))),
+      fdr = p.adjust(p_value, method = "BH")
+    )
+  
+  # Get significant correlations (FDR < 0.05)
+  sig_correlations <- correlation_results %>%
+    dplyr::filter(fdr < 0.05) %>%
+    dplyr::arrange(desc(abs_correlation))
+  
+  cat("Significant correlations:", nrow(sig_correlations), "\n")
+  
+  # Check if we have any significant correlations before proceeding with partial correlation
+  if(nrow(sig_correlations) == 0) {
+    cat("WARNING: No significant correlations found. Skipping partial correlation analysis.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = correlation_results,
+      sig_correlations = sig_correlations,
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = rna_samples
+    ))
+  }
+  
+  # Get top gene-taxa pairs for partial correlation based on user selection
+  top_correlations <- gen_get_top_correlations(correlation_results, top_n = top_n, top_by = top_by)
+  
+  # Check if we have any top correlations
+  if(nrow(top_correlations) == 0) {
+    cat("WARNING: No top correlations found for partial correlation analysis.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = correlation_results,
+      sig_correlations = sig_correlations,
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = rna_samples
+    ))
+  }
+  
+  cat(paste0("Top ", nrow(top_correlations), " by ", top_by, " for partial correlation:\n"))
+  print(top_correlations %>% dplyr::select(gene_id, TaxaID, abs_correlation))
+  
+  # Only run partial correlation on these gene-taxa pairs
+  top_pairs <- top_correlations %>%
+    dplyr::select(gene_id, TaxaID) %>%
+    dplyr::distinct()
+  
+  # Check if we have valid gene-taxa pairs
+  if(nrow(top_pairs) == 0 || any(is.na(top_pairs$gene_id)) || any(is.na(top_pairs$TaxaID))) {
+    cat("WARNING: No valid gene-taxa pairs found for partial correlation analysis.\n")
+    return(list(
+      question_name = question_name,
+      treatment_comparison = treatment_comparison,
+      correlation_results = correlation_results,
+      sig_correlations = sig_correlations,
+      partial_cor_results = data.frame(),
+      sig_partial_correlations = data.frame(),
+      failed_pairs = list(),
+      deg_sig = deg_sig,
+      dat_sig = dat_sig,
+      samples = rna_samples
+    ))
+  }
+  
+  # Perform partial correlation analysis (controlling for worm counts)
+  cat("Performing partial correlation analysis...\n")
+  
+  # Convert filtered expression data to wide format with samples as rows
+  expr_wide <- filtered_expr %>%
+    tidyr::pivot_longer(
+      cols = -c(gene, gene_id, gene_name),
+      names_to = "Sample",
+      values_to = "count"
+    ) %>%
+    dplyr::group_by(gene_id) %>%
+    dplyr::mutate(
+      z_score = (count - mean(count)) / sd(count)
+    ) %>%
+    dplyr::select(-c(count, gene_name, gene)) %>%
+    tidyr::pivot_wider(
+      names_from = gene_id,
+      values_from = z_score
+    ) %>%
+    dplyr::arrange(as.numeric(Sample))
+  
+  # Convert filtered taxa data to wide format with samples as rows
+  taxa_wide <- filtered_taxa %>%
+    tidyr::pivot_longer(
+      cols = -Sample,
+      names_to = "TaxaID",
+      values_to = "abundance"
+    ) %>%
+    tidyr::pivot_wider(
+      names_from = TaxaID,
+      values_from = abundance
+    ) %>%
+    dplyr::mutate(Sample = as.character(Sample)) %>%
+    dplyr::arrange(as.numeric(Sample))
+  
+  # Create control variable matrix (worm counts)
+  control_matrix <- metadata %>%
+    dplyr::filter(Sample %in% rna_samples) %>%
+    dplyr::arrange(Sample) %>%
+    dplyr::select(Total.Worm.Count) %>%
+    as.matrix()
+  
+  # Verify sample alignment
+  if(!all(expr_wide$Sample == taxa_wide$Sample) || 
+     !all(expr_wide$Sample == rownames(control_matrix))) {
+    stop("Sample order mismatch between expression, taxa, and control data")
+  }
+  
+  # Initialize results storage for partial correlations
+  partial_cor_results <- list()
+  failed_pairs <- list()
+  
+  # Set up parallel processing
+  library(parallel)
+  cl <- makeCluster(6)  # Create a cluster with 6 cores
+  on.exit(stopCluster(cl))  # Ensure cluster is stopped when done
+  
+  # Calculate partial correlations for the top pairs
+  for(i in 1:nrow(top_pairs)) {
+    gene <- top_pairs$gene_id[i]
+    taxa <- top_pairs$TaxaID[i]
+    
+    # Skip if gene or taxa is NA
+    if(is.na(gene) || is.na(taxa)) {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- "NA gene or taxa ID"
+      next
+    }
+    
+    # Check if gene and taxa exist in the data
+    if(!gene %in% colnames(expr_wide) || !taxa %in% colnames(taxa_wide)) {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- "Gene or taxa not found in data"
+      next
+    }
+    
+    # Get data for this gene-taxa pair
+    x <- expr_wide[[gene]]
+    y <- taxa_wide[[taxa]]
+    
+    # Skip if any data is missing
+    if(any(is.na(c(x, y)))) {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- "Missing data"
+      next
+    }
+    
+    set.seed(42)
+    
+    # Calculate partial correlation
+    res_pcor <- try(nptest::np.cor.test(
+      x = x,
+      y = y,
+      z = control_matrix,
+      partial = TRUE,
+      parallel = TRUE,
+      cl = cl,
+      R = 1000,
+      na.rm = TRUE
+    ), silent = TRUE)
+    
+    # Only store results if calculation was successful
+    if(!inherits(res_pcor, "try-error")) {
+      partial_cor_results[[paste(gene, taxa, sep = "_")]] <- list(
+        gene_id = gene,
+        taxa_id = taxa,
+        correlation = res_pcor$estimate,
+        p_value = res_pcor$p.value
+      )
+    } else {
+      failed_pairs[[paste(gene, taxa, sep = "_")]] <- as.character(res_pcor)
+    }
+  }
+  
+  # Convert partial correlation results to data frame
+  if(length(partial_cor_results) > 0) {
+    partial_cor_df <- do.call(rbind, lapply(partial_cor_results, function(x) {
+      data.frame(
+        gene_id = x$gene_id,
+        taxa_id = x$taxa_id,
+        correlation = x$correlation,
+        p_value = x$p_value
+      )
+    })) %>%
+      dplyr::mutate(
+        fdr = p.adjust(p_value, method = "BH"),
+        abs_correlation = abs(correlation)
+      ) %>%
+      dplyr::arrange(desc(abs_correlation))
+    
+    # Get significant partial correlations (FDR < 0.1)
+    sig_partial_cor <- partial_cor_df %>%
+      dplyr::filter(fdr < 0.1) %>%
+      dplyr::arrange(desc(abs_correlation))
+    
+    cat("Significant partial correlations (FDR < 0.1):", nrow(sig_partial_cor), "\n")
+  } else {
+    partial_cor_df <- data.frame()
+    sig_partial_cor <- data.frame()
+    cat("No successful partial correlations were calculated.\n")
+  }
+  
+  # Return all results for this comparison
+  return(list(
+    question_name = question_name,
+    treatment_comparison = treatment_comparison,
+    correlation_results = correlation_results,
+    sig_correlations = sig_correlations,
+    partial_cor_results = partial_cor_df,
+    sig_partial_correlations = sig_partial_cor,
+    failed_pairs = failed_pairs,
+    deg_sig = deg_sig,
+    dat_sig = dat_sig,
+    samples = rna_samples
+  ))
+}
+
+# Function to perform all pairwise comparisons for a research question
+perform_pairwise_analysis <- function(question_name, 
+                                     dat_results, 
+                                     deg_results, 
+                                     taxa_counts, 
+                                     expr_counts, 
+                                     metadata, 
+                                     base_treatment,
+                                     comparison_treatments,
+                                     top_n = 100,
+                                     top_by = c("correlation", "taxa", "gene")) {
+  # This function runs DEGxDAT analysis for all pairwise comparisons between a base treatment and a set of comparison treatments.
+  # INPUTS:
+  #   - question_name: string, name of the research question
+  #   - dat_results, deg_results, taxa_counts, expr_counts, metadata: as above
+  #   - base_treatment: string, the reference treatment
+  #   - comparison_treatments: vector of treatments to compare to base
+  # OUTPUT: list with all pairwise results and combined summary tables
+
+  cat("\n=== PAIRWISE ANALYSIS FOR:", question_name, "===\n")
+  cat("Base treatment:", base_treatment, "\n")
+  cat("Comparison treatments:", paste(comparison_treatments, collapse = ", "), "\n")
+  
+  # Store results for each pairwise comparison
+  pairwise_results <- list()
+  
+  # Loop over each comparison treatment
+  for(i in seq_along(comparison_treatments)) {
+    comparison_treatment <- comparison_treatments[i]
+    comparison_name <- paste(base_treatment, "vs", comparison_treatment)
+    
+    cat("\n--- Comparison", i, ":", comparison_name, "---\n")
+    
+    # Create treatment comparison vector
+    treatment_comparison <- c(base_treatment, comparison_treatment)
+    
+    # Run integrated analysis for this pair
+    result <- perform_integrated_analysis(
+      question_name = comparison_name,
+      dat_results = dat_results,
+      deg_results = deg_results,
+      taxa_counts = taxa_counts,
+      expr_counts = expr_counts,
+      metadata = metadata,
+      treatment_comparison = treatment_comparison,
+      top_n = top_n,
+      top_by = top_by
+    )
+    
+    # Add comparison info to result
+    result$comparison_name <- comparison_name
+    result$base_treatment <- base_treatment
+    result$comparison_treatment <- comparison_treatment
+    
+    pairwise_results[[comparison_name]] <- result
+  }
+  
+  # Combine significant correlations from all pairs (handle empty data frames)
+  combined_correlations <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$sig_correlations) > 0) {
+      x$sig_correlations %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  # Combine all correlations from all pairs (handle empty data frames)
+  combined_all_correlations <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$correlation_results) > 0) {
+      x$correlation_results %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  # Combine partial correlation results from all pairs
+  combined_partial_correlations <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$partial_cor_results) > 0) {
+      x$partial_cor_results %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  # Combine significant partial correlations from all pairs
+  combined_sig_partial_correlations <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$sig_partial_correlations) > 0) {
+      x$sig_partial_correlations %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  # Combine significant DEGs and DATs from all pairs (handle empty data frames)
+  combined_deg <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$deg_sig) > 0) {
+      x$deg_sig %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  combined_dat <- do.call(rbind, lapply(pairwise_results, function(x) {
+    if(nrow(x$dat_sig) > 0) {
+      x$dat_sig %>%
+        dplyr::mutate(
+          comparison_name = x$comparison_name,
+          base_treatment = x$base_treatment,
+          comparison_treatment = x$comparison_treatment
+        )
+    } else {
+      data.frame()
+    }
+  }))
+  
+  # Get all unique samples used in any pairwise comparison
+  all_samples <- unique(unlist(lapply(pairwise_results, function(x) x$samples)))
+  
+  # Print summary of results
+  cat("\n=== PAIRWISE ANALYSIS SUMMARY ===\n")
+  cat("Total comparisons completed:", length(pairwise_results), "\n")
+  cat("Comparisons with significant correlations:", sum(sapply(pairwise_results, function(x) nrow(x$sig_correlations) > 0)), "\n")
+  cat("Comparisons with significant partial correlations:", sum(sapply(pairwise_results, function(x) nrow(x$sig_partial_correlations) > 0)), "\n")
+  cat("Total significant correlations:", nrow(combined_correlations), "\n")
+  cat("Total significant partial correlations:", nrow(combined_sig_partial_correlations), "\n")
+  
+  return(list(
+    question_name = question_name,
+    base_treatment = base_treatment,
+    comparison_treatments = comparison_treatments,
+    pairwise_results = pairwise_results,
+    combined_correlations = combined_correlations,
+    combined_all_correlations = combined_all_correlations,
+    combined_partial_correlations = combined_partial_correlations,
+    combined_sig_partial_correlations = combined_sig_partial_correlations,
+    combined_deg = combined_deg,
+    combined_dat = combined_dat,
+    all_samples = all_samples
+  ))
+}
+```
+
+
+### Import Data
+
+#### Phyloseq
+
+```{r}
+
+ps.tmp <- readRDS("/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Robjects/pseq_uncleaned_05052025.rds")
+
+ps.cleaned <-
+    ps.tmp %>%
+        ## Update Metadata
+        ps_rename(Time = Timepoint) %>%
+        microViz::ps_mutate(
+            Treatment = case_when(
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "A- T- P-",
+                Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "A- T- P+",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "A+ T- P-",
+                Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "A+ T- P+",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "A- T+ P-",
+                Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "A- T+ P+",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "A+ T+ P-",
+                Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "A+ T+ P+",
+                TRUE ~ "Unknown"
+            ), .after = "Pathogen"
+        ) %>%
+        microViz::ps_mutate(Sample = fecal.sample.number, .before = 1) %>%
+        microViz::ps_mutate(Sample = gsub("^f", "", Sample)) %>%
+        microViz::ps_filter(Treatment != "Unknown") %>%
+        microViz::ps_mutate(
+            History = case_when(
+                Antibiotics + Temperature == 0 ~ 0,
+                Antibiotics + Temperature == 1 ~ 1,
+                Antibiotics + Temperature == 2 ~ 2,
+            ), .after = "Treatment"
+        ) %>%
+        
+        ## Additional metadata updates, factorizing metadata
+        microViz::ps_mutate(
+        # Create treatment code
+            treatment_code = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 0 ~ "Aneg_Tneg_Pneg",
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Aneg_Tneg_Ppos",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Apos_Tneg_Pneg",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Apos_Tneg_Ppos",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Aneg_Tpos_Pneg",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Aneg_Tpos_Ppos",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Apos_Tpos_Pneg",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Apos_Tpos_Ppos"
+            ),
+            # Create treatment group factor
+            treatment_group = case_when(
+              Antibiotics == 0 & Temperature == 0 & Pathogen == 1 ~ "Parasite",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 0 ~ "Antibiotics",
+              Antibiotics == 1 & Temperature == 0 & Pathogen == 1 ~ "Antibiotics_Parasite",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 0 ~ "Temperature",
+              Antibiotics == 0 & Temperature == 1 & Pathogen == 1 ~ "Temperature_Parasite",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 0 ~ "Antibiotics_Temperature",
+              Antibiotics == 1 & Temperature == 1 & Pathogen == 1 ~ "Antibiotics_Temperature_Parasite",
+              TRUE ~ "Control"
+            ),
+            # Convert to factor with appropriate levels
+            treatment_group = factor(treatment_group, 
+                                   levels = c("Control", "Parasite", 
+                                              "Antibiotics", "Antibiotics_Parasite",
+                                              "Temperature", "Temperature_Parasite",
+                                            "Antibiotics_Temperature", "Antibiotics_Temperature_Parasite")
+                                   ),
+            treatment_code = factor(treatment_code, levels = treatment_order),
+            # Create time point factor
+            time_point = factor(Time, levels = c(0, 14, 18, 25, 29, 60)),
+            # Create pathogen status factor
+            pathogen_status = factor(ifelse(Pathogen == 1, "Exposed", "Unexposed"),
+                                   levels = c("Unexposed", "Exposed")),
+            # Create sex factor
+            sex = factor(Sex, levels = c("M", "F"))
+            )  %>%
+    microViz::ps_mutate(Treatment = factor(Treatment, levels = treatment_order)) %>%
+      microViz::ps_mutate(Exp_Type = case_when(
+          Treatment %in% c("A- T- P-", "A- T- P+")  ~ "No prior stressor(s)",
+          Treatment %in% c("A+ T- P-", "A+ T- P+")  ~ "Antibiotics",
+          Treatment %in% c("A- T+ P-", "A- T+ P+") ~ "Temperature",
+          Treatment %in% c("A+ T+ P-", "A+ T+ P+") ~ "Combined",
+      )) %>%
+      microViz::ps_mutate(Exp_Type = factor(Exp_Type, levels = c("No prior stressor(s)", "Antibiotics", "Temperature", "Combined"))) %>%
+  # Fix names for taxonomic ranks not identified
+  microViz::tax_fix(suffix_rank = "current", anon_unique = T, unknown = NA) %>% 
+  # Filter for any samples that contain more than 5000 reads
+  microViz::ps_filter(sample_sums(.) > 5000) %>%
+  # Any taxa not found in at least 3 samples are removed
+  microViz::tax_filter(min_prevalence = 3, undetected = 0) %>%
+  # Remove any unwanted reads
+  microViz::tax_select(c("Mitochondria", "Chloroplast", "Eukaryota"), deselect = TRUE) %>%
+  microViz::tax_select(c("Bacteria, Phylum"), deselect = TRUE) 
+
+# Read and process OTU table for all treatments
+taxa_counts.all <- ps.cleaned %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+# Create taxa counts for different treatment comparisons
+taxa_counts.parasite <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P-", "A- T- P+")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+taxa_counts.priorStressors <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P+", "A+ T- P+", "A- T+ P+", "A+ T+ P+")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+
+taxa_counts.noPriorStressors <- ps.cleaned %>%
+    microViz::ps_filter(Treatment %in% c("A- T- P-", "A+ T- P-", "A- T+ P-", "A+ T+ P-")) %>%
+    microViz::tax_agg(rank = "Genus") %>%
+    microViz::otu_get()
+```
+
+#### DAT Results
+
+```{r}
+
+# Question 0: All
+dat_results.all <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/All_60DPE__TREATMENT__significant_results.tsv') %>%
+    dplyr::rename(taxa = feature)
+
+# Question 1: Parasite Exposure Response
+dat_results.parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/ParasiteExp_60DPE__TREATMENT__significant_results.tsv') %>%
+    dplyr::rename(taxa = feature)
+
+# Question 2: Historical Contingency of Parasite Response
+dat_results.historical_contingency <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/PriorStressParaExp_60DPE__TREATMENT__significant_results.tsv') %>%
+    dplyr::rename(taxa = feature)
+
+# Question 3: Historical Contingency of Recovery
+dat_results.recovery <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffAbund/Results/PriorStressNoParaExp_60DPE__TREATMENT__significant_results.tsv') %>%
+    dplyr::rename(taxa = feature)
+```
+
+#### DEG Results
+
+```{r}
+
+# Question 0: All
+
+deg_results.all <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/All_Treatments__significant_results.tsv')
+
+# Question 1: Parasite Exposure Response
+deg_results.parasite <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/Parasite_Effect__significant_results.tsv')
+
+# Question 2: Historical Contingency of Parasite Response
+deg_results.historical_contingency <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/Historical_Contingency__significant_results.tsv')
+
+# Question 3: Historical Contingency of Recovery
+deg_results.recovery <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/Recovery_Analysis__significant_results.tsv')
+```
+
+#### Expression Data
+
+```{r}
+
+# Import raw expression data
+expr_counts <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Data/Transcriptomics/Results/rnaseq/051525/salmon/salmon.merged.gene_counts_length_scale__Corrected_f136-f138.tsv') %>%
+  # Clean up column names
+  dplyr::rename_with(~gsub("TS047_RoL_RNA_", "", .), -c(gene_id, gene_name)) %>%
+    dplyr::mutate(gene = gene_id, .before = 1) #%>%
+    # dplyr::rename(`136` = `138`)
+
+# Get samples from raw expression data
+expr_samples <- colnames(expr_counts)[-c(1:3)] # Exclude gene_id and gene_name columns
+```
+
+#### Metadata
+
+```{r}
+
+# Import metadata to get treatment info
+metadata <- read_tsv('/Users/michaelsieler/Dropbox/Mac (2)/Documents/Sharpton_Lab/Projects_Repository/Rules_of_Life/major-experiment-2023/Code/Analysis/DiffExpGene/Results/sample_metadata.tsv') %>%
+    dplyr::mutate(Treatment_long = Treatment) %>%
+    dplyr::rename(Sample = sample) %>%
+  dplyr::mutate(
+    Treatment = stringr::str_c(
+      dplyr::case_when(Antibiotics == 0 ~ "A-", Antibiotics == 1 ~ "A+"),
+      dplyr::case_when(Temperature == 0 ~ " T-", Temperature == 1 ~ " T+"),
+      dplyr::case_when(Pathogen == 0 ~ " P-", Pathogen == 1 ~ " P+")
+    )
+  ) %>%
+    dplyr::relocate(Treatment, .after = Pathogen) %>%
+    dplyr::arrange(desc(Treatment))
+
+# Print summary of available data
+cat("\n=== DATA SUMMARY ===\n")
+
+# Create summary table
+data_summary <- tibble::tibble(
+  Metric = c("Total samples in expression data", "Total samples in metadata"),
+  Count = c(length(expr_samples), nrow(metadata))
+)
+
+# Display summary table
+data_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Data Summary",
+    subtitle = "Overview of available samples"
+  ) %>%
+  gt::cols_label(
+    Metric = "Data Type",
+    Count = "Number of Samples"
+  )
+
+# Create treatment distribution table
+metadata %>%
+  dplyr::count(Treatment) %>%
+  dplyr::arrange(desc(n)) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Treatment Distribution",
+    subtitle = "Number of samples per treatment group"
+  ) %>%
+  gt::cols_label(
+    Treatment = "Treatment Group",
+    n = "Number of Samples"
+  )
+
+```
+
+## Integrated Analysis
+
+### Question 0: All {.tabset}
+
+#### Analysis
+
+
+```{r echo=FALSE}
+
+# Question 0: All Treatments Analysis
+# Load existing results or perform new analysis based on configuration
+
+if (LOAD_EXISTING_RESULTS) {
+  cat("Attempting to load existing results for Question 0...\n")
+  results.all <- load_latest_results("results_all")
+  
+  if (is.null(results.all)) {
+    cat("No existing results found. Computing new results for Question 0...\n")
+    LOAD_EXISTING_RESULTS <- FALSE
+  } else {
+    cat("Successfully loaded existing results for Question 0.\n")
+  }
+}
+
+if (!LOAD_EXISTING_RESULTS) {
+  cat("Performing new analysis for Question 0: All Treatments...\n")
+  
+  # Perform pairwise analysis for Question 0: All Treatments
+  # Base treatment: A- T- P- (control)
+  # Comparison treatments: all other treatments
+  
+  results.all <- perform_pairwise_analysis(
+    question_name = "All Treatments Analysis",
+    dat_results = dat_results.all,
+    deg_results = deg_results.all,
+    taxa_counts = taxa_counts.all,
+    expr_counts = expr_counts,
+    metadata = metadata,
+    base_treatment = "A- T- P-",
+    comparison_treatments = c("A- T- P+", 
+                              "A+ T- P-", "A+ T- P+",
+                              "A- T+ P-", "A- T+ P+",
+                              "A+ T+ P-", "A+ T+ P+")
+  )
+  
+  # Save results
+  save_results(results.all, "results_all")
+}
+
+# Display summary statistics
+cat("\n=== QUESTION 0 SUMMARY ===\n")
+
+# Create summary table for Question 0
+question0_summary <- tibble::tibble(
+  Metric = c("Question", "Base Treatment", "Comparison Treatments", 
+             "Total Samples", "Number of Pairwise Comparisons"),
+  Value = c(
+    results.all$question_name,
+    results.all$base_treatment,
+    paste(results.all$comparison_treatments, collapse = ", "),
+    as.character(length(results.all$all_samples)),
+    as.character(length(results.all$pairwise_results))
+  )
+)
+
+question0_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Question 2: Historical Contingency of Parasite Response",
+    subtitle = "Summary of analysis results"
+  ) %>%
+  gt::cols_label(
+    Metric = "Analysis Metric",
+    Value = "Result"
+  )
+
+# Create detailed summary table for each pairwise comparison
+pairwise_summary <- tibble::tibble(
+  Comparison = character(),
+  Samples = integer(),
+  Significant_Genes = integer(),
+  Significant_Taxa = integer(),
+  Significant_Correlations = integer()
+)
+
+for(i in seq_along(results.all$pairwise_results)) {
+  comparison_name <- names(results.all$pairwise_results)[i]
+  result <- results.all$pairwise_results[[i]]
+  
+  # Extract the comparison treatment (after "vs") from the comparison name
+  comparison_treatment <- stringr::str_extract(comparison_name, "(?<=vs ).*")
+  
+  # Filter DEG results for this specific comparison treatment
+  deg_sig_filtered <- deg_results.all %>%
+    dplyr::filter(value == comparison_treatment)
+  
+  # Filter DAT results for this specific comparison treatment
+  dat_sig_filtered <- dat_results.all %>%
+    dplyr::filter(value == comparison_treatment)
+  
+  pairwise_summary <- pairwise_summary %>%
+    dplyr::add_row(
+      Comparison = comparison_name,
+      Samples = length(result$samples),
+      Significant_Genes = nrow(deg_sig_filtered),
+      Significant_Taxa = nrow(dat_sig_filtered),
+      Significant_Correlations = nrow(result$sig_correlations)
+    )
+}
+
+pairwise_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Comparison Details",
+    subtitle = "Results for each individual comparison"
+  ) %>%
+  gt::cols_label(
+    Comparison = "Comparison",
+    Samples = "N Samples",
+    Significant_Genes = "N Significant Genes",
+    Significant_Taxa = "N Significant Taxa",
+    Significant_Correlations = "N Significant Correlations"
+  )
+```
+
+#### Correlation Results
+
+```{r echo=FALSE}
+
+# Display combined top correlations across all pairwise comparisons
+cat("\nTop 10 strongest correlations across all pairwise comparisons:\n")
+results.all$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(10) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+  gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2)
+
+# Create histogram of correlations for each pairwise comparison
+ggplot2::ggplot(results.all$combined_all_correlations, ggplot2::aes(x = correlation, fill = comparison_name)) +
+  ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Distribution of Gene-Taxa Correlations - Historical Contingency of Parasite Response",
+    subtitle = "By pairwise comparison",
+    x = "Spearman Correlation",
+    y = "Count",
+    fill = "Comparison"
+  ) +
+  ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+
+# Summary statistics by comparison
+cat("\nCorrelation summary by comparison:\n")
+results.all$combined_all_correlations %>%
+  dplyr::group_by(comparison_name) %>%
+  dplyr::summarise(
+    n_correlations = n(),
+    mean_correlation = mean(correlation, na.rm = TRUE),
+    median_correlation = median(correlation, na.rm = TRUE),
+    n_significant = sum(fdr < 0.05, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("mean_correlation", "median_correlation"), decimals = 3)
+```
+
+#### Partial Correlation Results
+
+
+```{r test, eval=FALSE, include=FALSE}
+results.all$combined_sig_partial_correlations %>%
+    group_by(taxa_id) %>%
+    dplyr::count(taxa_id) %>%
+    arrange(desc(n))
+
+results.all$combined_sig_partial_correlations %>%
+    group_by(taxa_id) %>%
+    summarize(mean_cor = mean(abs(correlation))) %>%
+    arrange(desc(mean_cor))
+```
+
+
+```{r echo=FALSE}
+
+# Display partial correlation summary for Question 0
+
+  cat("\n=== PARTIAL CORRELATION SUMMARY ===\n")
+  
+  # Identify top N most correlated taxa (by number of correlated hits)
+  top_taxa_by_hits <- results.all$combined_sig_partial_correlations %>%
+    dplyr::group_by(taxa_id) %>%
+    dplyr::summarise(
+      n_correlations = n(),
+      mean_correlation = mean(abs(correlation), na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(desc(n_correlations)) %>%
+    head(top_n_taxa) %>%
+    dplyr::pull(taxa_id)
+  
+  # Filter partial correlations to only include top N taxa
+  filtered_partial_correlations <- results.all$combined_sig_partial_correlations %>%
+    dplyr::filter(taxa_id %in% top_taxa_by_hits)
+  
+  # Create partial correlation summary table
+  partial_summary_q0 <- tibble::tibble(
+    Metric = c("Total partial correlations calculated", 
+               "Significant partial correlations (FDR < 0.1)",
+               paste0("Top ", top_n_taxa, " taxa by number of correlations"),
+               paste0("Partial correlations for top ", top_n_taxa, " taxa")),
+    Count = c(nrow(results.all$combined_partial_correlations),
+              nrow(results.all$combined_sig_partial_correlations),
+              length(top_taxa_by_hits),
+              nrow(filtered_partial_correlations))
+  )
+  
+  partial_summary_q0 %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Partial Correlation Analysis Summary",
+      subtitle = "Question 0: All Treatments - Controlling for worm counts"
+    ) %>%
+    gt::cols_label(
+      Metric = "Analysis Metric",
+      Count = "Count"
+    )
+  
+  # Display top taxa by number of correlations
+  cat(paste0("\nTop ", top_n_taxa, " taxa by number of significant partial correlations:\n"))
+  results.all$combined_sig_partial_correlations %>%
+    dplyr::group_by(taxa_id) %>%
+    dplyr::summarise(
+      n_correlations = n(),
+      mean_correlation = mean(abs(correlation), na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(desc(n_correlations)) %>%
+    head(top_n_taxa) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::tab_header(
+      title = paste0("Top ", top_n_taxa, " Taxa by Number of Significant Partial Correlations"),
+      subtitle = "Question 0: All Treatments"
+    ) %>%
+    gt::cols_label(
+      taxa_id = "Taxa ID",
+      n_correlations = "Number of Correlations",
+      mean_correlation = "Mean Absolute Correlation"
+    )
+  
+    # Display top taxa by number of correlations
+  cat(paste0("\nTop ", top_n_taxa, " taxa by number of significant partial correlations:\n"))
+  results.all$combined_sig_partial_correlations %>%
+    dplyr::group_by(taxa_id, comparison_name) %>%
+      dplyr::filter(taxa_id == "Culicoidibacter") %>%
+    dplyr::summarise(
+      n_correlations = n(),
+      mean_correlation = mean(abs(correlation), na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(desc(n_correlations)) %>%
+    head(top_n_taxa) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::tab_header(
+      title = paste0("Top ", top_n_taxa, " Taxa by Number of Significant Partial Correlations by Comparison"),
+      subtitle = "Question 0: All Treatments"
+    ) %>%
+    gt::cols_label(
+      taxa_id = "Taxa ID",
+      n_correlations = "Number of Correlations",
+      mean_correlation = "Mean Absolute Correlation"
+    )
+  
+  # Display top partial correlations for the top N taxa
+  cat(paste0("\nTop ", top_n_taxa, " strongest partial correlations (for top ", top_n_taxa, " taxa only):\n"))
+  filtered_partial_correlations %>%
+    dplyr::arrange(desc(abs_correlation)) %>%
+    head(top_n_taxa) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = paste0("Top ", top_n_taxa, " Significant Partial Correlations"),
+      subtitle = paste0("Question 0: All Treatments - Top ", top_n_taxa, " taxa only")
+    ) %>%
+    gt::cols_label(
+      gene_id = "Gene ID",
+      taxa_id = "Taxa ID",
+      correlation = "Partial Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation",
+      comparison_name = "Comparison"
+    )
+  
+  # Display top partial correlations for the top N features (culicoidibacter)
+  cat(paste0("\nTop ", top_n_taxa, " strongest partial correlations (for top ", top_n_taxa, " taxa only):\n"))
+  filtered_partial_correlations %>%
+      dplyr::filter(taxa_id == "Culicoidibacter") %>%
+    dplyr::arrange(desc(abs_correlation)) %>%
+    head(top_n_taxa) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = paste0("Top ", top_n_taxa, " Significant Partial Correlations (Culicoidibacter)"),
+      subtitle = paste0("Question 0: All Treatments - Top ", top_n_taxa, " features")
+    ) %>%
+    gt::cols_label(
+      gene_id = "Gene ID",
+      taxa_id = "Taxa ID",
+      correlation = "Partial Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation",
+      comparison_name = "Comparison"
+    )
+  
+
+  
+  # Create histogram of partial correlations by comparison (filtered data)
+  ggplot2::ggplot(filtered_partial_correlations, 
+                  ggplot2::aes(x = correlation, fill = comparison_name)) +
+    ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+      title = "Distribution of Partial Correlations - Question 0: All Treatments",
+      subtitle = "Top 10 taxa only - Controlling for worm counts",
+      x = "Partial Correlation",
+      y = "Count",
+      fill = "Comparison"
+    ) +
+    ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+  
+  # Create bipartite graph of significant partial correlations (filtered data)
+  if(nrow(filtered_partial_correlations) > 0) {
+    # Assign y positions for genes and taxa
+    gene_levels <- filtered_partial_correlations %>%
+      dplyr::pull(gene_id) %>%
+      unique() %>%
+      sort()
+    
+    taxa_levels <- filtered_partial_correlations %>%
+      dplyr::pull(taxa_id) %>%
+      unique() %>%
+      sort()
+    
+    # Number of genes and taxa
+    n_genes <- length(gene_levels)
+    n_taxa <- length(taxa_levels)
+    
+    # Assign y positions for genes
+    gene_pos <- tibble::tibble(
+      gene_id = gene_levels,
+      y = seq_len(n_genes)
+    )
+    
+    # Assign y positions for taxa, evenly spaced across the gene y-range
+    taxa_pos <- tibble::tibble(
+      taxa_id = taxa_levels,
+      y = seq(1, n_genes, length.out = n_taxa)
+    )
+    
+    # Merge positions into edge data
+    edges <- filtered_partial_correlations %>%
+      dplyr::left_join(gene_pos, by = "gene_id") %>%
+      dplyr::rename(y_gene = y) %>%
+      dplyr::left_join(taxa_pos, by = "taxa_id") %>%
+      dplyr::rename(y_taxa = y)
+    
+    # Set x positions for left (genes) and right (taxa)
+    x_gene <- 1
+    x_taxa <- 3
+    
+    # Plot bipartite graph
+    set.seed(42)
+    ggplot2::ggplot() +
+      # Edges
+      ggplot2::geom_segment(
+        data = edges,
+        ggplot2::aes(
+          x = x_gene, xend = x_taxa,
+          y = y_gene, yend = y_taxa,
+          color = correlation
+        ),
+        size = 1
+      ) +
+      # Gene labels (left)
+      ggplot2::geom_text(
+        data = gene_pos,
+        ggplot2::aes(x = x_gene - 0.05, y = y, label = gene_id),
+        hjust = 1, size = 3
+      ) +
+      # Taxa labels (right)
+      ggplot2::geom_text(
+        data = taxa_pos,
+        ggplot2::aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+        hjust = 0, size = 3
+      ) +
+      # Color scale for correlation
+      ggplot2::scale_color_gradient2(
+        low = "blue", mid = "white", high = "red", 
+        midpoint = 0,
+        limits = c(-1, 1),
+        name = "Partial Correlation"
+      ) +
+      ggplot2::theme_void() +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.title = ggplot2::element_text(size = 16, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 12)
+      ) +
+      ggplot2::labs(
+        title = "Bipartite Network of Significant Gene-Taxa Partial Correlations",
+        subtitle = "Question 0: All Treatments - Top 10 taxa only - Edge color: partial correlation (blue = negative, red = positive)"
+      ) +
+      ggplot2::xlim(0.5, 3.5)
+  }
+
+```
+
+```{r}
+# Get top 100 genes by absolute correlation strength
+top_genes_by_correlation <- filtered_partial_correlations %>%
+  dplyr::group_by(gene_id) %>%
+  dplyr::summarise(
+    max_abs_correlation = max(abs_correlation, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  dplyr::arrange(desc(max_abs_correlation)) %>%
+  head(100) %>%
+  dplyr::pull(gene_id)
+
+# Filter edges to only include top 100 genes and top 10 taxa
+top100_edges <- edges %>%
+  dplyr::filter(gene_id %in% top_genes_by_correlation) %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(100)
+
+# Update gene positions for only the top 100 genes
+gene_pos_filtered <- gene_pos %>%
+  dplyr::filter(gene_id %in% top_genes_by_correlation) %>%
+  dplyr::mutate(y = seq_len(n()))
+
+# Get taxa that actually have connections in the top 100 edges
+taxa_with_connections <- top100_edges %>%
+  dplyr::pull(taxa_id) %>%
+  unique()
+
+# Update taxa positions to only include taxa with connections, evenly spaced across the same range as genes
+n_genes_filtered <- nrow(gene_pos_filtered)
+n_taxa_with_connections <- length(taxa_with_connections)
+
+taxa_pos_filtered <- taxa_pos %>%
+  dplyr::filter(taxa_id %in% taxa_with_connections) %>%
+  dplyr::mutate(y = seq(1, n_genes_filtered, length.out = n_taxa_with_connections))
+
+# Update edge positions to match new gene positions
+# First remove existing position columns if they exist
+top100_edges_updated <- top100_edges %>%
+  dplyr::select(-dplyr::any_of(c("y_gene", "y_taxa"))) %>%
+  dplyr::left_join(gene_pos_filtered, by = "gene_id") %>%
+  dplyr::rename(y_gene = y) %>%
+  dplyr::left_join(taxa_pos_filtered, by = "taxa_id") %>%
+  dplyr::rename(y_taxa = y)
+
+gene_pos_filtered
+```
+
+
+
+```{r fig.height=12, fig.width=6}
+ggplot2::ggplot() +
+      # Edges
+      ggplot2::geom_segment(
+        data = top100_edges_updated,
+        ggplot2::aes(
+          x = x_gene, xend = x_taxa,
+          y = y_gene, yend = y_taxa,
+          color = correlation
+        ),
+        size = 1
+      ) +
+      # Gene labels (left)
+      ggplot2::geom_text(
+        data = gene_pos_filtered,
+        ggplot2::aes(x = x_gene - 0.05, y = y, label = gene_id),
+        hjust = 1, size = 3
+      ) +
+      # Taxa labels (right)
+      ggplot2::geom_text(
+        data = taxa_pos_filtered,
+        ggplot2::aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+        hjust = 0, size = 3
+      ) +
+      # Color scale for correlation
+      ggplot2::scale_color_gradient2(
+        low = "blue", mid = "white", high = "red", 
+        midpoint = 0,
+        limits = c(-1, 1),
+        name = "Partial Correlation"
+      ) +
+      ggplot2::theme_void() +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.title = ggplot2::element_text(size = 16, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 12)
+      ) +
+      ggplot2::labs(
+        title = "Bipartite Network of Significant \nGene-Taxa Partial Correlations",
+        subtitle = "All Treatments - Top gene-taxa pairs",
+        caption = "Edge color: partial correlation (blue = negative, red = positive)"
+      ) +
+      ggplot2::xlim(0.5, 3.5)
+  
+```
+
+
+#### Heatmap
+
+```{r  echo=FALSE, fig.width=10, fig.height=12}
+
+# Create heatmap of top correlations across all pairwise comparisons
+top_correlations <- results.all$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(50)
+
+if(nrow(top_correlations) >= 2 && 
+   length(unique(top_correlations$gene_id)) >= 2 && 
+   length(unique(top_correlations$TaxaID)) >= 2) {
+  
+  # Create a matrix for the heatmap
+  heatmap_matrix <- matrix(
+    top_correlations$correlation,
+    nrow = length(unique(top_correlations$gene_id)),
+    ncol = length(unique(top_correlations$TaxaID)),
+    dimnames = list(
+      unique(top_correlations$gene_id),
+      unique(top_correlations$TaxaID)
+    )
+  )
+  
+  tmp.colPal <- colorRampPalette(c(pal.Dark2[3], "white", pal.Dark2[7]))(8)
+  
+  # Plot heatmap
+  pheatmap::pheatmap(
+    heatmap_matrix,
+    main = "Top 50 Significant Gene-Taxa Correlations - Historical Contingency of Parasite Response",
+    subtitle = "Combined across all pairwise comparisons",
+    color = tmp.colPal, #colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.250),
+    fontsize_row = 8,
+    fontsize_col = 8
+  )
+}
+
+# Create heatmap showing correlation strength by comparison
+if(nrow(top_correlations) > 0) {
+  # Create a matrix with comparisons as columns and gene-taxa pairs as rows
+  comparison_matrix <- top_correlations %>%
+    dplyr::select(gene_id, TaxaID, correlation, comparison_name) %>%
+    # Create a unique identifier for each gene-taxa pair
+    dplyr::mutate(gene_taxa = paste(gene_id, TaxaID, sep = "_&_")) %>%
+    tidyr::pivot_wider(
+      names_from = comparison_name,
+      values_from = correlation,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames(var = "gene_taxa") %>%
+    dplyr::select(-gene_id, -TaxaID) %>%
+    as.matrix()
+  
+  # Plot comparison heatmap
+  pheatmap::pheatmap(
+    comparison_matrix,
+    main = "Correlation Strength by Pairwise Comparison",
+    subtitle = "Top 50 correlations across all comparisons",
+    color = tmp.colPal, #colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = FALSE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.25),
+    fontsize_row = 8,
+    fontsize_col = 10
+  )
+}
+```
+
+### Question 1: Parasite Exposure Response {.tabset}
+
+#### Analysis
+
+```{r echo=FALSE}
+
+# Question 1: Parasite Exposure Response Analysis
+# Load existing results or perform new analysis based on configuration
+
+if (LOAD_EXISTING_RESULTS) {
+  cat("Attempting to load existing results for Question 1...\n")
+  results.parasite <- load_latest_results("results_parasite")
+  
+  if (is.null(results.parasite)) {
+    cat("No existing results found. Computing new results for Question 1...\n")
+    LOAD_EXISTING_RESULTS <- FALSE
+  } else {
+    cat("Successfully loaded existing results for Question 1.\n")
+  }
+}
+
+if (!LOAD_EXISTING_RESULTS) {
+  cat("Performing new analysis for Question 1: Parasite Exposure Response...\n")
+  
+  # Perform analysis for Question 1: Parasite Exposure Response
+  results.parasite <- perform_integrated_analysis(
+    question_name = "Parasite Exposure Response",
+    dat_results = dat_results.parasite,
+    deg_results = deg_results.parasite,
+    taxa_counts = taxa_counts.parasite,
+    expr_counts = expr_counts,
+    metadata = metadata,
+    treatment_comparison = c("A- T- P-", "A- T- P+")
+  )
+  
+  # Save results
+  save_results(results.parasite, "results_parasite")
+}
+
+# Display summary statistics
+cat("\n=== QUESTION 1 SUMMARY ===\n")
+
+# Create summary table for Question 1
+question1_summary <- tibble::tibble(
+  Metric = c("Question", "Treatment Comparison", "Number of Samples", 
+             "Significant Genes", "Significant Taxa", "Significant Correlations"),
+  Value = c(
+    results.parasite$question_name,
+    paste(results.parasite$treatment_comparison, collapse = " vs "),
+    as.character(length(results.parasite$samples)),
+    as.character(nrow(results.parasite$deg_sig)),
+    as.character(nrow(results.parasite$dat_sig)),
+    as.character(nrow(results.parasite$sig_correlations))
+  )
+)
+
+question1_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Question 1: Parasite Exposure Response",
+    subtitle = "Summary of analysis results"
+  ) %>%
+  gt::cols_label(
+    Metric = "Analysis Metric",
+    Value = "Result"
+  )
+```
+
+#### Correlation Results
+
+```{r echo=FALSE}
+
+# Display top correlations
+cat("\nTop 10 strongest correlations:\n")
+results.parasite$sig_correlations %>%
+  head(10) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+  gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2)
+
+# Create histogram of correlations
+ggplot2::ggplot(results.parasite$correlation_results, ggplot2::aes(x = correlation)) +
+  ggplot2::geom_histogram(bins = 50, fill = "steelblue", color = "black") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Distribution of Gene-Taxa Correlations - Parasite Exposure Response",
+    x = "Spearman Correlation",
+    y = "Count"
+  )
+```
+
+#### Partial Correlation Results
+
+```{r}
+results.parasite$sig_partial_correlations %>%
+  dplyr::filter(fdr < 0.1) %>%
+    gt::gt() %>%
+  gt::fmt_number(
+    columns = c(correlation, p_value, fdr, abs_correlation),
+    decimals = 4
+  )
+```
+
+```{r}
+# Count of significant partial correlations
+results.parasite$sig_partial_correlations %>%
+  dplyr::filter(fdr < 0.1) %>%
+  dplyr::summarise(
+    n_significant = n()
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Number of Significant Partial Correlations",
+    subtitle = "Parasite Exposure Response (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    n_significant = "Number of Significant Correlations"
+  )
+
+# Count of significant partial correlations by direction
+results.parasite$sig_partial_correlations %>%
+  dplyr::filter(fdr < 0.1) %>%
+  dplyr::mutate(
+    direction = dplyr::case_when(
+      correlation > 0 ~ "Positive",
+      correlation < 0 ~ "Negative",
+      TRUE ~ "Zero"
+    )
+  ) %>%
+  dplyr::group_by(direction) %>%
+  dplyr::summarise(
+    n_correlations = n(),
+    .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Significant Partial Correlations by Direction",
+    subtitle = "Parasite Exposure Response (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    direction = "Correlation Direction",
+    n_correlations = "Number of Correlations"
+  )
+
+```
+
+
+
+```{r echo=FALSE}
+
+# Display partial correlation summary
+if(nrow(results.parasite$partial_cor_results) > 0) {
+  cat("\n=== PARTIAL CORRELATION SUMMARY ===\n")
+  
+  # Create partial correlation summary table
+  partial_summary <- tibble::tibble(
+    Metric = c("Total partial correlations calculated", 
+               "Significant partial correlations (FDR < 0.1)",
+               "Failed calculations"),
+    Count = c(nrow(results.parasite$partial_cor_results),
+              nrow(results.parasite$sig_partial_correlations),
+              length(results.parasite$failed_pairs))
+  )
+  
+  partial_summary %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Partial Correlation Analysis Summary",
+      subtitle = "Controlling for worm counts"
+    ) %>%
+    gt::cols_label(
+      Metric = "Analysis Metric",
+      Count = "Count"
+    )
+  
+  # Display top partial correlations
+  cat("\nTop 10 strongest partial correlations:\n")
+  results.parasite$sig_partial_correlations %>%
+    head(10) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 10 Significant Partial Correlations",
+      subtitle = "Parasite Exposure Response"
+    ) %>%
+    gt::cols_label(
+      gene_id = "Gene ID",
+      taxa_id = "Taxa ID",
+      correlation = "Partial Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation"
+    )
+  
+  # Create histogram of partial correlations
+  ggplot2::ggplot(results.parasite$partial_cor_results, ggplot2::aes(x = correlation)) +
+    ggplot2::geom_histogram(bins = 30, fill = "darkgreen", color = "black") +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+      title = "Distribution of Partial Correlations - Parasite Exposure Response",
+      subtitle = "Controlling for worm counts",
+      x = "Partial Correlation",
+      y = "Count"
+    )
+  
+  # Create bipartite graph of significant partial correlations
+  if(nrow(results.parasite$sig_partial_correlations) > 0) {
+    # Assign y positions for genes and taxa
+    gene_levels <- results.parasite$sig_partial_correlations %>%
+      dplyr::pull(gene_id) %>%
+      unique() %>%
+      sort()
+    
+    taxa_levels <- results.parasite$sig_partial_correlations %>%
+      dplyr::pull(taxa_id) %>%
+      unique() %>%
+      sort()
+    
+    # Number of genes and taxa
+    n_genes <- length(gene_levels)
+    n_taxa <- length(taxa_levels)
+    
+    # Assign y positions for genes
+    gene_pos <- tibble::tibble(
+      gene_id = gene_levels,
+      y = seq_len(n_genes)
+    )
+    
+    # Assign y positions for taxa, evenly spaced across the gene y-range
+    taxa_pos <- tibble::tibble(
+      taxa_id = taxa_levels,
+      y = seq(1, n_genes, length.out = n_taxa)
+    )
+    
+    # Merge positions into edge data
+    edges <- results.parasite$sig_partial_correlations %>%
+      dplyr::left_join(gene_pos, by = "gene_id") %>%
+      dplyr::rename(y_gene = y) %>%
+      dplyr::left_join(taxa_pos, by = "taxa_id") %>%
+      dplyr::rename(y_taxa = y)
+    
+    # Set x positions for left (genes) and right (taxa)
+    x_gene <- 1
+    x_taxa <- 3
+    
+    # Plot bipartite graph
+    set.seed(42)
+    ggplot2::ggplot() +
+      # Edges
+      ggplot2::geom_segment(
+        data = edges,
+        ggplot2::aes(
+          x = x_gene, xend = x_taxa,
+          y = y_gene, yend = y_taxa,
+          color = correlation
+        ),
+        size = 1
+      ) +
+      # Gene labels (left)
+      ggplot2::geom_text(
+        data = gene_pos,
+        ggplot2::aes(x = x_gene - 0.05, y = y, label = gene_id),
+        hjust = 1, size = 3
+      ) +
+      # Taxa labels (right)
+      ggplot2::geom_text(
+        data = taxa_pos,
+        ggplot2::aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+        hjust = 0, size = 3
+      ) +
+      # Color scale for correlation
+      ggplot2::scale_color_gradient2(
+        low = "blue", mid = "white", high = "red", 
+        midpoint = 0,
+        limits = c(-1, 1),
+        name = "Partial Correlation"
+      ) +
+      ggplot2::theme_void() +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.title = ggplot2::element_text(size = 16, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 12)
+      ) +
+      ggplot2::labs(
+        title = "Bipartite Network of Significant Gene-Taxa Partial Correlations",
+        subtitle = "Parasite Exposure Response - Edge color: partial correlation (blue = negative, red = positive)"
+      ) +
+      ggplot2::xlim(0.5, 3.5)
+  }
+} else {
+  cat("\nNo partial correlation results available for this analysis.\n")
+}
+```
+
+#### Heatmap
+
+```{r  echo=FALSE, fig.width=10, fig.height=12}
+
+# Create heatmap of top correlations
+top_correlations <- results.parasite$sig_correlations %>%
+  head(100)
+
+if(nrow(top_correlations) >= 2 && 
+   length(unique(top_correlations$gene_id)) >= 2 && 
+   length(unique(top_correlations$TaxaID)) >= 2) {
+  
+  # Create a matrix for the heatmap
+  heatmap_matrix <- matrix(
+    top_correlations$correlation,
+    nrow = length(unique(top_correlations$gene_id)),
+    ncol = length(unique(top_correlations$TaxaID)),
+    dimnames = list(
+      unique(top_correlations$gene_id),
+      unique(top_correlations$TaxaID)
+    )
+  )
+  
+  tmp.colPal <- colorRampPalette(c(pal.Dark2[3], "white", pal.Dark2[7]))(8)
+  
+  # Plot heatmap
+  pheatmap::pheatmap(
+    heatmap_matrix,
+    main = "Top 100 Significant Gene-Taxa Correlations - Parasite Exposure Response",
+    color = tmp.colPal, # color = colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.250),
+    fontsize_row = 8,
+    fontsize_col = 8
+  )
+}
+
+```
+
+### Question 2: Historical Contingency of Parasite Response {.tabset}
+
+#### Analysis
+
+```{r echo=FALSE}
+
+# Question 2: Historical Contingency of Parasite Response Analysis
+# Load existing results or perform new analysis based on configuration
+
+if (LOAD_EXISTING_RESULTS) {
+  cat("Attempting to load existing results for Question 2...\n")
+  results.historical_contingency <- load_latest_results("results_historical_contingency")
+  
+  if (is.null(results.historical_contingency)) {
+    cat("No existing results found. Computing new results for Question 2...\n")
+    LOAD_EXISTING_RESULTS <- FALSE
+  } else {
+    cat("Successfully loaded existing results for Question 2.\n")
+  }
+}
+
+if (!LOAD_EXISTING_RESULTS) {
+  cat("Performing new analysis for Question 2: Historical Contingency of Parasite Response...\n")
+  
+  # Perform pairwise analysis for Question 2: Historical Contingency of Parasite Response
+  # Base treatment: A- T- P+ (parasite exposure without prior stressors)
+  # Comparison treatments: A+ T- P+, A- T+ P+, A+ T+ P+ (parasite exposure with prior stressors)
+  
+  results.historical_contingency <- perform_pairwise_analysis(
+    question_name = "Historical Contingency of Parasite Response",
+    dat_results = dat_results.historical_contingency,
+    deg_results = deg_results.historical_contingency,
+    taxa_counts = taxa_counts.priorStressors,
+    expr_counts = expr_counts,
+    metadata = metadata,
+    base_treatment = "A- T- P+",
+    comparison_treatments = c("A+ T- P+", "A- T+ P+", "A+ T+ P+")
+  )
+  
+  # Save results
+  save_results(results.historical_contingency, "results_historical_contingency")
+}
+
+# Display summary statistics
+cat("\n=== QUESTION 2 SUMMARY ===\n")
+
+# Create summary table for Question 2
+question2_summary <- tibble::tibble(
+  Metric = c("Question", "Base Treatment", "Comparison Treatments", 
+             "Total Samples", "Number of Pairwise Comparisons"),
+  Value = c(
+    results.historical_contingency$question_name,
+    results.historical_contingency$base_treatment,
+    paste(results.historical_contingency$comparison_treatments, collapse = ", "),
+    as.character(length(results.historical_contingency$all_samples)),
+    as.character(length(results.historical_contingency$pairwise_results))
+  )
+)
+
+question2_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Question 2: Historical Contingency of Parasite Response",
+    subtitle = "Summary of analysis results"
+  ) %>%
+  gt::cols_label(
+    Metric = "Analysis Metric",
+    Value = "Result"
+  )
+
+# Create detailed summary table for each pairwise comparison
+pairwise_summary <- tibble::tibble(
+  Comparison = character(),
+  Samples = integer(),
+  Significant_Genes = integer(),
+  Significant_Taxa = integer(),
+  Significant_Correlations = integer()
+)
+
+for(i in seq_along(results.historical_contingency$pairwise_results)) {
+  comparison_name <- names(results.historical_contingency$pairwise_results)[i]
+  result <- results.historical_contingency$pairwise_results[[i]]
+  
+  # Extract the comparison treatment (after "vs") from the comparison name
+  comparison_treatment <- stringr::str_extract(comparison_name, "(?<=vs ).*")
+  
+  # Filter DEG results for this specific comparison treatment
+  deg_sig_filtered <- deg_results.historical_contingency %>%
+    dplyr::filter(value == comparison_treatment)
+  
+  # Filter DAT results for this specific comparison treatment
+  dat_sig_filtered <- dat_results.historical_contingency %>%
+    dplyr::filter(value == comparison_treatment)
+  
+  pairwise_summary <- pairwise_summary %>%
+    dplyr::add_row(
+      Comparison = comparison_name,
+      Samples = length(result$samples),
+      Significant_Genes = nrow(deg_sig_filtered),
+      Significant_Taxa = nrow(dat_sig_filtered),
+      Significant_Correlations = nrow(result$sig_correlations)
+    )
+}
+
+pairwise_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Pairwise Comparison Details",
+    subtitle = "Results for each individual comparison"
+  ) %>%
+  gt::cols_label(
+    Comparison = "Comparison",
+    Samples = "N Samples",
+    Significant_Genes = "N Significant Genes",
+    Significant_Taxa = "N Significant Taxa",
+    Significant_Correlations = "N Significant Correlations"
+  )
+```
+
+#### Correlation Results
+
+```{r echo=FALSE}
+
+# Display combined top correlations across all pairwise comparisons
+cat("\nTop 10 strongest correlations across all pairwise comparisons:\n")
+results.historical_contingency$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(10) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+  gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2)
+
+# Create histogram of correlations for each pairwise comparison
+ggplot2::ggplot(results.historical_contingency$combined_all_correlations, ggplot2::aes(x = correlation, fill = comparison_name)) +
+  ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Distribution of Gene-Taxa Correlations - Historical Contingency of Parasite Response",
+    subtitle = "By pairwise comparison",
+    x = "Spearman Correlation",
+    y = "Count",
+    fill = "Comparison"
+  ) +
+  ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+
+# Summary statistics by comparison
+cat("\nCorrelation summary by comparison:\n")
+results.historical_contingency$combined_all_correlations %>%
+  dplyr::group_by(comparison_name) %>%
+  dplyr::summarise(
+    n_correlations = n(),
+    mean_correlation = mean(correlation, na.rm = TRUE),
+    median_correlation = median(correlation, na.rm = TRUE),
+    n_significant = sum(fdr < 0.05, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("mean_correlation", "median_correlation"), decimals = 3)
+```
+
+#### Partial Correlation Results
+
+```{r}
+
+results.historical_contingency[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+    gt::gt() %>%
+  gt::fmt_number(
+    columns = c(correlation, p_value, fdr, abs_correlation),
+    decimals = 4
+  )
+
+```
+
+```{r}
+# Count of significant partial correlations
+results.historical_contingency[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+    dplyr::group_by(comparison_name) %>%
+  dplyr::summarise(
+    n_significant = n()
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Number of Significant Partial Correlations",
+    subtitle = "Historical Contingency of Parasite Response (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    n_significant = "Number of Significant Correlations"
+  )
+
+# Count of significant partial correlations by direction
+results.historical_contingency[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+  dplyr::mutate(
+    direction = dplyr::case_when(
+      correlation > 0 ~ "Positive",
+      correlation < 0 ~ "Negative",
+      TRUE ~ "Zero"
+    )
+  ) %>%
+  dplyr::group_by(comparison_name, direction) %>%
+  dplyr::summarise(
+    n_correlations = n()#,
+    # .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Significant Partial Correlations by Direction",
+    subtitle = "Historical Contingency of Parasite Response (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    direction = "Correlation Direction",
+    n_correlations = "Number of Correlations"
+  )
+
+```
+
+
+```{r echo=FALSE}
+
+# Display partial correlation summary for Question 2
+if(nrow(results.historical_contingency$combined_partial_correlations) > 0) {
+  cat("\n=== PARTIAL CORRELATION SUMMARY ===\n")
+  
+  # Create partial correlation summary table
+  partial_summary_q2 <- tibble::tibble(
+    Metric = c("Total partial correlations calculated", 
+               "Significant partial correlations (FDR < 0.1)"),
+    Count = c(nrow(results.historical_contingency$combined_partial_correlations),
+              nrow(results.historical_contingency$combined_sig_partial_correlations))
+  )
+  
+  partial_summary_q2 %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Partial Correlation Analysis Summary",
+      subtitle = "Historical Contingency of Parasite Response - Controlling for worm counts"
+    ) %>%
+    gt::cols_label(
+      Metric = "Analysis Metric",
+      Count = "Count"
+    )
+  
+  # Display top partial correlations
+  cat("\nTop 10 strongest partial correlations:\n")
+  results.historical_contingency$combined_sig_partial_correlations %>%
+    dplyr::arrange(desc(abs_correlation)) %>%
+    head(10) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 10 Significant Partial Correlations",
+      subtitle = "Historical Contingency of Parasite Response"
+    ) %>%
+    gt::cols_label(
+      gene_id = "Gene ID",
+      taxa_id = "Taxa ID",
+      correlation = "Partial Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation",
+      comparison_name = "Comparison"
+    )
+  
+  # Create histogram of partial correlations by comparison
+  ggplot2::ggplot(results.historical_contingency$combined_partial_correlations, 
+                  ggplot2::aes(x = correlation, fill = comparison_name)) +
+    ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+      title = "Distribution of Partial Correlations - Historical Contingency of Parasite Response",
+      subtitle = "Controlling for worm counts",
+      x = "Partial Correlation",
+      y = "Count",
+      fill = "Comparison"
+    ) +
+    ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+  
+  # Create bipartite graph of significant partial correlations
+  if(nrow(results.historical_contingency$combined_sig_partial_correlations) > 0) {
+    # Assign y positions for genes and taxa
+    gene_levels <- results.historical_contingency$combined_sig_partial_correlations %>%
+      dplyr::pull(gene_id) %>%
+      unique() %>%
+      sort()
+    
+    taxa_levels <- results.historical_contingency$combined_sig_partial_correlations %>%
+      dplyr::pull(taxa_id) %>%
+      unique() %>%
+      sort()
+    
+    # Number of genes and taxa
+    n_genes <- length(gene_levels)
+    n_taxa <- length(taxa_levels)
+    
+    # Assign y positions for genes
+    gene_pos <- tibble::tibble(
+      gene_id = gene_levels,
+      y = seq_len(n_genes)
+    )
+    
+    # Assign y positions for taxa, evenly spaced across the gene y-range
+    taxa_pos <- tibble::tibble(
+      taxa_id = taxa_levels,
+      y = seq(1, n_genes, length.out = n_taxa)
+    )
+    
+    # Merge positions into edge data
+    edges <- results.historical_contingency$combined_sig_partial_correlations %>%
+      dplyr::left_join(gene_pos, by = "gene_id") %>%
+      dplyr::rename(y_gene = y) %>%
+      dplyr::left_join(taxa_pos, by = "taxa_id") %>%
+      dplyr::rename(y_taxa = y)
+    
+    # Set x positions for left (genes) and right (taxa)
+    x_gene <- 1
+    x_taxa <- 3
+    
+    # Plot bipartite graph
+    set.seed(42)
+    ggplot2::ggplot() +
+      # Edges
+      ggplot2::geom_segment(
+        data = edges,
+        ggplot2::aes(
+          x = x_gene, xend = x_taxa,
+          y = y_gene, yend = y_taxa,
+          color = correlation
+        ),
+        size = 1
+      ) +
+      # Gene labels (left)
+      ggplot2::geom_text(
+        data = gene_pos,
+        ggplot2::aes(x = x_gene - 0.05, y = y, label = gene_id),
+        hjust = 1, size = 3
+      ) +
+      # Taxa labels (right)
+      ggplot2::geom_text(
+        data = taxa_pos,
+        ggplot2::aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+        hjust = 0, size = 3
+      ) +
+      # Color scale for correlation
+      ggplot2::scale_color_gradient2(
+        low = "blue", mid = "white", high = "red", 
+        midpoint = 0,
+        limits = c(-1, 1),
+        name = "Partial Correlation"
+      ) +
+      ggplot2::theme_void() +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.title = ggplot2::element_text(size = 16, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 12)
+      ) +
+      ggplot2::labs(
+        title = "Bipartite Network of Significant Gene-Taxa Partial Correlations",
+        subtitle = "Historical Contingency of Parasite Response - Edge color: partial correlation (blue = negative, red = positive)"
+      ) +
+      ggplot2::xlim(0.5, 3.5) +
+        facet_wrap(.~comparison_name)
+  }
+} else {
+  cat("\nNo partial correlation results available for this analysis.\n")
+}
+```
+
+
+#### Heatmap
+
+```{r  echo=FALSE, fig.width=10, fig.height=12}
+
+# Create heatmap of top correlations across all pairwise comparisons
+top_correlations <- results.historical_contingency$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(50)
+
+if(nrow(top_correlations) >= 2 && 
+   length(unique(top_correlations$gene_id)) >= 2 && 
+   length(unique(top_correlations$TaxaID)) >= 2) {
+  
+  # Create a matrix for the heatmap
+  heatmap_matrix <- matrix(
+    top_correlations$correlation,
+    nrow = length(unique(top_correlations$gene_id)),
+    ncol = length(unique(top_correlations$TaxaID)),
+    dimnames = list(
+      unique(top_correlations$gene_id),
+      unique(top_correlations$TaxaID)
+    )
+  )
+  
+  tmp.colPal <- colorRampPalette(c(pal.Dark2[3], "white", pal.Dark2[7]))(8)
+  
+  # Plot heatmap
+  pheatmap::pheatmap(
+    heatmap_matrix,
+    main = "Top 50 Significant Gene-Taxa Correlations - Historical Contingency of Parasite Response",
+    subtitle = "Combined across all pairwise comparisons",
+    color = tmp.colPal, #colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.250),
+    fontsize_row = 8,
+    fontsize_col = 8
+  )
+}
+
+# Create heatmap showing correlation strength by comparison
+if(nrow(top_correlations) > 0) {
+  # Create a matrix with comparisons as columns and gene-taxa pairs as rows
+  comparison_matrix <- top_correlations %>%
+    dplyr::select(gene_id, TaxaID, correlation, comparison_name) %>%
+    # Create a unique identifier for each gene-taxa pair
+    dplyr::mutate(gene_taxa = paste(gene_id, TaxaID, sep = "_&_")) %>%
+    tidyr::pivot_wider(
+      names_from = comparison_name,
+      values_from = correlation,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames(var = "gene_taxa") %>%
+    dplyr::select(-gene_id, -TaxaID) %>%
+    as.matrix()
+  
+  # Plot comparison heatmap
+  pheatmap::pheatmap(
+    comparison_matrix,
+    main = "Correlation Strength by Pairwise Comparison",
+    subtitle = "Top 50 correlations across all comparisons",
+    color = tmp.colPal, #colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = FALSE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.25),
+    fontsize_row = 8,
+    fontsize_col = 10
+  )
+}
+```
+
+### Question 3: Historical Contingency of Recovery {.tabset}
+
+#### Analysis
+
+```{r echo=FALSE}
+
+# Question 3: Historical Contingency of Recovery Analysis
+# Load existing results or perform new analysis based on configuration
+
+if (LOAD_EXISTING_RESULTS) {
+  cat("Attempting to load existing results for Question 3...\n")
+  results.recovery <- load_latest_results("results_recovery")
+  
+  if (is.null(results.recovery)) {
+    cat("No existing results found. Computing new results for Question 3...\n")
+    LOAD_EXISTING_RESULTS <- FALSE
+  } else {
+    cat("Successfully loaded existing results for Question 3.\n")
+  }
+}
+
+if (!LOAD_EXISTING_RESULTS) {
+  cat("Performing new analysis for Question 3: Historical Contingency of Recovery...\n")
+  
+  # Perform pairwise analysis for Question 3: Historical Contingency of Recovery
+  # Base treatment: A- T- P- (no prior stressors, no parasite)
+  # Comparison treatments: A+ T- P-, A- T+ P-, A+ T+ P- (prior stressors, no parasite)
+  
+  results.recovery <- perform_pairwise_analysis(
+    question_name = "Historical Contingency of Recovery",
+    dat_results = dat_results.recovery,
+    deg_results = deg_results.recovery,
+    taxa_counts = taxa_counts.noPriorStressors,
+    expr_counts = expr_counts,
+    metadata = metadata,
+    base_treatment = "A- T- P-",
+    comparison_treatments = c("A+ T- P-", "A- T+ P-", "A+ T+ P-")
+  )
+  
+  # Save results
+  save_results(results.recovery, "results_recovery")
+}
+
+# Display summary statistics
+cat("\n=== QUESTION 3 SUMMARY ===\n")
+
+# Create summary table for Question 3
+question3_summary <- tibble::tibble(
+  Metric = c("Question", "Base Treatment", "Comparison Treatments", 
+             "Total Samples", "Number of Pairwise Comparisons"),
+  Value = c(
+    results.recovery$question_name,
+    results.recovery$base_treatment,
+    paste(results.recovery$comparison_treatments, collapse = ", "),
+    as.character(length(results.recovery$all_samples)),
+    as.character(length(results.recovery$pairwise_results))
+  )
+)
+
+question3_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Question 3: Historical Contingency of Recovery",
+    subtitle = "Summary of analysis results"
+  ) %>%
+  gt::cols_label(
+    Metric = "Analysis Metric",
+    Value = "Result"
+  )
+
+# Create detailed summary table for each pairwise comparison
+pairwise_summary_recovery <- tibble::tibble(
+  Comparison = character(),
+  Samples = integer(),
+  Significant_Genes = integer(),
+  Significant_Taxa = integer(),
+  Significant_Correlations = integer()
+)
+    
+    for(i in seq_along(results.recovery$pairwise_results)) {
+      comparison_name <- names(results.recovery$pairwise_results)[i]
+      result <- results.recovery$pairwise_results[[i]]
+      
+      # Extract the comparison treatment (after "vs") from the comparison name
+      comparison_treatment <- stringr::str_extract(comparison_name, "(?<=vs ).*")
+      
+      # Filter DEG results for this specific comparison treatment
+      deg_sig_filtered <- deg_results.recovery %>%
+        dplyr::filter(value == comparison_treatment)
+      
+      # Filter DAT results for this specific comparison treatment
+      dat_sig_filtered <- dat_results.recovery %>%
+        dplyr::filter(value == comparison_treatment)
+      
+      pairwise_summary_recovery <- pairwise_summary_recovery %>%
+        dplyr::add_row(
+          Comparison = comparison_name,
+          Samples = length(result$samples),
+          Significant_Genes = nrow(deg_sig_filtered),
+          Significant_Taxa = nrow(dat_sig_filtered),
+          Significant_Correlations = nrow(result$sig_correlations)
+        )
+    }
+    
+    pairwise_summary_recovery %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "Pairwise Comparison Details",
+        subtitle = "Results for each individual comparison"
+      ) %>%
+      gt::cols_label(
+        Comparison = "Comparison",
+        Samples = "N Samples",
+        Significant_Genes = "N Significant Genes",
+        Significant_Taxa = "N Significant Taxa",
+        Significant_Correlations = "N Significant Correlations"
+      )
+```
+
+#### Correlation Results
+
+```{r echo=FALSE}
+
+# Display combined top correlations across all pairwise comparisons
+cat("\nTop 10 strongest correlations across all pairwise comparisons:\n")
+results.recovery$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) %>%
+  head(10) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+  gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2)
+
+# Create histogram of correlations for each pairwise comparison
+ggplot2::ggplot(results.recovery$combined_all_correlations, ggplot2::aes(x = correlation, fill = comparison_name)) +
+  ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Distribution of Gene-Taxa Correlations - Historical Contingency of Recovery",
+    subtitle = "By pairwise comparison",
+    x = "Spearman Correlation",
+    y = "Count",
+    fill = "Comparison"
+  ) +
+  ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+
+# Summary statistics by comparison
+cat("\nCorrelation summary by comparison:\n")
+results.recovery$combined_all_correlations %>%
+  dplyr::group_by(comparison_name) %>%
+  dplyr::summarise(
+    n_correlations = n(),
+    mean_correlation = mean(correlation, na.rm = TRUE),
+    median_correlation = median(correlation, na.rm = TRUE),
+    n_significant = sum(fdr < 0.05, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("mean_correlation", "median_correlation"), decimals = 3)
+```
+
+#### Partial Correlation Results
+
+```{r}
+
+# Display all significant partial correlations
+results.recovery[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+  gt::gt() %>%
+  gt::fmt_number(
+    columns = c(correlation, p_value, fdr, abs_correlation),
+    decimals = 4
+  )
+
+```
+
+```{r}
+# Count of significant partial correlations
+results.recovery[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+    dplyr::group_by(comparison_name) %>%
+  dplyr::summarise(
+    n_significant = n()
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Number of Significant Partial Correlations",
+    subtitle = "Historical Contingency of Recovery (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    n_significant = "Number of Significant Correlations"
+  )
+
+# Count of significant partial correlations by direction
+results.recovery[["combined_sig_partial_correlations"]] %>%
+  dplyr::filter(fdr < 0.1) %>%
+  dplyr::mutate(
+    direction = dplyr::case_when(
+      correlation > 0 ~ "Positive",
+      correlation < 0 ~ "Negative",
+      TRUE ~ "Zero"
+    )
+  ) %>%
+  dplyr::group_by(comparison_name,direction) %>%
+  dplyr::summarise(
+    n_correlations = n()#,
+    # .groups = "drop"
+  ) %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Significant Partial Correlations by Direction",
+    subtitle = "Historical Contingency of Recovery (FDR < 0.1)"
+  ) %>%
+  gt::cols_label(
+    direction = "Correlation Direction",
+    n_correlations = "Number of Correlations"
+  )
+```
+
+```{r echo=FALSE}
+
+# Display partial correlation summary for Question 3
+if(nrow(results.recovery$combined_partial_correlations) > 0) {
+  cat("\n=== PARTIAL CORRELATION SUMMARY ===\n")
+  
+  # Create partial correlation summary table
+  partial_summary_q3 <- tibble::tibble(
+    Metric = c("Total partial correlations calculated", 
+               "Significant partial correlations (FDR < 0.1)"),
+    Count = c(nrow(results.recovery$combined_partial_correlations),
+              nrow(results.recovery$combined_sig_partial_correlations))
+  )
+  
+  partial_summary_q3 %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Partial Correlation Analysis Summary",
+      subtitle = "Historical Contingency of Recovery - Controlling for worm counts"
+    ) %>%
+    gt::cols_label(
+      Metric = "Analysis Metric",
+      Count = "Count"
+    )
+  
+  # Display top partial correlations
+  cat("\nTop 10 strongest partial correlations:\n")
+  results.recovery$combined_sig_partial_correlations %>%
+    dplyr::arrange(desc(abs_correlation)) %>%
+    head(10) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 10 Significant Partial Correlations",
+      subtitle = "Historical Contingency of Recovery"
+    ) %>%
+    gt::cols_label(
+      gene_id = "Gene ID",
+      taxa_id = "Taxa ID",
+      correlation = "Partial Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation",
+      comparison_name = "Comparison"
+    )
+  
+  # Create histogram of partial correlations by comparison
+  ggplot2::ggplot(results.recovery$combined_partial_correlations, 
+                  ggplot2::aes(x = correlation, fill = comparison_name)) +
+    ggplot2::geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+      title = "Distribution of Partial Correlations - Historical Contingency of Recovery",
+      subtitle = "Controlling for worm counts",
+      x = "Partial Correlation",
+      y = "Count",
+      fill = "Comparison"
+    ) +
+    ggplot2::facet_wrap(~comparison_name, scales = "free_y")
+  
+  # Create bipartite graph of significant partial correlations
+  if(nrow(results.recovery$combined_sig_partial_correlations) > 0) {
+    # Assign y positions for genes and taxa
+    gene_levels <- results.recovery$combined_sig_partial_correlations %>%
+      dplyr::pull(gene_id) %>%
+      unique() %>%
+      sort()
+    
+    taxa_levels <- results.recovery$combined_sig_partial_correlations %>%
+      dplyr::pull(taxa_id) %>%
+      unique() %>%
+      sort()
+    
+    # Number of genes and taxa
+    n_genes <- length(gene_levels)
+    n_taxa <- length(taxa_levels)
+    
+    # Assign y positions for genes
+    gene_pos <- tibble::tibble(
+      gene_id = gene_levels,
+      y = seq_len(n_genes)
+    )
+    
+    # Assign y positions for taxa, evenly spaced across the gene y-range
+    taxa_pos <- tibble::tibble(
+      taxa_id = taxa_levels,
+      y = seq(1, n_genes, length.out = n_taxa)
+    )
+    
+    # Merge positions into edge data
+    edges <- results.recovery$combined_sig_partial_correlations %>%
+      dplyr::left_join(gene_pos, by = "gene_id") %>%
+      dplyr::rename(y_gene = y) %>%
+      dplyr::left_join(taxa_pos, by = "taxa_id") %>%
+      dplyr::rename(y_taxa = y)
+    
+    # Set x positions for left (genes) and right (taxa)
+    x_gene <- 1
+    x_taxa <- 3
+    
+    # Plot bipartite graph
+    set.seed(42)
+    ggplot2::ggplot() +
+      # Edges
+      ggplot2::geom_segment(
+        data = edges,
+        ggplot2::aes(
+          x = x_gene, xend = x_taxa,
+          y = y_gene, yend = y_taxa,
+          color = correlation
+        ),
+        size = 1
+      ) +
+      # Gene labels (left)
+      ggplot2::geom_text(
+        data = gene_pos,
+        ggplot2::aes(x = x_gene - 0.05, y = y, label = gene_id),
+        hjust = 1, size = 3
+      ) +
+      # Taxa labels (right)
+      ggplot2::geom_text(
+        data = taxa_pos,
+        ggplot2::aes(x = x_taxa + 0.05, y = y, label = taxa_id),
+        hjust = 0, size = 3
+      ) +
+      # Color scale for correlation
+      ggplot2::scale_color_gradient2(
+        low = "blue", mid = "white", high = "red", 
+        midpoint = 0,
+        limits = c(-1, 1),
+        name = "Partial Correlation"
+      ) +
+      ggplot2::theme_void() +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.title = ggplot2::element_text(size = 16, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 12)
+      ) +
+      ggplot2::labs(
+        title = "Bipartite Network of Significant Gene-Taxa Partial Correlations",
+        subtitle = "Historical Contingency of Recovery - Edge color: partial correlation (blue = negative, red = positive)"
+      ) +
+      ggplot2::xlim(0.5, 3.5) +
+        facet_wrap(.~comparison_name)
+  }
+} else {
+  cat("\nNo partial correlation results available for this analysis.\n")
+}
+```
+
+
+#### Heatmap
+
+
+```{r  echo=FALSE, fig.width=10, fig.height=12}
+
+
+# Create heatmap of top correlations across all pairwise comparisons
+top_correlations <- results.recovery$combined_correlations %>%
+  dplyr::arrange(desc(abs_correlation)) #%>%
+  head(50)
+
+if(nrow(top_correlations) >= 2 && 
+   length(unique(top_correlations$gene_id)) >= 2 && 
+   length(unique(top_correlations$TaxaID)) >= 2) {
+  
+  # Create a matrix for the heatmap
+  heatmap_matrix <- matrix(
+    top_correlations$correlation,
+    nrow = length(unique(top_correlations$gene_id)),
+    ncol = length(unique(top_correlations$TaxaID)),
+    dimnames = list(
+      unique(top_correlations$gene_id),
+      unique(top_correlations$TaxaID)
+    )
+  )
+  
+  tmp.colPal <- colorRampPalette(c(pal.Dark2[3], "white", pal.Dark2[7]))(8)
+  
+    # Plot heatmap
+  pheatmap::pheatmap(
+    heatmap_matrix,
+    main = "Top 50 Significant Gene-Taxa Correlations - Historical Contingency of Recovery",
+    subtitle = "Combined across all pairwise comparisons",
+    color = tmp.colPal, #rgb.palette(16), # color = colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.25),
+    fontsize_row = 8,
+    fontsize_col = 8
+  )
+}
+
+
+# Create heatmap showing correlation strength by comparison
+if(nrow(top_correlations) > 0) {
+  # Create a matrix with comparisons as columns and gene-taxa pairs as rows
+  comparison_matrix <- top_correlations %>%
+    dplyr::select(gene_id, TaxaID, correlation, comparison_name) %>%
+    # Create a unique identifier for each gene-taxa pair
+    dplyr::mutate(gene_taxa = paste(gene_id, TaxaID, sep = "_&_")) %>%
+    tidyr::pivot_wider(
+      names_from = comparison_name,
+      values_from = correlation,
+      values_fill = 0
+    ) %>%
+    tibble::column_to_rownames(var = "gene_taxa") %>%
+    dplyr::select(-gene_id, -TaxaID) %>%
+    as.matrix()
+  
+  # Plot comparison heatmap
+  pheatmap::pheatmap(
+    comparison_matrix,
+    main = "Correlation Strength by Pairwise Comparison",
+    subtitle = "Top 50 correlations across all comparisons",
+    color = tmp.colPal, #colorRampPalette(c("blue", "white", "red"))(16),
+    cluster_rows = TRUE,
+    cluster_cols = FALSE,
+    treeheight_row = 0,
+    treeheight_col = 0,
+    show_rownames = TRUE,
+    show_colnames = TRUE,
+    breaks = seq(-1,1,.25),
+    fontsize_row = 8,
+    fontsize_col = 10
+  )
+}
+
+```
+
+## Comparative Analysis {.tabset}
+
+### Summary Statistics Across Questions
+
+```{r echo=FALSE}
+
+# Create summary table comparing all three questions
+summary_comparison <- tibble::tibble(
+  Question = c("Parasite Exposure Response", 
+               "Historical Contingency of Parasite Response", 
+               "Historical Contingency of Recovery"),
+  Treatment_Comparison = c(
+    "A- T- P- vs A- T- P+",
+    "A- T- P+ vs (A+ T- P+, A- T+ P+, A+ T+ P+)",
+    "A- T- P- vs (A+ T- P-, A- T+ P-, A+ T+ P-)"
+  ),
+  N_Samples = c(
+    length(results.parasite$samples),
+    length(results.historical_contingency$all_samples),
+    length(results.recovery$all_samples)
+  ),
+  N_Pairwise_Comparisons = c(
+    1,  # Single comparison for Question 1
+    length(results.historical_contingency$pairwise_results),
+    length(results.recovery$pairwise_results)
+  ),
+  N_Significant_Genes = c(
+    nrow(results.parasite$deg_sig),
+    nrow(results.historical_contingency$combined_deg),
+    nrow(results.recovery$combined_deg)
+  ),
+  N_Significant_Taxa = c(
+    nrow(results.parasite$dat_sig),
+    nrow(results.historical_contingency$combined_dat),
+    nrow(results.recovery$combined_dat)
+  ),
+  N_Significant_Correlations = c(
+    nrow(results.parasite$sig_correlations),
+    nrow(results.historical_contingency$combined_correlations),
+    nrow(results.recovery$combined_correlations)
+  ),
+  N_Significant_Partial_Correlations = c(
+    nrow(results.parasite$sig_partial_correlations),
+    nrow(results.historical_contingency$combined_sig_partial_correlations),
+    nrow(results.recovery$combined_sig_partial_correlations)
+  ),
+  Mean_Correlation = c(
+    mean(results.parasite$correlation_results$correlation, na.rm = TRUE),
+    mean(results.historical_contingency$combined_all_correlations$correlation, na.rm = TRUE),
+    mean(results.recovery$combined_all_correlations$correlation, na.rm = TRUE)
+  ),
+  Median_Correlation = c(
+    median(results.parasite$correlation_results$correlation, na.rm = TRUE),
+    median(results.historical_contingency$combined_all_correlations$correlation, na.rm = TRUE),
+    median(results.recovery$combined_all_correlations$correlation, na.rm = TRUE)
+  )
+)
+
+# Display summary table
+summary_comparison %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c("Mean_Correlation", "Median_Correlation"), decimals = 3) %>%
+  gt::tab_header(
+    title = "Summary Comparison Across Research Questions",
+    subtitle = "Integrated DEGxDAT Analysis Results"
+  ) %>%
+  gt::cols_label(
+    Question = "Research Question",
+    Treatment_Comparison = "Treatment Comparison",
+    N_Samples = "N Samples",
+    N_Significant_Genes = "N Significant Genes",
+    N_Significant_Taxa = "N Significant Taxa",
+    N_Significant_Correlations = "N Significant Correlations",
+    N_Significant_Partial_Correlations = "N Significant Partial Correlations",
+    Mean_Correlation = "Mean Correlation",
+    Median_Correlation = "Median Correlation"
+  )
+```
+
+### Overlap Analysis
+
+```{r echo=FALSE}
+
+# Analyze overlap in significant genes across questions
+gene_overlap <- list(
+  Parasite = results.parasite$deg_sig$gene,
+  Historical_Contingency = unique(results.historical_contingency$combined_deg$gene),
+  Recovery = unique(results.recovery$combined_deg$gene)
+)
+
+# Calculate overlap statistics
+cat("\n=== GENE OVERLAP STATISTICS ===\n")
+
+# Create gene overlap summary table
+gene_overlap_summary <- tibble::tibble(
+  Overlap_Category = c(
+    "Total unique genes across all questions",
+    "Genes in Parasite Response only",
+    "Genes in Historical Contingency only", 
+    "Genes in Recovery only",
+    "Genes in Parasite Response and Historical Contingency",
+    "Genes in Parasite Response and Recovery",
+    "Genes in Historical Contingency and Recovery",
+    "Genes in all three"
+  ),
+  Count = c(
+    length(unique(unlist(gene_overlap))),
+    length(setdiff(gene_overlap$Parasite, union(gene_overlap$Historical_Contingency, gene_overlap$Recovery))),
+    length(setdiff(gene_overlap$Historical_Contingency, union(gene_overlap$Parasite, gene_overlap$Recovery))),
+    length(setdiff(gene_overlap$Recovery, union(gene_overlap$Parasite, gene_overlap$Historical_Contingency))),
+    length(intersect(gene_overlap$Parasite, gene_overlap$Historical_Contingency)),
+    length(intersect(gene_overlap$Parasite, gene_overlap$Recovery)),
+    length(intersect(gene_overlap$Historical_Contingency, gene_overlap$Recovery)),
+    length(Reduce(intersect, gene_overlap))
+  )
+)
+
+gene_overlap_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Gene Overlap Statistics",
+    subtitle = "Distribution of significant genes across research questions"
+  ) %>%
+  gt::cols_label(
+    Overlap_Category = "Overlap Category",
+    Count = "Number of Genes"
+  )
+
+# Analyze overlap in significant taxa across questions
+taxa_overlap <- list(
+  Parasite = results.parasite$dat_sig$taxa,
+  Historical_Contingency = unique(results.historical_contingency$combined_dat$taxa),
+  Recovery = unique(results.recovery$combined_dat$taxa)
+)
+
+cat("\n=== TAXA OVERLAP STATISTICS ===\n")
+
+# Create taxa overlap summary table
+taxa_overlap_summary <- tibble::tibble(
+  Overlap_Category = c(
+    "Total unique taxa across all questions",
+    "Taxa in Parasite Response only",
+    "Taxa in Historical Contingency only",
+    "Taxa in Recovery only", 
+    "Taxa in Parasite Response and Historical Contingency",
+    "Taxa in Parasite Response and Recovery",
+    "Taxa in Historical Contingency and Recovery",
+    "Taxa in all three"
+  ),
+  Count = c(
+    length(unique(unlist(taxa_overlap))),
+    length(setdiff(taxa_overlap$Parasite, union(taxa_overlap$Historical_Contingency, taxa_overlap$Recovery))),
+    length(setdiff(taxa_overlap$Historical_Contingency, union(taxa_overlap$Parasite, taxa_overlap$Recovery))),
+    length(setdiff(taxa_overlap$Recovery, union(taxa_overlap$Parasite, taxa_overlap$Historical_Contingency))),
+    length(intersect(taxa_overlap$Parasite, taxa_overlap$Historical_Contingency)),
+    length(intersect(taxa_overlap$Parasite, taxa_overlap$Recovery)),
+    length(intersect(taxa_overlap$Historical_Contingency, taxa_overlap$Recovery)),
+    length(Reduce(intersect, taxa_overlap))
+  )
+)
+
+taxa_overlap_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Taxa Overlap Statistics", 
+    subtitle = "Distribution of significant taxa across research questions"
+  ) %>%
+  gt::cols_label(
+    Overlap_Category = "Overlap Category",
+    Count = "Number of Taxa"
+  )
+```
+
+<!-- ### Correlation Strength Comparison -->
+
+<!-- ```{r fig.width=10, fig.height=6} -->
+
+<!-- # Create comparison plot of correlation distributions -->
+<!-- correlation_comparison <- bind_rows( -->
+<!--   results.parasite$correlation_results %>%  -->
+<!--     dplyr::mutate(Question = "Parasite Exposure Response"), -->
+<!--   results.historical_contingency$combined_all_correlations %>%  -->
+<!--     dplyr::mutate(Question = "Historical Contingency of Parasite Response"), -->
+<!--   results.recovery$combined_all_correlations %>%  -->
+<!--     dplyr::mutate(Question = "Historical Contingency of Recovery") -->
+<!-- ) -->
+
+<!-- # Create violin plot comparing correlation distributions -->
+<!-- ggplot2::ggplot(correlation_comparison, ggplot2::aes(x = Question, y = correlation, fill = Question)) + -->
+<!--   ggplot2::geom_violin(alpha = 0.7) + -->
+<!--   ggplot2::geom_boxplot(width = 0.2, alpha = 0.8) + -->
+<!--   ggplot2::scale_fill_manual(values = c("#1B9E77", "#D95F02", "#7570B3")) + -->
+<!--   ggplot2::theme_minimal() + -->
+<!--   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) + -->
+<!--   ggplot2::labs( -->
+<!--     title = "Comparison of Gene-Taxa Correlation Distributions Across Research Questions", -->
+<!--     x = "Research Question", -->
+<!--     y = "Spearman Correlation", -->
+<!--     fill = "Question" -->
+<!--   ) + -->
+<!--   ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "red", alpha = 0.5) -->
+
+<!-- # Create detailed comparison showing individual pairwise comparisons -->
+<!-- detailed_comparison <- bind_rows( -->
+<!--   results.parasite$correlation_results %>%  -->
+<!--     dplyr::mutate(Question = "Parasite Exposure Response", Comparison = "A- T- P- vs A- T- P+"), -->
+<!--   results.historical_contingency$combined_all_correlations %>%  -->
+<!--     dplyr::mutate(Question = "Historical Contingency of Parasite Response"), -->
+<!--   results.recovery$combined_all_correlations %>%  -->
+<!--     dplyr::mutate(Question = "Historical Contingency of Recovery") -->
+<!-- ) -->
+
+<!-- # Create violin plot showing individual comparisons -->
+<!-- ggplot2::ggplot(detailed_comparison, ggplot2::aes(x = Comparison, y = correlation, fill = Question)) + -->
+<!--   ggplot2::geom_violin(alpha = 0.7) + -->
+<!--   ggplot2::geom_boxplot(width = 0.2, alpha = 0.8) + -->
+<!--   ggplot2::scale_fill_manual(values = c("#1B9E77", "#D95F02", "#7570B3")) + -->
+<!--   ggplot2::theme_minimal() + -->
+<!--   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) + -->
+<!--   ggplot2::labs( -->
+<!--     title = "Detailed Comparison of Gene-Taxa Correlations by Individual Pairwise Comparison", -->
+<!--     x = "Pairwise Comparison", -->
+<!--     y = "Spearman Correlation", -->
+<!--     fill = "Research Question" -->
+<!--   ) + -->
+<!--   ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "red", alpha = 0.5) -->
+<!-- ``` -->
+
+## Enrichment Analysis {.tabset}
+
+### Question 0: All Treatments
+
+```{r echo=FALSE}
+
+    # Perform GO enrichment for Question 0
+if(nrow(results.all$combined_sig_partial_correlations) > 0) {
+  # Rename taxa_id to TaxaID to match the expected column name in get_go_correlations
+  combined_data <- results.all$combined_sig_partial_correlations %>%
+    dplyr::rename(TaxaID = taxa_id)
+  
+  entrez.all <- get_entrez(combined_data)
+  go_results.all <- get_go_correlations(entrez.all)
+  
+  cat("\n=== GO ENRICHMENT - ALL TREATMENTS ===\n")
+  
+  # Create GO enrichment summary table
+  go_summary_all <- tibble::tibble(
+    Metric = c("Number of enriched GO terms"),
+    Value = c(as.character(nrow(go_results.all)))
+  )
+  
+  go_summary_all %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "GO Enrichment Summary - All Treatments",
+      subtitle = "Gene Ontology enrichment results"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+  
+  # Display top GO terms
+  go_results.all %>%
+    head(10) %>%
+    dplyr::select(ID, Description, p.adjust, mean_correlation, n_positive, n_negative) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Top 10 Enriched GO Terms",
+      subtitle = "All Treatments"
+    ) %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+    gt::cols_label(
+      ID = "GO ID",
+      Description = "GO Term Description",
+      p.adjust = "Adjusted P-value",
+      mean_correlation = "Mean Correlation",
+      n_positive = "N Positive",
+      n_negative = "N Negative"
+    )
+}
+```
+
+### Question 1: Parasite Exposure Response
+
+```{r echo=FALSE}
+
+# Perform GO enrichment for Question 1
+if(nrow(results.parasite$sig_correlations) > 0) {
+  entrez.parasite <- get_entrez(results.parasite$sig_correlations)
+  go_results.parasite <- get_go_correlations(entrez.parasite)
+  
+  cat("\n=== GO ENRICHMENT - PARASITE EXPOSURE RESPONSE ===\n")
+  
+  # Create GO enrichment summary table
+  go_summary_parasite <- tibble::tibble(
+    Metric = c("Number of enriched GO terms"),
+    Value = c(as.character(nrow(go_results.parasite)))
+  )
+  
+  go_summary_parasite %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "GO Enrichment Summary - Parasite Exposure Response",
+      subtitle = "Gene Ontology enrichment results"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+  
+  # Display top GO terms
+  go_results.parasite %>%
+    head(10) %>%
+    dplyr::select(ID, Description, p.adjust, mean_correlation, n_positive, n_negative) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Top 10 Enriched GO Terms",
+      subtitle = "Parasite Exposure Response"
+    ) %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+    gt::cols_label(
+      ID = "GO ID",
+      Description = "GO Term Description",
+      p.adjust = "Adjusted P-value",
+      mean_correlation = "Mean Correlation",
+      n_positive = "N Positive",
+      n_negative = "N Negative"
+    )
+}
+```
+
+### Question 2: Historical Contingency of Parasite Response
+
+```{r echo=FALSE}
+
+# Perform GO enrichment for Question 2
+if(nrow(results.historical_contingency$combined_correlations) > 0) {
+  entrez.historical <- get_entrez(results.historical_contingency$combined_correlations)
+  go_results.historical <- get_go_correlations(entrez.historical)
+  
+  cat("\n=== GO ENRICHMENT - HISTORICAL CONTINGENCY OF PARASITE RESPONSE ===\n")
+  
+  # Create GO enrichment summary table
+  go_summary_historical <- tibble::tibble(
+    Metric = c("Number of enriched GO terms"),
+    Value = c(as.character(nrow(go_results.historical)))
+  )
+  
+  go_summary_historical %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "GO Enrichment Summary - Historical Contingency of Parasite Response",
+      subtitle = "Gene Ontology enrichment results"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+  
+  # Display top GO terms
+  go_results.historical %>%
+    head(10) %>%
+    dplyr::select(ID, Description, p.adjust, mean_correlation, n_positive, n_negative) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Top 10 Enriched GO Terms",
+      subtitle = "Historical Contingency of Parasite Response"
+    ) %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+    gt::cols_label(
+      ID = "GO ID",
+      Description = "GO Term Description",
+      p.adjust = "Adjusted P-value",
+      mean_correlation = "Mean Correlation",
+      n_positive = "N Positive",
+      n_negative = "N Negative"
+    )
+}
+```
+
+### Question 3: Historical Contingency of Recovery
+
+```{r echo=FALSE}
+
+# Perform GO enrichment for Question 3
+if(nrow(results.recovery$combined_correlations) > 0) {
+  entrez.recovery <- get_entrez(results.recovery$combined_correlations)
+  go_results.recovery <- get_go_correlations(entrez.recovery)
+  
+  cat("\n=== GO ENRICHMENT - HISTORICAL CONTINGENCY OF RECOVERY ===\n")
+  
+  # Create GO enrichment summary table
+  go_summary_recovery <- tibble::tibble(
+    Metric = c("Number of enriched GO terms"),
+    Value = c(as.character(nrow(go_results.recovery)))
+  )
+  
+  go_summary_recovery %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "GO Enrichment Summary - Historical Contingency of Recovery",
+      subtitle = "Gene Ontology enrichment results"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+  
+  # Display top GO terms
+  go_results.recovery %>%
+    head(10) %>%
+    dplyr::select(ID, Description, p.adjust, mean_correlation, n_positive, n_negative) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Top 10 Enriched GO Terms",
+      subtitle = "Historical Contingency of Recovery"
+    ) %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+    gt::cols_label(
+      ID = "GO ID",
+      Description = "GO Term Description",
+      p.adjust = "Adjusted P-value",
+      mean_correlation = "Mean Correlation",
+      n_positive = "N Positive",
+      n_negative = "N Negative"
+    )
+}
+
+```
+
+## Comprehensive Enrichment Analysis and Results Export {.tabset}
+
+### Setup and Functions
+
+```{r}
+
+# Function to create comprehensive enrichment tables for significant correlations
+create_comprehensive_enrichment_tables <- function(results_list, analysis_name) {
+  # This function creates comprehensive tables of significant gene-taxa correlations
+  # with GO and KEGG annotations for a given analysis
+  
+  cat("\n=== Creating comprehensive enrichment tables for:", analysis_name, "===\n")
+  
+  # Get significant partial correlations
+  if ("sig_partial_correlations" %in% names(results_list)) {
+    sig_correlations <- results_list$sig_partial_correlations
+  } else if ("combined_sig_partial_correlations" %in% names(results_list)) {
+    sig_correlations <- results_list$combined_sig_partial_correlations
+  } else {
+    cat("No significant partial correlations found for", analysis_name, "\n")
+    return(NULL)
+  }
+  
+  if (nrow(sig_correlations) == 0) {
+    cat("No significant partial correlations found for", analysis_name, "\n")
+    return(NULL)
+  }
+  
+  # Get unique genes from significant correlations
+  unique_genes <- unique(sig_correlations$gene_id)
+  cat("Number of unique genes:", length(unique_genes), "\n")
+  
+  # Map genes to Entrez IDs and get annotations
+  # First, get Entrez IDs
+  entrez_ids <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = unique_genes,
+    column = "ENTREZID",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  )
+  
+  # Then, get gene names
+  gene_names <- AnnotationDbi::mapIds(
+    org.Dr.eg.db,
+    keys = unique_genes,
+    column = "GENENAME",
+    keytype = "SYMBOL",
+    multiVals = "first"
+  )
+  
+  # Create annotation dataframe
+  gene_annotations <- tibble::tibble(
+    gene_id = unique_genes,
+    entrez_id = as.character(entrez_ids),
+    gene_name = gene_names,
+    symbol = unique_genes  # Since we're using SYMBOL as keytype, symbol is the same as gene_id
+  ) %>%
+    dplyr::filter(!is.na(entrez_id))
+  
+  # Perform GO enrichment for these genes
+  if (nrow(gene_annotations) > 0) {
+    go_enrichment <- enrichGO(
+      gene = gene_annotations$entrez_id,
+      OrgDb = org.Dr.eg.db,
+      keyType = "ENTREZID",
+      ont = "BP",
+      pAdjustMethod = "BH",
+      pvalueCutoff = 0.1,
+      qvalueCutoff = 0.2,
+      readable = TRUE
+    )
+    
+    if (!is.null(go_enrichment) && nrow(go_enrichment) > 0) {
+      go_results <- as.data.frame(go_enrichment) %>%
+        dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+        dplyr::mutate(log_padj = -log10(p.adjust))
+    } else {
+      go_results <- data.frame()
+    }
+    
+    # Perform KEGG enrichment for these genes
+    kegg_enrichment <- enrichKEGG(
+      gene = gene_annotations$entrez_id,
+      organism = 'dre',
+      keyType = 'ncbi-geneid',
+      pAdjustMethod = "BH",
+      pvalueCutoff = 0.1,
+      qvalueCutoff = 0.2
+    )
+    
+    if (!is.null(kegg_enrichment) && nrow(kegg_enrichment) > 0) {
+      kegg_results <- as.data.frame(kegg_enrichment) %>%
+        dplyr::select(ID, Description, p.adjust, Count, geneID) %>%
+        dplyr::mutate(log_padj = -log10(p.adjust))
+    } else {
+      kegg_results <- data.frame()
+    }
+  } else {
+    go_results <- data.frame()
+    kegg_results <- data.frame()
+  }
+  
+  # Create comprehensive correlation table with annotations
+  comprehensive_table <- sig_correlations %>%
+    dplyr::left_join(gene_annotations, by = "gene_id") %>%
+    dplyr::mutate(
+      gene_description = ifelse(!is.na(gene_name), gene_name, gene_id),
+      analysis = analysis_name
+    ) %>%
+    dplyr::select(
+      analysis, gene_id, gene_description, taxa_id, correlation, 
+      p_value, fdr, abs_correlation, entrez_id
+    ) %>%
+    dplyr::arrange(desc(abs_correlation))
+  
+  # Add GO term annotations to the comprehensive table
+  if (nrow(go_results) > 0) {
+    go_gene_mapping <- go_results %>%
+      tidyr::separate_rows(geneID, sep = "/") %>%
+      dplyr::select(ID, Description, geneID) %>%
+      dplyr::rename(go_id = ID, go_description = Description, gene_symbol = geneID)
+    
+    comprehensive_table <- comprehensive_table %>%
+      dplyr::left_join(go_gene_mapping, by = c("gene_id" = "gene_symbol")) %>%
+      dplyr::group_by(analysis, gene_id, gene_description, taxa_id, correlation, 
+                      p_value, fdr, abs_correlation, entrez_id) %>%
+      dplyr::summarise(
+        go_terms = paste(unique(go_description), collapse = "; "),
+        .groups = "drop"
+      )
+  } else {
+    comprehensive_table <- comprehensive_table %>%
+      dplyr::mutate(go_terms = NA_character_)
+  }
+  
+  # Add KEGG pathway annotations to the comprehensive table
+  if (nrow(kegg_results) > 0) {
+    kegg_gene_mapping <- kegg_results %>%
+      tidyr::separate_rows(geneID, sep = "/") %>%
+      dplyr::select(ID, Description, geneID) %>%
+      dplyr::rename(kegg_id = ID, kegg_description = Description, gene_symbol = geneID)
+    
+    comprehensive_table <- comprehensive_table %>%
+      dplyr::left_join(kegg_gene_mapping, by = c("gene_id" = "gene_symbol")) %>%
+      dplyr::group_by(analysis, gene_id, gene_description, taxa_id, correlation, 
+                      p_value, fdr, abs_correlation, entrez_id, go_terms) %>%
+      dplyr::summarise(
+        kegg_pathways = paste(unique(kegg_description), collapse = "; "),
+        .groups = "drop"
+      )
+  } else {
+    comprehensive_table <- comprehensive_table %>%
+      dplyr::mutate(kegg_pathways = NA_character_)
+  }
+  
+  return(list(
+    comprehensive_table = comprehensive_table,
+    go_results = go_results,
+    kegg_results = kegg_results,
+    gene_annotations = gene_annotations
+  ))
+}
+
+# Function to export results for each analysis
+export_analysis_results <- function(results_list, analysis_name, results_dir = RESULTS_DIR) {
+  # This function exports comprehensive results for a given analysis
+  
+  cat("\n=== Exporting results for:", analysis_name, "===\n")
+  
+  # Create timestamp
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  
+  # Create analysis-specific directory
+  analysis_dir <- file.path(results_dir, analysis_name)
+  if (!dir.exists(analysis_dir)) {
+    dir.create(analysis_dir, recursive = TRUE)
+  }
+  
+  # Export significant correlations
+  if ("sig_correlations" %in% names(results_list) && nrow(results_list$sig_correlations) > 0) {
+    correlations_file <- file.path(analysis_dir, paste0("significant_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$sig_correlations, correlations_file)
+    cat("Exported significant correlations to:", correlations_file, "\n")
+  }
+  
+  # Export significant partial correlations
+  if ("sig_partial_correlations" %in% names(results_list) && nrow(results_list$sig_partial_correlations) > 0) {
+    partial_correlations_file <- file.path(analysis_dir, paste0("significant_partial_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$sig_partial_correlations, partial_correlations_file)
+    cat("Exported significant partial correlations to:", partial_correlations_file, "\n")
+  } else if ("combined_sig_partial_correlations" %in% names(results_list) && nrow(results_list$combined_sig_partial_correlations) > 0) {
+    partial_correlations_file <- file.path(analysis_dir, paste0("significant_partial_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$combined_sig_partial_correlations, partial_correlations_file)
+    cat("Exported significant partial correlations to:", partial_correlations_file, "\n")
+  }
+  
+  # Export all correlations
+  if ("correlation_results" %in% names(results_list) && nrow(results_list$correlation_results) > 0) {
+    all_correlations_file <- file.path(analysis_dir, paste0("all_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$correlation_results, all_correlations_file)
+    cat("Exported all correlations to:", all_correlations_file, "\n")
+  } else if ("combined_all_correlations" %in% names(results_list) && nrow(results_list$combined_all_correlations) > 0) {
+    all_correlations_file <- file.path(analysis_dir, paste0("all_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$combined_all_correlations, all_correlations_file)
+    cat("Exported all correlations to:", all_correlations_file, "\n")
+  }
+  
+  # Export DEG results
+  if ("deg_sig" %in% names(results_list) && nrow(results_list$deg_sig) > 0) {
+    deg_file <- file.path(analysis_dir, paste0("significant_genes_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$deg_sig, deg_file)
+    cat("Exported significant genes to:", deg_file, "\n")
+  } else if ("combined_deg" %in% names(results_list) && nrow(results_list$combined_deg) > 0) {
+    deg_file <- file.path(analysis_dir, paste0("significant_genes_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$combined_deg, deg_file)
+    cat("Exported significant genes to:", deg_file, "\n")
+  }
+  
+  # Export DAT results
+  if ("dat_sig" %in% names(results_list) && nrow(results_list$dat_sig) > 0) {
+    dat_file <- file.path(analysis_dir, paste0("significant_taxa_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$dat_sig, dat_file)
+    cat("Exported significant taxa to:", dat_file, "\n")
+  } else if ("combined_dat" %in% names(results_list) && nrow(results_list$combined_dat) > 0) {
+    dat_file <- file.path(analysis_dir, paste0("significant_taxa_", timestamp, ".tsv"))
+    readr::write_tsv(results_list$combined_dat, dat_file)
+    cat("Exported significant taxa to:", dat_file, "\n")
+  }
+  
+  # Create and export comprehensive enrichment tables
+  enrichment_results <- create_comprehensive_enrichment_tables(results_list, analysis_name)
+  
+  if (!is.null(enrichment_results)) {
+    # Export comprehensive table
+    comprehensive_file <- file.path(analysis_dir, paste0("comprehensive_gene_taxa_correlations_", timestamp, ".tsv"))
+    readr::write_tsv(enrichment_results$comprehensive_table, comprehensive_file)
+    cat("Exported comprehensive gene-taxa correlations to:", comprehensive_file, "\n")
+    
+    # Export GO results
+    if (nrow(enrichment_results$go_results) > 0) {
+      go_file <- file.path(analysis_dir, paste0("go_enrichment_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_results$go_results, go_file)
+      cat("Exported GO enrichment results to:", go_file, "\n")
+    }
+    
+    # Export KEGG results
+    if (nrow(enrichment_results$kegg_results) > 0) {
+      kegg_file <- file.path(analysis_dir, paste0("kegg_enrichment_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_results$kegg_results, kegg_file)
+      cat("Exported KEGG enrichment results to:", kegg_file, "\n")
+    }
+    
+    # Export gene annotations
+    if (nrow(enrichment_results$gene_annotations) > 0) {
+      annotations_file <- file.path(analysis_dir, paste0("gene_annotations_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_results$gene_annotations, annotations_file)
+      cat("Exported gene annotations to:", annotations_file, "\n")
+    }
+  }
+  
+  cat("Export complete for:", analysis_name, "\n")
+  return(enrichment_results)
+}
+
+```
+
+### Question 0: All Treatments Analysis
+
+```{r echo=FALSE}
+
+# Create comprehensive enrichment tables for Question 0
+cat("\n=== COMPREHENSIVE ENRICHMENT ANALYSIS - QUESTION 0: ALL TREATMENTS ===\n")
+
+enrichment_results.all <- create_comprehensive_enrichment_tables(results.all, "All_Treatments")
+
+# Create tables for Question 0 and save to list
+tables_all <- list()
+
+if (!is.null(enrichment_results.all)) {
+  # Create comprehensive correlation table
+  tables_all$comprehensive_table <- enrichment_results.all$comprehensive_table %>%
+    head(20) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Top 20 Significant Gene-Taxa Correlations",
+      subtitle = "All Treatments Analysis"
+    ) %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::cols_label(
+      analysis = "Analysis",
+      gene_id = "Gene ID",
+      gene_description = "Gene Description",
+      taxa_id = "Taxa ID",
+      correlation = "Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Abs Correlation",
+      entrez_id = "Entrez ID",
+      go_terms = "GO Terms",
+      kegg_pathways = "KEGG Pathways"
+    )
+  
+  # Create GO enrichment table
+  if (nrow(enrichment_results.all$go_results) > 0) {
+    tables_all$go_table <- enrichment_results.all$go_results %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "Gene Ontology Enrichment Results",
+        subtitle = "All Treatments Analysis"
+      ) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 2) %>%
+      gt::cols_label(
+        ID = "GO ID",
+        Description = "GO Term Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create KEGG enrichment table
+  if (nrow(enrichment_results.all$kegg_results) > 0) {
+    tables_all$kegg_table <- enrichment_results.all$kegg_results %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = "KEGG Pathway Enrichment Results",
+        subtitle = "All Treatments Analysis"
+      ) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 2) %>%
+      gt::cols_label(
+        ID = "KEGG ID",
+        Description = "Pathway Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create summary statistics table
+  summary_stats <- tibble::tibble(
+    Metric = c(
+      "Total significant gene-taxa correlations",
+      "Unique genes involved",
+      "Unique taxa involved",
+      "Enriched GO terms",
+      "Enriched KEGG pathways",
+      "Mean absolute correlation",
+      "Median absolute correlation"
+    ),
+    Value = c(
+      as.character(nrow(enrichment_results.all$comprehensive_table)),
+      as.character(length(unique(enrichment_results.all$comprehensive_table$gene_id))),
+      as.character(length(unique(enrichment_results.all$comprehensive_table$taxa_id))),
+      as.character(nrow(enrichment_results.all$go_results)),
+      as.character(nrow(enrichment_results.all$kegg_results)),
+      as.character(round(mean(enrichment_results.all$comprehensive_table$abs_correlation, na.rm = TRUE), 3)),
+      as.character(round(median(enrichment_results.all$comprehensive_table$abs_correlation, na.rm = TRUE), 3))
+    )
+  )
+  
+  tables_all$summary_table <- summary_stats %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics",
+      subtitle = "All Treatments Analysis"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+}
+
+# Display all tables for Question 0
+tables_all
+
+if (!is.null(enrichment_results.all)) {
+  # Display comprehensive table
+  cat("\nTop 20 significant gene-taxa correlations with annotations:\n")
+  enrichment_results.all$comprehensive_table %>%
+    head(20) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 20 Significant Gene-Taxa Correlations",
+      subtitle = "All Treatments Analysis - With GO and KEGG Annotations"
+    ) %>%
+    gt::cols_label(
+      analysis = "Analysis",
+      gene_id = "Gene ID",
+      gene_description = "Gene Description",
+      taxa_id = "Taxa ID",
+      correlation = "Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Absolute Correlation",
+      entrez_id = "Entrez ID",
+      go_terms = "GO Terms",
+      kegg_pathways = "KEGG Pathways"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::tab_style(
+      style = cell_fill(color = "#F7F7F7"),
+      locations = cells_body(rows = seq(1, 20, 2))
+    ) %>%
+    gt::opt_table_font(font = "Arial") %>%
+    gt::opt_table_lines(extent = "none") %>%
+    gt::opt_row_striping()
+  
+  # Display GO enrichment results
+  if (nrow(enrichment_results.all$go_results) > 0) {
+    cat("\nTop 15 enriched GO terms:\n")
+    enrichment_results.all$go_results %>%
+      head(15) %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "Top 15 Enriched GO Terms",
+        subtitle = "All Treatments Analysis"
+      ) %>%
+      gt::cols_label(
+        ID = "GO ID",
+        Description = "GO Term Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj p-value)"
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+      ) %>%
+      gt::opt_table_font(font = "Arial") %>%
+      gt::opt_table_lines(extent = "none") %>%
+      gt::opt_row_striping()
+  }
+  
+  # Display KEGG enrichment results
+  if (nrow(enrichment_results.all$kegg_results) > 0) {
+    cat("\nTop 15 enriched KEGG pathways:\n")
+    enrichment_results.all$kegg_results %>%
+      head(15) %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "Top 15 Enriched KEGG Pathways",
+        subtitle = "All Treatments Analysis"
+      ) %>%
+      gt::cols_label(
+        ID = "KEGG ID",
+        Description = "KEGG Pathway Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj p-value)"
+      ) %>%
+      gt::tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+      ) %>%
+      gt::opt_table_font(font = "Arial") %>%
+      gt::opt_table_lines(extent = "none") %>%
+      gt::opt_row_striping()
+  }
+} else {
+  cat("No significant correlations found for comprehensive analysis.\n")
+}
+```
+
+### Question 1: Parasite Exposure Response
+
+```{r echo=FALSE}
+
+# Create comprehensive enrichment tables for Question 1
+cat("\n=== COMPREHENSIVE ENRICHMENT ANALYSIS - QUESTION 1: PARASITE EXPOSURE RESPONSE ===\n")
+
+enrichment_results.parasite <- create_comprehensive_enrichment_tables(results.parasite, "Parasite_Exposure_Response")
+
+# Create tables for Question 1 and save to list
+tables_parasite <- list()
+
+if (!is.null(enrichment_results.parasite)) {
+  # Create comprehensive correlation table
+  tables_parasite$comprehensive_table <- enrichment_results.parasite$comprehensive_table %>%
+    head(20) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 20 Significant Gene-Taxa Correlations",
+      subtitle = "Parasite Exposure Response"
+    ) %>%
+    gt::cols_label(
+      analysis = "Analysis",
+      gene_id = "Gene ID",
+      gene_description = "Gene Description",
+      taxa_id = "Taxa ID",
+      correlation = "Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Abs Correlation",
+      entrez_id = "Entrez ID",
+      go_terms = "GO Terms",
+      kegg_pathways = "KEGG Pathways"
+    )
+  
+  # Create GO enrichment table
+  if (nrow(enrichment_results.parasite$go_results) > 0) {
+    tables_parasite$go_table <- enrichment_results.parasite$go_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "Gene Ontology Enrichment Results",
+        subtitle = "Parasite Exposure Response"
+      ) %>%
+      gt::cols_label(
+        ID = "GO ID",
+        Description = "GO Term Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create KEGG enrichment table
+  if (nrow(enrichment_results.parasite$kegg_results) > 0) {
+    tables_parasite$kegg_table <- enrichment_results.parasite$kegg_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "KEGG Pathway Enrichment Results",
+        subtitle = "Parasite Exposure Response"
+      ) %>%
+      gt::cols_label(
+        ID = "KEGG ID",
+        Description = "Pathway Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create summary statistics table
+  summary_stats <- tibble::tibble(
+    Metric = c(
+      "Total significant gene-taxa correlations",
+      "Unique genes involved",
+      "Unique taxa involved",
+      "Enriched GO terms",
+      "Enriched KEGG pathways",
+      "Mean absolute correlation",
+      "Median absolute correlation"
+    ),
+    Value = c(
+      as.character(nrow(enrichment_results.parasite$comprehensive_table)),
+      as.character(length(unique(enrichment_results.parasite$comprehensive_table$gene_id))),
+      as.character(length(unique(enrichment_results.parasite$comprehensive_table$taxa_id))),
+      as.character(nrow(enrichment_results.parasite$go_results)),
+      as.character(nrow(enrichment_results.parasite$kegg_results)),
+      as.character(round(mean(enrichment_results.parasite$comprehensive_table$abs_correlation, na.rm = TRUE), 3)),
+      as.character(round(median(enrichment_results.parasite$comprehensive_table$abs_correlation, na.rm = TRUE), 3))
+    )
+  )
+  
+  tables_parasite$summary_table <- summary_stats %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics",
+      subtitle = "Parasite Exposure Response"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+} else {
+  cat("No significant correlations found for comprehensive analysis.\n")
+}
+
+# Display all tables for Question 1
+tables_parasite
+```
+
+### Question 2: Historical Contingency of Parasite Response
+
+```{r echo=FALSE}
+
+# Create comprehensive enrichment tables for Question 2
+cat("\n=== COMPREHENSIVE ENRICHMENT ANALYSIS - QUESTION 2: HISTORICAL CONTINGENCY OF PARASITE RESPONSE ===\n")
+
+enrichment_results.historical <- create_comprehensive_enrichment_tables(results.historical_contingency, "Historical_Contingency_Parasite_Response")
+
+# Create tables for Question 2 and save to list
+tables_historical <- list()
+
+if (!is.null(enrichment_results.historical)) {
+  # Create comprehensive correlation table
+  tables_historical$comprehensive_table <- enrichment_results.historical$comprehensive_table %>%
+    head(20) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 20 Significant Gene-Taxa Correlations",
+      subtitle = "Historical Contingency of Parasite Response"
+    ) %>%
+    gt::cols_label(
+      analysis = "Analysis",
+      gene_id = "Gene ID",
+      gene_description = "Gene Description",
+      taxa_id = "Taxa ID",
+      correlation = "Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Abs Correlation",
+      entrez_id = "Entrez ID",
+      go_terms = "GO Terms",
+      kegg_pathways = "KEGG Pathways"
+    )
+  
+  # Create GO enrichment table
+  if (nrow(enrichment_results.historical$go_results) > 0) {
+    tables_historical$go_table <- enrichment_results.historical$go_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "Gene Ontology Enrichment Results",
+        subtitle = "Historical Contingency of Parasite Response"
+      ) %>%
+      gt::cols_label(
+        ID = "GO ID",
+        Description = "GO Term Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create KEGG enrichment table
+  if (nrow(enrichment_results.historical$kegg_results) > 0) {
+    tables_historical$kegg_table <- enrichment_results.historical$kegg_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "KEGG Pathway Enrichment Results",
+        subtitle = "Historical Contingency of Parasite Response"
+      ) %>%
+      gt::cols_label(
+        ID = "KEGG ID",
+        Description = "Pathway Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create summary statistics table
+  summary_stats <- tibble::tibble(
+    Metric = c(
+      "Total significant gene-taxa correlations",
+      "Unique genes involved",
+      "Unique taxa involved",
+      "Enriched GO terms",
+      "Enriched KEGG pathways",
+      "Mean absolute correlation",
+      "Median absolute correlation"
+    ),
+    Value = c(
+      as.character(nrow(enrichment_results.historical$comprehensive_table)),
+      as.character(length(unique(enrichment_results.historical$comprehensive_table$gene_id))),
+      as.character(length(unique(enrichment_results.historical$comprehensive_table$taxa_id))),
+      as.character(nrow(enrichment_results.historical$go_results)),
+      as.character(nrow(enrichment_results.historical$kegg_results)),
+      as.character(round(mean(enrichment_results.historical$comprehensive_table$abs_correlation, na.rm = TRUE), 3)),
+      as.character(round(median(enrichment_results.historical$comprehensive_table$abs_correlation, na.rm = TRUE), 3))
+    )
+  )
+  
+  tables_historical$summary_table <- summary_stats %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics",
+      subtitle = "Historical Contingency of Parasite Response"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+} else {
+  cat("No significant correlations found for comprehensive analysis.\n")
+}
+
+# Display all tables for Question 2
+tables_historical
+```
+
+### Question 3: Historical Contingency of Recovery
+
+```{r echo=FALSE}
+
+# Create comprehensive enrichment tables for Question 3
+cat("\n=== COMPREHENSIVE ENRICHMENT ANALYSIS - QUESTION 3: HISTORICAL CONTINGENCY OF RECOVERY ===\n")
+
+enrichment_results.recovery <- create_comprehensive_enrichment_tables(results.recovery, "Historical_Contingency_Recovery")
+
+# Create tables for Question 3 and save to list
+tables_recovery <- list()
+
+if (!is.null(enrichment_results.recovery)) {
+  # Create comprehensive correlation table
+  tables_recovery$comprehensive_table <- enrichment_results.recovery$comprehensive_table %>%
+    head(20) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("correlation", "abs_correlation"), decimals = 3) %>%
+    gt::fmt_scientific(columns = c("p_value", "fdr"), decimals = 2) %>%
+    gt::tab_header(
+      title = "Top 20 Significant Gene-Taxa Correlations",
+      subtitle = "Historical Contingency of Recovery"
+    ) %>%
+    gt::cols_label(
+      analysis = "Analysis",
+      gene_id = "Gene ID",
+      gene_description = "Gene Description",
+      taxa_id = "Taxa ID",
+      correlation = "Correlation",
+      p_value = "P-value",
+      fdr = "FDR",
+      abs_correlation = "Abs Correlation",
+      entrez_id = "Entrez ID",
+      go_terms = "GO Terms",
+      kegg_pathways = "KEGG Pathways"
+    )
+  
+  # Create GO enrichment table
+  if (nrow(enrichment_results.recovery$go_results) > 0) {
+    tables_recovery$go_table <- enrichment_results.recovery$go_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "Gene Ontology Enrichment Results",
+        subtitle = "Historical Contingency of Recovery"
+      ) %>%
+      gt::cols_label(
+        ID = "GO ID",
+        Description = "GO Term Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create KEGG enrichment table
+  if (nrow(enrichment_results.recovery$kegg_results) > 0) {
+    tables_recovery$kegg_table <- enrichment_results.recovery$kegg_results %>%
+      gt::gt() %>%
+      gt::fmt_number(columns = c("log_padj"), decimals = 3) %>%
+      gt::fmt_scientific(columns = c("p.adjust"), decimals = 2) %>%
+      gt::tab_header(
+        title = "KEGG Pathway Enrichment Results",
+        subtitle = "Historical Contingency of Recovery"
+      ) %>%
+      gt::cols_label(
+        ID = "KEGG ID",
+        Description = "Pathway Description",
+        p.adjust = "Adjusted P-value",
+        Count = "Gene Count",
+        geneID = "Gene IDs",
+        log_padj = "-log10(adj. P-value)"
+      )
+  }
+  
+  # Create summary statistics table
+  summary_stats <- tibble::tibble(
+    Metric = c(
+      "Total significant gene-taxa correlations",
+      "Unique genes involved",
+      "Unique taxa involved",
+      "Enriched GO terms",
+      "Enriched KEGG pathways",
+      "Mean absolute correlation",
+      "Median absolute correlation"
+    ),
+    Value = c(
+      as.character(nrow(enrichment_results.recovery$comprehensive_table)),
+      as.character(length(unique(enrichment_results.recovery$comprehensive_table$gene_id))),
+      as.character(length(unique(enrichment_results.recovery$comprehensive_table$taxa_id))),
+      as.character(nrow(enrichment_results.recovery$go_results)),
+      as.character(nrow(enrichment_results.recovery$kegg_results)),
+      as.character(round(mean(enrichment_results.recovery$comprehensive_table$abs_correlation, na.rm = TRUE), 3)),
+      as.character(round(median(enrichment_results.recovery$comprehensive_table$abs_correlation, na.rm = TRUE), 3))
+    )
+  )
+  
+  tables_recovery$summary_table <- summary_stats %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = "Summary Statistics",
+      subtitle = "Historical Contingency of Recovery"
+    ) %>%
+    gt::cols_label(
+      Metric = "Metric",
+      Value = "Value"
+    )
+} else {
+  cat("No significant correlations found for comprehensive analysis.\n")
+}
+
+# Display all tables for Question 3
+tables_recovery
+```
+
+### Results Export
+
+```{r eval=FALSE, include=FALSE}
+
+# Export results for all analyses
+cat("\n=== EXPORTING COMPREHENSIVE RESULTS ===\n")
+
+# Create list of all results
+all_analysis_results <- list(
+  "00_All_Treatments" = results.all,
+  "01_Parasite_Exposure_Response" = results.parasite,
+  "02_Historical_Contingency_Parasite_Response" = results.historical_contingency,
+  "03_Historical_Contingency_Recovery" = results.recovery
+)
+
+# Create list of all enrichment results
+all_enrichment_results <- list(
+  "00_All_Treatments" = enrichment_results.all,
+  "01_Parasite_Exposure_Response" = enrichment_results.parasite,
+  "02_Historical_Contingency_Parasite_Response" = enrichment_results.historical,
+  "03_Historical_Contingency_Recovery" = enrichment_results.recovery
+)
+
+# Create list of all table objects
+all_table_objects <- list(
+  "00_All_Treatments" = tables_all,
+  "01_Parasite_Exposure_Response" = tables_parasite,
+  "02_Historical_Contingency_Parasite_Response" = tables_historical,
+  "03_Historical_Contingency_Recovery" = tables_recovery
+)
+
+# Export results for each analysis
+exported_results <- list()
+
+for (analysis_name in names(all_analysis_results)) {
+  cat("\n--- Exporting results for:", analysis_name, "---\n")
+  
+  exported_results[[analysis_name]] <- export_analysis_results(
+    all_analysis_results[[analysis_name]], 
+    analysis_name
+  )
+}
+
+# Export enrichment results as .rds and .tsv files
+cat("\n=== EXPORTING ENRICHMENT RESULTS ===\n")
+
+# Create timestamp for file naming
+timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+
+for (analysis_name in names(all_enrichment_results)) {
+  cat("\n--- Exporting enrichment results for:", analysis_name, "---\n")
+  
+  # Create analysis-specific directory
+  analysis_dir <- file.path(RESULTS_DIR, analysis_name)
+  if (!dir.exists(analysis_dir)) {
+    dir.create(analysis_dir, recursive = TRUE)
+  }
+  
+  # Get enrichment results for this analysis
+  enrichment_data <- all_enrichment_results[[analysis_name]]
+  table_objects <- all_table_objects[[analysis_name]]
+  
+  if (!is.null(enrichment_data)) {
+    # Export comprehensive table as .tsv
+    if (!is.null(enrichment_data$comprehensive_table) && nrow(enrichment_data$comprehensive_table) > 0) {
+      comprehensive_file <- file.path(analysis_dir, paste0("comprehensive_gene_taxa_correlations_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_data$comprehensive_table, comprehensive_file)
+      cat("Exported comprehensive table to:", comprehensive_file, "\n")
+    }
+    
+    # Export GO results as .tsv
+    if (!is.null(enrichment_data$go_results) && nrow(enrichment_data$go_results) > 0) {
+      go_file <- file.path(analysis_dir, paste0("go_enrichment_results_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_data$go_results, go_file)
+      cat("Exported GO enrichment results to:", go_file, "\n")
+    }
+    
+    # Export KEGG results as .tsv
+    if (!is.null(enrichment_data$kegg_results) && nrow(enrichment_data$kegg_results) > 0) {
+      kegg_file <- file.path(analysis_dir, paste0("kegg_enrichment_results_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_data$kegg_results, kegg_file)
+      cat("Exported KEGG enrichment results to:", kegg_file, "\n")
+    }
+    
+    # Export gene annotations as .tsv
+    if (!is.null(enrichment_data$gene_annotations) && nrow(enrichment_data$gene_annotations) > 0) {
+      annotations_file <- file.path(analysis_dir, paste0("gene_annotations_", timestamp, ".tsv"))
+      readr::write_tsv(enrichment_data$gene_annotations, annotations_file)
+      cat("Exported gene annotations to:", annotations_file, "\n")
+    }
+    
+    # Export complete enrichment results as .rds
+    enrichment_rds_file <- file.path(analysis_dir, paste0("enrichment_results_complete_", timestamp, ".rds"))
+    saveRDS(enrichment_data, enrichment_rds_file)
+    cat("Exported complete enrichment results to:", enrichment_rds_file, "\n")
+  }
+  
+  # Export table objects as .rds
+  if (!is.null(table_objects) && length(table_objects) > 0) {
+    tables_rds_file <- file.path(analysis_dir, paste0("formatted_tables_", timestamp, ".rds"))
+    saveRDS(table_objects, tables_rds_file)
+    cat("Exported formatted tables to:", tables_rds_file, "\n")
+  }
+}
+
+# Create combined enrichment export
+cat("\n=== EXPORTING COMBINED ENRICHMENT RESULTS ===\n")
+
+# Combine all comprehensive tables
+all_comprehensive_combined <- list()
+all_go_combined <- list()
+all_kegg_combined <- list()
+all_annotations_combined <- list()
+
+for (analysis_name in names(all_enrichment_results)) {
+  enrichment_data <- all_enrichment_results[[analysis_name]]
+  
+  if (!is.null(enrichment_data)) {
+    # Add comprehensive tables
+    if (!is.null(enrichment_data$comprehensive_table) && nrow(enrichment_data$comprehensive_table) > 0) {
+      all_comprehensive_combined[[analysis_name]] <- enrichment_data$comprehensive_table %>%
+        dplyr::mutate(analysis_group = analysis_name)
+    }
+    
+    # Add GO results
+    if (!is.null(enrichment_data$go_results) && nrow(enrichment_data$go_results) > 0) {
+      all_go_combined[[analysis_name]] <- enrichment_data$go_results %>%
+        dplyr::mutate(analysis_group = analysis_name)
+    }
+    
+    # Add KEGG results
+    if (!is.null(enrichment_data$kegg_results) && nrow(enrichment_data$kegg_results) > 0) {
+      all_kegg_combined[[analysis_name]] <- enrichment_data$kegg_results %>%
+        dplyr::mutate(analysis_group = analysis_name)
+    }
+    
+    # Add gene annotations
+    if (!is.null(enrichment_data$gene_annotations) && nrow(enrichment_data$gene_annotations) > 0) {
+      all_annotations_combined[[analysis_name]] <- enrichment_data$gene_annotations %>%
+        dplyr::mutate(analysis_group = analysis_name)
+    }
+  }
+}
+
+# Export combined files
+if (length(all_comprehensive_combined) > 0) {
+  combined_comprehensive <- dplyr::bind_rows(all_comprehensive_combined)
+  combined_comprehensive_file <- file.path(RESULTS_DIR, paste0("combined_comprehensive_gene_taxa_correlations_", timestamp, ".tsv"))
+  readr::write_tsv(combined_comprehensive, combined_comprehensive_file)
+  cat("Exported combined comprehensive table to:", combined_comprehensive_file, "\n")
+}
+
+if (length(all_go_combined) > 0) {
+  combined_go <- dplyr::bind_rows(all_go_combined)
+  combined_go_file <- file.path(RESULTS_DIR, paste0("combined_go_enrichment_results_", timestamp, ".tsv"))
+  readr::write_tsv(combined_go, combined_go_file)
+  cat("Exported combined GO enrichment results to:", combined_go_file, "\n")
+}
+
+if (length(all_kegg_combined) > 0) {
+  combined_kegg <- dplyr::bind_rows(all_kegg_combined)
+  combined_kegg_file <- file.path(RESULTS_DIR, paste0("combined_kegg_enrichment_results_", timestamp, ".tsv"))
+  readr::write_tsv(combined_kegg, combined_kegg_file)
+  cat("Exported combined KEGG enrichment results to:", combined_kegg_file, "\n")
+}
+
+if (length(all_annotations_combined) > 0) {
+  combined_annotations <- dplyr::bind_rows(all_annotations_combined)
+  combined_annotations_file <- file.path(RESULTS_DIR, paste0("combined_gene_annotations_", timestamp, ".tsv"))
+  readr::write_tsv(combined_annotations, combined_annotations_file)
+  cat("Exported combined gene annotations to:", combined_annotations_file, "\n")
+}
+
+# Export all enrichment results as single .rds file
+all_enrichment_combined <- list(
+  individual_results = all_enrichment_results,
+  table_objects = all_table_objects,
+  combined_comprehensive = if (length(all_comprehensive_combined) > 0) dplyr::bind_rows(all_comprehensive_combined) else NULL,
+  combined_go = if (length(all_go_combined) > 0) dplyr::bind_rows(all_go_combined) else NULL,
+  combined_kegg = if (length(all_kegg_combined) > 0) dplyr::bind_rows(all_kegg_combined) else NULL,
+  combined_annotations = if (length(all_annotations_combined) > 0) dplyr::bind_rows(all_annotations_combined) else NULL,
+  export_timestamp = timestamp
+)
+
+all_enrichment_rds_file <- file.path(RESULTS_DIR, paste0("all_enrichment_results_", timestamp, ".rds"))
+saveRDS(all_enrichment_combined, all_enrichment_rds_file)
+cat("Exported all enrichment results to:", all_enrichment_rds_file, "\n")
+
+# Create combined summary across all analyses
+cat("\n=== CREATING COMBINED SUMMARY ===\n")
+
+# Combine all comprehensive tables
+all_comprehensive_tables <- list()
+
+for (analysis_name in names(exported_results)) {
+  if (!is.null(exported_results[[analysis_name]]) && 
+      !is.null(exported_results[[analysis_name]]$comprehensive_table)) {
+    all_comprehensive_tables[[analysis_name]] <- exported_results[[analysis_name]]$comprehensive_table
+  }
+}
+
+# Create combined comprehensive table
+if (length(all_comprehensive_tables) > 0) {
+  combined_comprehensive <- dplyr::bind_rows(all_comprehensive_tables, .id = "analysis_group")
+  
+  # Export combined comprehensive table
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  combined_file <- file.path(RESULTS_DIR, paste0("combined_comprehensive_gene_taxa_correlations_", timestamp, ".tsv"))
+  readr::write_tsv(combined_comprehensive, combined_file)
+  cat("Exported combined comprehensive table to:", combined_file, "\n")
+  
+  # Display combined summary table
+  cat("\nCombined summary across all analyses:\n")
+  combined_comprehensive %>%
+    dplyr::group_by(analysis_group) %>%
+    dplyr::summarise(
+      n_correlations = n(),
+      n_unique_genes = n_distinct(gene_id),
+      n_unique_taxa = n_distinct(taxa_id),
+      mean_correlation = mean(abs_correlation, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    gt::gt() %>%
+    gt::fmt_number(columns = c("mean_correlation"), decimals = 3) %>%
+    gt::tab_header(
+      title = "Combined Analysis Summary",
+      subtitle = "Gene-taxa correlations across all research questions"
+    ) %>%
+    gt::cols_label(
+      analysis_group = "Analysis Group",
+      n_correlations = "N Correlations",
+      n_unique_genes = "N Unique Genes",
+      n_unique_taxa = "N Unique Taxa",
+      mean_correlation = "Mean Absolute Correlation"
+    ) %>%
+    gt::tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    gt::opt_table_font(font = "Arial") %>%
+    gt::opt_table_lines(extent = "none") %>%
+    gt::opt_row_striping()
+}
+
+# Create export summary
+cat("\n=== EXPORT SUMMARY ===\n")
+cat("Results exported to:", RESULTS_DIR, "\n")
+cat("Analysis directories created:\n")
+for (analysis_name in names(all_analysis_results)) {
+  analysis_dir <- file.path(RESULTS_DIR, analysis_name)
+  if (dir.exists(analysis_dir)) {
+    n_tsv_files <- length(list.files(analysis_dir, pattern = "\\.tsv$"))
+    n_rds_files <- length(list.files(analysis_dir, pattern = "\\.rds$"))
+    cat("-", analysis_name, ":", n_tsv_files, "TSV files,", n_rds_files, "RDS files\n")
+  }
+}
+
+# List combined files
+cat("\nCombined files created:\n")
+combined_files <- list.files(RESULTS_DIR, pattern = paste0("combined_.*_", timestamp), full.names = FALSE)
+for (file in combined_files) {
+  cat("-", file, "\n")
+}
+
+cat("\nEnrichment export complete!\n")
+```
+
+## Summary and Conclusions
+
+```{r echo=FALSE}
+
+cat("\n=== INTEGRATED ANALYSIS SUMMARY ===\n")
+
+# Create final summary table
+final_summary <- tibble::tibble(
+  Research_Question = c(
+    "1. Parasite Exposure Response (A- T- P- vs A- T- P+)",
+    "2. Historical Contingency of Parasite Response (A- T- P+ vs A+ T- P+ vs A- T+ P+ vs A+ T+ P+)",
+    "3. Historical Contingency of Recovery (A- T- P- vs A+ T- P- vs A- T+ P- vs A+ T+ P-)"
+  ),
+  Significant_Correlations = c(
+    nrow(results.parasite$sig_correlations),
+    nrow(results.historical_contingency$combined_correlations),
+    nrow(results.recovery$combined_correlations)
+  ),
+  Significant_Partial_Correlations = c(
+    nrow(results.parasite$sig_partial_correlations),
+    nrow(results.historical_contingency$combined_sig_partial_correlations),
+    nrow(results.recovery$combined_sig_partial_correlations)
+  ),
+  Unique_Genes = c(
+    length(unique(results.parasite$sig_correlations$gene_id)),
+    length(unique(results.historical_contingency$combined_correlations$gene_id)),
+    length(unique(results.recovery$combined_correlations$gene_id))
+  ),
+  Unique_Taxa = c(
+    length(unique(results.parasite$sig_correlations$TaxaID)),
+    length(unique(results.historical_contingency$combined_correlations$TaxaID)),
+    length(unique(results.recovery$combined_correlations$TaxaID))
+  )
+)
+
+final_summary %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Integrated Analysis Summary",
+    subtitle = "Gene-taxa correlations across three key research questions"
+  ) %>%
+  gt::cols_label(
+    Research_Question = "Research Question",
+    Significant_Correlations = "N Significant Correlations",
+    Significant_Partial_Correlations = "N Significant Partial Correlations",
+    Unique_Genes = "N Unique Genes",
+    Unique_Taxa = "N Unique Taxa"
+  )
+
+# Display saved/loaded files summary
+cat("\n=== FILES SUMMARY ===\n")
+cat("Results directory:", RESULTS_DIR, "\n")
+cat("Configuration: LOAD_EXISTING_RESULTS =", LOAD_EXISTING_RESULTS, "\n")
+
+if (LOAD_EXISTING_RESULTS) {
+  cat("Analysis results were loaded from existing files.\n")
+  cat("To recompute results, set LOAD_EXISTING_RESULTS = FALSE in the configuration section.\n")
+} else {
+  cat("Analysis results were computed and saved to new files.\n")
+  cat("To load existing results in future runs, set LOAD_EXISTING_RESULTS = TRUE in the configuration section.\n")
+}
+
+# List all result files in the directory
+result_files <- list.files(RESULTS_DIR, pattern = "\\.rds$", full.names = TRUE)
+if (length(result_files) > 0) {
+  cat("\nAvailable result files:\n")
+  for (file in result_files) {
+    file_info <- file.info(file)
+    cat("-", basename(file), "(modified:", format(file_info$mtime, "%Y-%m-%d %H:%M:%S"), ")\n")
+  }
+} else {
+  cat("\nNo result files found in directory.\n")
+}
+
+``` 
+``` 

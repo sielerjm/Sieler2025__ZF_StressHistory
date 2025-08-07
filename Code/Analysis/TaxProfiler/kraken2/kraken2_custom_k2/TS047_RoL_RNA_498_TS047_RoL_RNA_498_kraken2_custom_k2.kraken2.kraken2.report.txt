@@ -1,0 +1,31 @@
+  5.95	777264	777264	U	0	unclassified
+ 94.05	12280502	0	R	1	root
+ 94.05	12280502	0	R1	131567	  cellular organisms
+ 94.05	12280502	0	R2	2759	    Eukaryota
+ 94.05	12280502	0	R3	33154	      Opisthokonta
+ 94.05	12280502	0	K	33208	        Metazoa
+ 94.05	12280502	0	K1	6072	          Eumetazoa
+ 94.05	12280502	0	K2	33213	            Bilateria
+ 94.05	12280502	0	K3	33511	              Deuterostomia
+ 94.05	12280502	0	P	7711	                Chordata
+ 94.05	12280502	0	P1	89593	                  Craniata
+ 94.05	12280502	0	P2	7742	                    Vertebrata
+ 94.05	12280502	0	P3	7776	                      Gnathostomata
+ 94.05	12280502	0	P4	117570	                        Teleostomi
+ 94.05	12280502	0	P5	117571	                          Euteleostomi
+ 94.05	12280502	0	P6	7898	                            Actinopterygii
+ 94.05	12280502	0	C	186623	                              Actinopteri
+ 94.05	12280502	0	C1	41665	                                Neopterygii
+ 94.05	12280502	0	C2	32443	                                  Teleostei
+ 94.05	12280502	0	C3	1489341	                                    Osteoglossocephalai
+ 94.05	12280502	0	C4	186625	                                      Clupeocephala
+ 94.05	12280502	0	C5	186634	                                        Otomorpha
+ 94.05	12280502	0	C6	32519	                                          Ostariophysi
+ 94.05	12280502	0	C7	186626	                                            Otophysi
+ 94.05	12280502	0	C8	186627	                                              Cypriniphysae
+ 94.05	12280502	0	O	7952	                                                Cypriniformes
+ 94.05	12280502	0	O1	30727	                                                  Cyprinoidei
+ 94.05	12280502	0	F	2743709	                                                    Danionidae
+ 94.05	12280502	0	F1	2743711	                                                      Danioninae
+ 94.05	12280502	0	G	7954	                                                        Danio
+ 94.05	12280502	12280502	S	7955	                                                          Danio rerio
